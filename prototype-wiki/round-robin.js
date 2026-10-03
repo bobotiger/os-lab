@@ -38,7 +38,7 @@ function schedulingExplanation(run, frame, quantum) {
     if (frame.time === 0) return {title: arrival === 0 ? 'B 的剩余时间更短，先运行 B' : 'B 尚未到达，A 先运行', text: arrival === 0 ? 'A、B 同时就绪，剩余 CPU 时间分别为 5 和 3，因此选择 B。CPU 空闲时的并列候选按就绪入队顺序选择。' : `A 在 t=0 到达，B 在 t=${arrival} 到达。只考虑已就绪的进程，不为未来的短任务空等。`};
     if (arrival > 0 && frame.time === arrival) return arrival === 1
       ? {title: 'B 剩余 3 < A 剩余 4，发生抢占', text: 'B 到达后获得 CPU，A 从运行回到就绪。A 已执行的 1 个单位保留，剩余 4；没有时间片耗尽，也没有发生 I/O 阻塞。'}
-      : {title: 'A、B 都剩余 3，A 继续运行', text: 'B 在 t=2 到达，此刻 A 还剩 3。候选没有严格短于运行者，本模型保留 A，不为相等的剩余时间额外切换。'};
+      : {title: 'A、B 都剩余 3，A 继续运行', text: 'B 在 t=2 到达，此刻 A 还剩 3。候选没有严格短于运行者，按相等时保留运行者的约定，A 继续运行，不额外切换。'};
     const completed = run.events.find(event => event.time === frame.time && event.type === '完成');
     if (completed) {
       const resumed = run.timeline.some(segment => segment.id === frame.running && segment.start < frame.time);
@@ -55,14 +55,14 @@ function schedulingExplanation(run, frame, quantum) {
     if (frame.time === 0) return {title: laterArrival ? '只有 A 已就绪，先运行 A' : 'B 的 CPU 段更短，因此先运行 B', text: laterArrival ? 'A 在 t=0 到达，B 要到 t=1 才到达。SJF 只比较此刻已经就绪的进程，不会等待将来的短任务。' : 'A、B 同时到达，按 A、B 顺序入队；下一段 CPU 时长分别为 5 和 3。SJF 选择更短的 B，而不是直接取队首 A。'};
     if (laterArrival && frame.time === 1) return {title: '更短的 B 到达，A 不被抢占', text: 'B 的 CPU 段为 3，此刻 A 还剩 4。尽管 B 更短，非抢占 SJF 仍让 A 继续运行；抢占式的最短剩余时间优先是另一种策略。'};
     const completed = run.events.find(event => event.time === frame.time && event.type === '完成');
-    if (completed) return {title: `${completed.process} 完成，${frame.running} 获得 CPU`, text: `只有在 CPU 可以重新分配时才选择下一位。现在就绪队列中仅剩 ${frame.running}，它将连续运行到完成。`};
+    if (completed) return {title: `${completed.process} 完成，${frame.running} 获得 CPU`, text: `只有在 CPU 可以重新分配时才选择下一个就绪进程。现在就绪队列中仅剩 ${frame.running}，它将连续运行到完成。`};
     return {title: `${frame.running} 继续运行，不设时间片`, text: `${frame.running} 已获得 CPU，不会因为另一个进程更短而中途让出。${frame.queue.length ? `${frame.queue.join('、')} 保持就绪并等待，不是阻塞。` : '就绪队列为空。'}`};
   }
   if (run.config.strategy.kind === 'FCFS') {
     if (frame.time === RR_TOTAL) return {title: '先 A，后 B，两个进程都已完成', text: 'A 连续执行 5 个时间单位，B 随后执行 3 个。总耗时为 8，进程间只切换一次；切换少，并不意味着后来的任务等待得少。'};
     if (frame.time === 0) return {title: 'A 先入队，先获得 CPU', text: '两个进程同时到达，约定按 A、B 顺序入队。FCFS 取队首 A，不会因为 B 的任务更短而让 B 先运行。'};
     const completed = run.events.find(event => event.time === frame.time && event.type === '完成');
-    if (completed) return {title: `${completed.process} 完成，${frame.running} 才获得 CPU`, text: 'A 没有被时间片打断，已经连续运行了 5 个时间单位。现在 A 退出，调度器取出队首 B；B 的等待终于结束。'};
+    if (completed) return {title: `${completed.process} 完成，${frame.running} 才获得 CPU`, text: 'A 没有被时间片打断，已经连续运行了 5 个时间单位。现在 A 退出，调度器取出队首 B；B 从就绪转为运行。'};
     if (frame.running === 'A') return {title: 'A 继续运行，B 仍在等待', text: `A 已执行 ${frame.time}/5。FCFS 没有时间片，B 即使更短，也不能抢占正在运行的 A。B 当前已等待 ${frame.time} 个时间单位。`};
     return {title: 'B 继续运行，就绪队列已空', text: `B 已执行 ${frame.time - 5}/3。A 已完成；B 也将连续执行到任务结束，不需要轮流交出 CPU。`};
   }
@@ -86,18 +86,20 @@ function renderSchedulingPage(root, pageId) {
   const isShortestRemaining = pageId === 'srtf';
   const hasArrivalScenarios = isShortestJob || isShortestRemaining;
   const strategyKind = isRoundRobin ? 'RR' : isShortestJob ? 'SJF' : isShortestRemaining ? 'SRTF' : 'FCFS';
+  const homeworkSection = isRoundRobin ? 'rr' : isShortestRemaining ? 'comparison' : 'fifo-sjf';
   root.innerHTML = `<div class="page rr-page" id="top">
     ${wikiHeader(pageId, [{href: '#demo', title: isRoundRobin ? '轮转演示' : isShortestRemaining ? '抢占演示' : isShortestJob ? '最短任务选择' : '排队演示'}, {href: '#rules', title: isRoundRobin ? '轮转规则' : '调度规则'}, {href: '#knowledge-related-title', title: '相关知识'}])}
     <main>
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">${page.theme} / 调度</p>
         <h1 id="page-title">${page.title} <span>${page.english}</span></h1>
-        <p class="lead">${isRoundRobin ? '每次用一小段 CPU，没做完，就回到队尾。' : isShortestRemaining ? '还有更短的剩余任务，就先把 CPU 交给它。' : isShortestJob ? '就绪者中，短任务先运行；运行中，不抢占。' : '先来的先运行，后来的等它让出 CPU。'}</p>
-        <p class="definition">${isRoundRobin ? `调度器按就绪队列顺序分配 CPU。时间片限制的是一次连续运行的时长，不是一个<a class="inline-link" href="${WIKI_PAGES.process.href}">进程</a>完成全部任务的时间。` : isShortestRemaining ? `SRTF（Shortest Remaining Time First）是抢占式的<a class="inline-link" href="${WIKI_PAGES.sjf.href}">SJF</a>。比较运行者与就绪候选当前 CPU 段的剩余时间，候选严格更短时抢占；原运行者回到就绪，保留已执行进度。` : isShortestJob ? `SJF（Shortest Job First）在 CPU 可以分配时，从已就绪的<a class="inline-link" href="${WIKI_PAGES.process.href}">进程</a>中选择下一段 CPU 时长最短的一个。获得 CPU 后不主动抢占，完成或阻塞时才重新选择。` : `FCFS（First Come, First Served）按就绪入队顺序选择<a class="inline-link" href="${WIKI_PAGES.process.href}">进程</a>，不主动抢占。当前进程执行完成或阻塞后，CPU 才交给下一个。`}</p>
-        <p class="model-note">${isShortestRemaining ? '教学模型：单核、无 I/O、零切换开销；预先确切知道 CPU 段时长，A 为 5、B 为 3。A 在 t=0 到达，B 按场景到达。剩余时间相等时保留运行者；CPU 无运行者时，并列候选按入队顺序选择。这些是本模型的确定性规则，真实系统通常需估计时长。' : isShortestJob ? '教学模型：单核、无 I/O、忽略切换开销；预先确切知道下一段 CPU 时长，A 为 5、B 为 3。A 在 t=0 到达，B 的到达时刻由场景决定；同时到达时按 A、B 入队，时长并列时按入队顺序。真实系统通常需要估计 CPU 段时长。' : '教学模型：单核、两个进程同时到达、无 I/O、忽略切换开销。A 需要 5 个时间单位，B 需要 3 个；初始入队顺序为 A、B。'}</p>
+        <p class="lead">${isRoundRobin ? '进程按时间片使用 CPU；时间片耗尽且尚未完成时，回到就绪队列队尾。' : isShortestRemaining ? '就绪进程的剩余 CPU 时间严格更短时，抢占当前运行进程。' : isShortestJob ? '选择下一 CPU 段最短的就绪进程；运行期间不因更短任务到达而抢占。' : '按就绪入队顺序分配 CPU；当前进程完成或阻塞后，再选择下一个就绪进程。'}</p>
+        <p class="definition">${isRoundRobin ? `时间片是一次连续使用 CPU 的时长上限。调度器按就绪队列顺序选择<a class="inline-link" href="${WIKI_PAGES.process.href}">进程</a>；时间片耗尽时，未完成的进程回到队尾。一个进程可能需要多个时间片才能完成全部 CPU 工作。` : isShortestRemaining ? `CPU 段是进程连续执行 CPU 工作的一段时间。SRTF（Shortest Remaining Time First）是抢占式的<a class="inline-link" href="${WIKI_PAGES.sjf.href}">SJF</a>，比较当前运行进程与就绪进程的剩余 CPU 段时长。就绪候选严格更短时，操作系统暂停当前进程，将它放回就绪队列，并保留已执行的进度。` : isShortestJob ? `CPU 段是进程连续执行 CPU 工作的一段时间。SJF（Shortest Job First）在 CPU 可以重新分配时，从就绪的<a class="inline-link" href="${WIKI_PAGES.process.href}">进程</a>中选择下一段 CPU 时长最短的一个。它是非抢占策略：运行进程完成或阻塞前，不因更短任务到达而暂停执行。` : `就绪队列包含已具备运行条件、正在等待 CPU 的<a class="inline-link" href="${WIKI_PAGES.process.href}">进程</a>。FCFS（First Come, First Served）按入队顺序选择进程，不中途抢占。当前进程完成或阻塞后，调度器才选择下一个就绪进程。`}</p>
+        <p class="model-note">${isShortestRemaining ? '单核、无 I/O，切换开销取零；CPU 段时长已知，A 为 5、B 为 3。A 在 t=0 到达，B 按场景到达。约定剩余时间相等时保留运行者；CPU 空闲时，并列候选按入队顺序选择。实际系统通常需要估计时长。' : isShortestJob ? '单核、无 I/O，切换开销取零；下一段 CPU 时长已知，A 为 5、B 为 3。A 在 t=0 到达，B 按场景到达；同时到达时按 A、B 入队，时长并列时按入队顺序选择。实际系统通常需要估计 CPU 段时长。' : '单核，两个进程同时到达，无 I/O，切换开销取零。A 需要 5 个时间单位，B 需要 3 个；初始入队顺序为 A、B。'}</p>
+        <p class="process-homework-link"><a class="inline-link" href="scheduling-homework.html#${homeworkSection}">CPU 调度基础作业：程序使用与调度实验</a></p>
       </section>
       <section class="rr-demo" id="demo" aria-labelledby="demo-title">
-        <div class="section-heading"><div><p class="section-index">01 / ${isRoundRobin ? 'ROUND ROBIN' : isShortestRemaining ? 'SHORTEST REMAINING TIME' : isShortestJob ? 'SHORTEST JOB FIRST' : 'FIRST COME, FIRST SERVED'}</p><h2 id="demo-title">${isRoundRobin ? '同一颗 CPU，轮流使用' : isShortestRemaining ? '剩余更短，就换人' : isShortestJob ? '从就绪者中选最短' : 'A 在运行，B 就继续等待'}</h2></div><p class="rr-clock">当前时刻 <strong id="rr-time">0</strong> / 8</p></div>
+        <div class="section-heading"><div><p class="section-index">01 / ${isRoundRobin ? 'ROUND ROBIN' : isShortestRemaining ? 'SHORTEST REMAINING TIME' : isShortestJob ? 'SHORTEST JOB FIRST' : 'FIRST COME, FIRST SERVED'}</p><h2 id="demo-title">${isRoundRobin ? 'CPU 时间片分配与就绪队列轮转' : isShortestRemaining ? '比较剩余 CPU 时间，决定是否抢占' : isShortestJob ? '根据下一 CPU 段时长选择就绪进程' : '按就绪入队顺序执行，不抢占运行进程'}</h2></div><p class="rr-clock">当前时刻 <strong id="rr-time">0</strong> / 8</p></div>
         <div class="rr-toolbar">
           <div class="rr-transport" role="group" aria-label="播放控制">
             <button type="button" class="icon-button primary" id="rr-play" title="播放" aria-label="播放" aria-pressed="false"><span aria-hidden="true">▶</span></button>
@@ -126,7 +128,7 @@ function renderSchedulingPage(root, pageId) {
         <div class="rr-summary"><span>总 CPU 需求 <strong>8</strong></span><span>已执行 <strong id="rr-executed">0</strong></span><span>进程间切换 <strong id="rr-switches">0</strong></span>${hasArrivalScenarios ? '<span>平均等待 <strong id="sjf-wait">—</strong></span>' : ''}</div>
       </section>
       <section class="rr-rules" id="rules" aria-labelledby="rules-title">
-        <div class="section-heading"><div><p class="section-index">02 / THE RULE</p><h2 id="rules-title">${isRoundRobin ? '时间片结束，不代表任务结束' : isShortestRemaining ? '更短才抢占，相等时继续' : isShortestJob ? '最短，是选择规则；不是抢占规则' : '先来先服务，不是最短任务优先'}</h2></div></div>
+        <div class="section-heading"><div><p class="section-index">02 / THE RULE</p><h2 id="rules-title">${isRoundRobin ? '时间片结束，不代表任务结束' : isShortestRemaining ? '剩余 CPU 时间严格更短时抢占，相等时继续运行' : isShortestJob ? 'SJF 的最短 CPU 段选择与非抢占执行' : '先来先服务，不是最短任务优先'}</h2></div></div>
         <dl class="concepts rr-concepts">
           ${isRoundRobin ? `
           <div><dt>从队首取出</dt><dd>就绪进程按入队顺序等待。获得 CPU 的进程不再占据就绪队列的位置。</dd></div>
@@ -135,18 +137,18 @@ function renderSchedulingPage(root, pageId) {
           ` : isShortestRemaining ? `
           <div><dt>比较剩余，不是原始时长</dt><dd>A 原本需要 5，但执行 2 后只剩 3。B 此时到达也需要 3，不能只看“B 原本比 A 短”就决定抢占。</dd></div>
           <div><dt>抢占回到就绪，不是阻塞</dt><dd>运行者仍能继续执行，只是 CPU 暂时交给更短者。已执行的进度保留，恢复时继续剩下的部分。</dd></div>
-          <div><dt>相等时保留当前运行者</dt><dd>本模型只在就绪候选严格更短时抢占。CPU 空闲时的候选并列，按就绪入队顺序处理；这与运行中的相等情况不同。</dd></div>
+          <div><dt>相等时保留当前运行者</dt><dd>按本例约定，只有就绪候选严格更短时才抢占。CPU 空闲时的候选并列，按就绪入队顺序处理；这与运行中的相等情况不同。</dd></div>
           ` : isShortestJob ? `
           <div><dt>只比较已经就绪的任务</dt><dd>尚未到达的进程不是候选者。CPU 空闲时只要已有就绪任务，就从其中选择，不为将来的短任务等待。</dd></div>
           <div><dt>比较下一段 CPU 时长</dt><dd>不是比较进程整个生命周期。本例没有 I/O，每个进程只有一段 CPU 任务；时长并列时按就绪入队顺序选择。</dd></div>
-          <div><dt>选中后，不主动抢占</dt><dd>晚到的短任务要等待运行者让出 CPU。<a class="inline-link" href="${WIKI_PAGES.srtf.href}">SRTF</a> 会比较剩余 CPU 时间并在条件满足时抢占，本页的 SJF 不这样做。</dd></div>
+          <div><dt>选中后，不主动抢占</dt><dd>晚到的短任务需要等待当前进程完成或阻塞。非抢占 SJF 不会因任务更短而暂停运行进程；<a class="inline-link" href="${WIKI_PAGES.srtf.href}">SRTF</a> 则重新比较剩余 CPU 时间，在候选严格更短时抢占。</dd></div>
           ` : `
           <div><dt>顺序由入队决定</dt><dd>先进入就绪队列的先获得 CPU。同时到达时需要约定顺序，本例按 A、B 排列，而不是比较任务长短。</dd></div>
           <div><dt>运行中不会被抢占</dt><dd>没有时间片。新的就绪进程不会打断当前运行者；当前进程完成或因 I/O 等原因阻塞时，才让出 CPU。</dd></div>
           <div><dt>短任务也可能久等</dt><dd>B 只需要 3 个时间单位，却必须先等 A 的 5 个时间单位。先来先服务简单，但并不保证等待时间最短。</dd></div>
           `}
         </dl>
-        ${isRoundRobin ? '<div class="rr-tradeoff"><h3>时间片越小，就一定越好吗？</h3><p>较小的时间片让等待者更早轮到 CPU，但通常也带来更频繁的切换。这里忽略了切换开销，所以总耗时始终是 8；真实系统不能忽略这种成本。较大的时间片减少轮换，但可能让后面的进程等待更久。</p></div>' : isShortestRemaining ? `<div class="rr-tradeoff"><h3>短任务更早完成，运行者也要重新等待</h3><p>B 在 t=1 到达时，<a class="inline-link" href="${WIKI_PAGES.sjf.href}">非抢占 SJF</a>让 B 等到 t=5 才运行、t=8 完成；SRTF 让 B 在 t=1 立即运行、t=4 完成，但 A 被推迟到 t=8 完成。SRTF 的平均等待为 (3 + 0) ÷ 2 = 1.5，SJF 为 2。此比较仅针对 B 在 t=1 到达的场景。本例没有 I/O，累计等待 = 完成时刻 − 到达时刻 − CPU 需求；A 的首次响应是 0，但累计等待是 3。切换开销被省略，短任务持续到来仍可能使长任务饥饿。</p></div>` : isShortestJob ? `<div class="rr-tradeoff"><h3>平均等待减少，不代表每个任务都更快</h3><p>本例无 I/O，等待时间是首次运行时刻减去到达时刻。同时到达时，<a class="inline-link" href="${WIKI_PAGES.fcfs.href}">FCFS</a>的平均等待为 (0 + 5) ÷ 2 = 2.5，SJF 为 (0 + 3) ÷ 2 = 1.5；但 A 反而需要等待。这个比较仅针对同时到达的场景。若短任务持续到来，长任务可能长期得不到 CPU。</p></div>` : `<div class="rr-tradeoff"><h3>同一组进程，换成轮转会怎样？</h3><p>这里 B 在 t=5 才首次运行。相同入队顺序下，<a class="inline-link" href="${WIKI_PAGES.roundRobin.href}">时间片轮转</a>取 q=2 时，B 在 t=2 就能获得 CPU，但完成时刻是 t=7，FCFS 则是 t=8。这个例子展示等待与完成时刻的变化，不代表轮转在所有场景中都更好。</p></div>`}
+        ${isRoundRobin ? '<div class="rr-tradeoff"><h3>时间片大小与响应、切换开销</h3><p>响应时间是进程到达后，到第一次获得 CPU 的间隔。较小的时间片通常让排在后面的进程更早获得 CPU，但也可能增加切换次数。本例切换开销取零，A、B 的总 CPU 需求始终是 8；如果每次切换需要额外时间，总耗时还要计入这些开销。较大的时间片减少轮转次数，却可能增加后续进程首次运行前的等待。</p></div>' : isShortestRemaining ? `<div class="rr-tradeoff"><h3>短任务更早完成，运行者也要重新等待</h3><p>B 在 t=1 到达时，<a class="inline-link" href="${WIKI_PAGES.sjf.href}">非抢占 SJF</a>让 B 等到 t=5 才运行、t=8 完成；SRTF 让 B 在 t=1 立即运行、t=4 完成，但 A 被推迟到 t=8 完成。SRTF 的平均等待为 (3 + 0) ÷ 2 = 1.5，SJF 为 2。此比较仅针对 B 在 t=1 到达的场景。</p><p>响应时间计算到首次获得 CPU 为止；累计等待时间还包括被抢占后的排队。本例没有 I/O，累计等待 = 完成时刻 − 到达时刻 − CPU 需求，因此 A 的响应时间是 0，累计等待却是 3。切换开销取零。若短任务持续到来，长任务可能长期得不到 CPU，这种情况称为饥饿。</p></div>` : isShortestJob ? `<div class="rr-tradeoff"><h3>平均等待减少，不代表每个任务都更快</h3><p>本例无 I/O，也不抢占，等待时间等于首次运行时刻减去到达时刻。同时到达时，<a class="inline-link" href="${WIKI_PAGES.fcfs.href}">FCFS</a>的平均等待为 (0 + 5) ÷ 2 = 2.5，SJF 为 (0 + 3) ÷ 2 = 1.5；但 A 从立即运行变为等待 3 个单位。这些数值只适用于同时到达的场景。</p><p>如果短任务持续到来，长任务可能始终未被选中，长期得不到 CPU。这种情况称为饥饿；平均等待时间较低并不保证每个进程都能及时运行。</p></div>` : `<div class="rr-tradeoff"><h3>相同任务与入队顺序下的轮转比较</h3><p>响应时间是到达后到首次获得 CPU 的间隔。本例 B 在 t=5 才首次运行。相同入队顺序下，<a class="inline-link" href="${WIKI_PAGES.roundRobin.href}">时间片轮转</a>取 q=2 时，B 在 t=2 获得 CPU，t=7 完成；FCFS 下则在 t=8 完成。轮转改变了首次响应与完成时刻，但这个结果不能推广为所有任务组合都更快。</p></div>`}
       </section>
       ${wikiRelated(pageId)}
     </main><footer><span>OSLab / CPU 虚拟化</span><a href="#top">回到页首 ↑</a></footer>

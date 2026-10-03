@@ -1,7 +1,7 @@
 const MULTIPROCESSOR_SCENES = Object.freeze({
   queues: {title: '每核队列与负载均衡', text: 'CPU 0 分配 A、B、C，CPU 1 分配 D。一个核空闲时，是否从另一核队尾迁移一个排队任务？'},
-  shared: {title: '共享队列', text: '两个 CPU 从同一队列领取任务。本例按 CPU 0、CPU 1 的顺序协调取队首，不模拟锁实现或争用耗时。'},
-  affinity: {title: '缓存亲和性', text: 'A 曾在 CPU 0 执行，现在重新就绪。两个核都可用，对照继续留在原核与迁移到 CPU 1；不计算缓存命中率或迁移成本。'},
+  shared: {title: '共享队列', text: '两个 CPU 从同一队列领取任务，按 CPU 0、CPU 1 的顺序协调取队首，锁争用开销取零。'},
+  affinity: {title: '缓存亲和性', text: 'A 曾在 CPU 0 执行，现在重新就绪。两个核都可用，可以留在原核或迁移到 CPU 1；原运行关联可能影响缓存复用，但不保证命中。'},
 });
 
 function buildMultiprocessorRun(scene = 'queues', balance = true, target = 0) {
@@ -13,19 +13,19 @@ function buildMultiprocessorRun(scene = 'queues', balance = true, target = 0) {
     state.queues[0] = [];
     state.cpus[target] = 'A';
     state.migrations = target;
-    state.events = [target === 0 ? '将 A 派发到原核：可能复用已有缓存数据。' : '将 A 派发到新核：可能需要重新预热，未计入任何耗时。'];
+    state.events = [target === 0 ? '将 A 派发到原核：可能复用已有缓存数据。' : '将 A 派发到新核：可能需要重新预热，代价取决于缓存与工作集。'];
     snapshots.push(structuredClone(state));
     state.time = 2;
     state.busy[target] = 1;
     state.tasks[0].remaining = 1;
     state.cache[target] = ['A'];
-    state.events = ['A 已在所选 CPU 执行一个示意单位；记录运行关联，不保证真实缓存内容仍驻留。'];
+    state.events = ['A 已在所选 CPU 执行一个示意单位；有运行关联不保证缓存内容仍驻留。'];
     snapshots.push(structuredClone(state));
     state.time = 3;
     state.busy[target] = 2;
     state.tasks[0].remaining = 0;
     state.cpus[target] = null;
-    state.events = ['A 的示例工作完成。两条路径均不模拟缓存成本，不能据此比较真实性能。'];
+    state.events = ['A 的两个 CPU 工作单位已完成。给定工作量不包含缓存预热代价，不能据此比较留在原核与迁移的实际性能。'];
     snapshots.push(structuredClone(state));
     return {scene, balance, target, snapshots, duration: 3, timeline: []};
   }

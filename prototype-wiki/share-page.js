@@ -6,12 +6,12 @@ function renderSharePage(root) {
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">CPU 虚拟化 / 调度</p>
         <h1 id="page-title">比例份额调度 <span>Proportional Share</span></h1>
-        <p class="lead">权重决定应得份额，不代表每轮固定轮到谁。</p>
-        <p class="definition">比例份额调度是一类目标：让持续竞争 CPU 的进程，按相对权重获得处理器时间。<strong>彩票调度</strong>用票数表达中奖概率；<strong>步长调度（Stride）</strong>用累计 pass 值确定性地选择下一位。这里用同一组权重对照两者。</p>
-        <p class="model-note">教学模型：单核、三个进程始终就绪、无 I/O、无任务完成、零切换开销，每次分配 1 个示意 CPU 单位。观察结束不是进程完成；权重只在重新开始时改变。彩票采用固定种子的教学伪随机序列，非安全随机数；Stride 初始 pass 均为 0，并列按 A、B、C 顺序。</p>
+        <p class="lead">权重确定目标 CPU 份额，不保证每轮的分配顺序。</p>
+        <p class="definition">权重是用于比较 CPU 分配比例的数值。进程的目标份额等于自身权重除以当前可运行进程的总权重。<strong>彩票调度</strong>把权重表示为票数，每轮随机选一张票；<strong>步长调度（Stride）</strong>则比较各进程的累计虚拟进度 pass，选择数值最小者。同一组权重可以得到不同的短期分配顺序。</p>
+        <p class="model-note">单核，三个进程始终就绪并持续竞争 CPU，无 I/O，切换开销为零，每次分配 1 个示意 CPU 单位。一条序列内权重固定；彩票使用给定种子的伪随机抽签序列。Stride 初始 pass 均为 0，并列按 A、B、C 顺序选择。</p>
       </section>
       <section class="share-demo" id="demo" aria-labelledby="demo-title">
-        <div class="section-heading"><div><p class="section-index">01 / PROPORTIONAL SHARE</p><h2 id="demo-title">同一份权重，两种分配方式</h2></div><p class="rr-clock">已分配 <strong id="share-time">0</strong> / <span id="share-total">60</span></p></div>
+        <div class="section-heading"><div><p class="section-index">01 / PROPORTIONAL SHARE</p><h2 id="demo-title">同一组进程权重下的彩票调度与步长调度</h2></div><p class="rr-clock">已分配 <strong id="share-time">0</strong> / <span id="share-total">60</span></p></div>
         <div class="rr-toolbar share-toolbar">
           <div class="rr-transport" role="group" aria-label="播放控制">
             <button type="button" class="icon-button primary" id="share-play" title="播放" aria-label="播放" aria-pressed="false"><span aria-hidden="true">▶</span></button>
@@ -34,7 +34,8 @@ function renderSharePage(root) {
           </section>
           <section class="share-mechanism" aria-labelledby="stride-title">
             <p class="section-index">STRIDE / 确定性选择</p><h3 id="stride-title">步长调度</h3>
-            <p class="share-method-note">选 pass 最小者；运行后 pass 增加一个 stride。</p>
+            <p class="share-method-note">步长 stride = ${strideScale} ÷ 权重。${strideScale} 是本例统一选取的计算常数，只确定虚拟进度的尺度，不是时间片长度。</p>
+            <p class="share-method-note">pass 是累计虚拟进度，不是实际时间或剩余工作量。每轮选 pass 最小者；运行 1 个 CPU 单位后，pass 增加自己的步长。权重越大，步长越小，因而能更频繁地被选中。</p>
             <table class="share-pass"><thead><tr><th scope="col">进程</th><th scope="col">步长</th><th scope="col">pass 前</th><th scope="col">pass 后</th></tr></thead><tbody id="share-passes"></tbody></table>
             <p class="share-decision" id="stride-reason" aria-live="polite"></p>
           </section>
@@ -47,15 +48,15 @@ function renderSharePage(root) {
         <p class="share-observation" id="share-observation" aria-live="polite"></p>
       </section>
       <section class="rr-rules" id="rules" aria-labelledby="rules-title">
-        <div class="section-heading"><div><p class="section-index">02 / THE FAMILY</p><h2 id="rules-title">比例是目标，选择方式可以不同</h2></div></div>
+        <div class="section-heading"><div><p class="section-index">02 / THE FAMILY</p><h2 id="rules-title">目标 CPU 份额与进程选择规则</h2></div></div>
         <dl class="concepts rr-concepts">
           <div><dt>彩票调度：概率上的份额</dt><dd>拥有 5 张票、总票数 10，每轮中奖概率为 50%。短期可能连续获胜，也可能连续没被选中；理想均匀抽签的长期统计趋向票数比例，但没有有限等待上界或固定窗口配额保证。</dd></div>
-          <div><dt>Stride：用虚拟进度追赶</dt><dd>本例 stride = ${strideScale} ÷ 权重。权重越大，步长越小；每次运行后 pass 增加自己的步长，因此更频繁地成为 pass 最小者。pass 不是实际时间或剩余工作量。</dd></div>
-          <div><dt>公平份额，不是完成时间排序</dt><dd>它不根据短任务、完成期限或 MLFQ 的行为反馈选人。即使长期份额合适，也不等于每轮公平、响应时间最短，或任何进程一定最快完成。</dd></div>
+          <div><dt>Stride：优先选择累计虚拟进度最小的进程</dt><dd>本例 stride = ${strideScale} ÷ 权重。权重越大，步长越小；每次运行后 pass 增加自己的步长，因此更频繁地成为 pass 最小者。pass 不是实际时间或剩余工作量。</dd></div>
+          <div><dt>公平份额，不是完成时间排序</dt><dd>它不根据短任务、完成期限或 MLFQ 的行为反馈选择进程。即使长期份额合适，也不等于每轮公平、响应时间最短，或任何进程一定最快完成。</dd></div>
         </dl>
-        <div class="rr-tradeoff"><h3>还有哪些相关实现？</h3><p>加权轮转可以按权重安排服务次数，但会受轮次排列和突发分配影响；加权公平排队（WFQ）用虚拟完成时间安排服务，常见于网络调度。Linux CFS 也通过加权虚拟运行时间追求公平，但它不等同于这里的 Stride；较新的 Linux 公平调度还涉及 EEVDF。本页只实现彩票和 Stride，不模拟这些系统的完整规则。</p></div>
-        <div class="rr-tradeoff"><h3>权重只有在竞争者确定时才有明确分母</h3><p>目标份额 = 自己的权重 ÷ 当前可运行进程的总权重。本例三个进程一直就绪，因此目标不变。实际系统中，阻塞、退出、新任务到达和权重变化都会改变竞争集合；Stride 还需要明确新进程的 pass 初始化等规则，不能把本例的静态过程直接套用。</p></div>
-        <div class="rr-tradeoff"><h3>固定种子，不意味着彩票保证按比例兑现</h3><p>种子只使这次教学抽签可以复现。重新开始重放同一序列，改变种子得到另一条序列；观察轮数改变仍保留相同抽签前缀。某条 240 轮结果不一定比某条 60 轮结果更接近目标。Stride 的并列顺序会影响初始几轮；本例三种固定权重采用整数步长，不演示取整误差、动态加入或实际切换成本。</p></div>
+        <div class="rr-tradeoff"><h3>其他按权重分配的调度方式</h3><p>加权轮转按权重安排服务次数，结果还受轮次顺序影响。加权公平排队（WFQ）根据权重计算虚拟完成时间，并用它决定服务顺序，常见于网络调度。</p><p>Linux CFS 比较加权后的虚拟运行时间。较新的 EEVDF 先确定尚未超过应得 CPU 份额的候选，再比较由请求长度和权重计算的虚拟截止时间。这些数值用于调度排序，并不等于任务的实际完成时刻；各策略的选择规则也不同于 Stride。</p></div>
+        <div class="rr-tradeoff"><h3>目标份额的分母是当前可运行进程的总权重</h3><p>目标份额 = 自己的权重 ÷ 当前可运行进程的总权重。本例三个进程一直就绪，因此目标不变。实际系统中，阻塞、退出、新任务到达和权重变化都会改变竞争集合；Stride 还需要明确新进程的 pass 初始化等规则，不能把本例的静态过程直接套用。</p></div>
+        <div class="rr-tradeoff"><h3>固定种子不保证有限轮数内达到目标份额</h3><p>给定权重与种子，伪随机抽签的顺序确定，但不保证有限轮数的份额恰好等于票数比例。某条 240 轮结果不一定比某条 60 轮结果更接近目标。Stride 的并列顺序会影响初始几轮；三组给定权重采用整数步长，其他权重还可能产生取整误差。</p></div>
       </section>
       ${wikiRelated('shares')}
     </main><footer class="site-footer"><span>OSLab / CPU 虚拟化</span><a href="#top">回到页首 ↑</a></footer>
@@ -114,7 +115,7 @@ function renderSharePage(root) {
     position.value = time;
     position.setAttribute('aria-valuetext', time ? `已分配 ${time} 轮，彩票最近选 ${lottery.decision.id}，Stride 最近选 ${stride.decision.id}` : '尚未分配');
     const deviation = frame => Math.max(...run.processes.map((process, index) => Math.abs(frame.counts[index] / time - process.weight / run.total) * 100));
-    root.querySelector('#share-observation').textContent = time ? `${time === run.duration ? '观察结束，三个进程仍可继续运行。' : `已观察 ${time} 轮。`}最大份额偏差：彩票 ${deviation(lottery).toFixed(1)} 个百分点，Stride ${deviation(stride).toFixed(1)} 个百分点。这是当前样本，不是策略保证。` : '尚未分配 CPU；目标占比已确定，实际占比还没有样本。';
+    root.querySelector('#share-observation').textContent = time ? `${time === run.duration ? '观察结束，三个进程仍可继续运行。' : `已观察 ${time} 轮。`}最大份额偏差：彩票 ${deviation(lottery).toFixed(1)} 个百分点，Stride ${deviation(stride).toFixed(1)} 个百分点。偏差是实际占比与目标占比之差的绝对值；这里取三个进程中的最大值，后续轮次仍可能改变它。` : '尚未分配 CPU。权重已确定目标占比，但实际占比要根据已分配的 CPU 单位计算。';
     playButton.disabled = time === run.duration;
     stepButton.disabled = time === run.duration;
   };
