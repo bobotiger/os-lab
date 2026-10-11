@@ -86,6 +86,7 @@ function renderProcessPage(root) {
           <p class="definition">程序包含指令和相关数据。操作系统用进程管理程序的一次执行，包括所需资源和运行状态。同一份程序可以由多个进程执行；这些进程具有不同的标识，并分别记录执行位置和计算状态。</p>
           <p class="model-note">示例采用单核 CPU，以进程为调度对象，区分五种基本状态。现代系统通常以线程为调度单位。</p>
           <p class="process-homework-link"><a class="inline-link" href="process-homework.html">进程作业：process-run.py 使用说明与练习</a></p>
+          <p class="process-homework-link"><a class="inline-link" href="cpu-virtualization-experiments.html">CPU 虚拟化实验：CPU 共享、进程状态、进程创建、程序替换与回收、系统调用</a></p>
         </section>
 
         <section class="state-section" id="states" aria-labelledby="states-title">

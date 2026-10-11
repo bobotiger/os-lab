@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>计算、等待与暂停：观察进程状态 · OSLab</title>
+<style>
+:root{--ink:#253330;--green:#176754;--blue:#315f7b;--rust:#9d493b;--line:#d9e1dc;--paper:#fbfcfa}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.85 "Noto Sans SC","Source Han Sans SC","Microsoft YaHei",sans-serif;letter-spacing:0}
+main{max-width:1100px;margin:auto;padding:28px 36px 60px}
+a{color:var(--green);text-underline-offset:4px}
+nav{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font-size:13px;padding-bottom:24px;border-bottom:1px solid var(--line)}
+header{padding:26px 0 22px}h1{font-size:32px;line-height:1.4;margin:8px 0 14px}h2{font-size:23px;line-height:1.5;margin:0 0 14px}h3{font-size:18px;line-height:1.6;margin:0 0 12px}p{margin:0 0 14px}
+.eyebrow{font-size:13px;color:var(--green)}.lead{max-width:68ch}.conditions{display:flex;flex-wrap:wrap;gap:8px 24px;font-size:14px;padding:12px 0;border-block:1px solid var(--line)}
+.intro-processes{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px 16px;margin:18px 0;padding:16px 0;border-block:1px solid var(--line)}
+.intro-processes dt{font-weight:500}.intro-processes dd{margin:0}
+.section-links{justify-content:flex-start;margin:0 0 8px;padding:10px 0 18px;gap:12px 24px}
+.exercise{padding:22px 0;border-top:1px solid var(--line);scroll-margin-top:20px}
+.exercise h4{font-size:15px;font-weight:500;margin:18px 0 8px}
+.exercise ul{margin:0 0 14px;padding-left:22px}.exercise li+li{margin-top:8px}
+.reference-answer{border-left:2px solid #9bbcb0;padding-left:16px;margin:18px 0 0}
+.reference-answer h4{color:var(--green);margin-top:0}
+.output-guide th{white-space:nowrap}.output-guide td:first-child{font-family:Consolas,monospace;white-space:nowrap}
+section{padding:28px 0;border-bottom:1px solid var(--line)}.compare,.facts{display:grid;grid-template-columns:1fr 1fr;gap:32px}.compare>article,.facts>article{min-width:0}.scenario{font-size:13px;color:#596a63}
+.state{font:38px/1.4 Consolas,monospace;margin:12px 0 8px}.green{color:var(--green)}.blue{color:var(--blue)}.rust{color:var(--rust)}.caption{font-size:13px;color:#596a63}.question{margin-top:18px;border-left:3px solid var(--rust);padding-left:16px}
+.stages{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--line);margin:18px 0 24px}.stages button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:12px 16px;font:inherit;font-size:14px;line-height:1.7;color:#596a63;cursor:pointer}.stages button[aria-selected="true"]{border-bottom-color:var(--green);color:var(--green);font-weight:500}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--green);outline-offset:4px}
+.current{min-height:84px}.current h3{margin-bottom:8px}.objects{display:grid;grid-template-columns:1fr 1fr;gap:28px}.object{border:1px solid var(--line);border-radius:4px;padding:18px;min-width:0}.object h3{display:flex;justify-content:space-between;gap:12px;align-items:baseline}.badge{font:24px/1 Consolas,monospace;color:var(--green)}.object:nth-child(2) .badge{color:var(--blue)}.object .action{min-height:62px}
+.cpu-label{font-size:13px;margin:12px 0 8px}.cpu-value{font:24px/1.4 Consolas,monospace}.meter{height:18px;background:#e9eeea;margin:10px 0}.meter span{display:block;height:100%;background:var(--green)}.object:nth-child(2) .meter span{background:var(--blue)}.pipe{margin-top:20px;border-block:1px solid var(--line);padding:12px 0;font-size:14px}.pipe strong{font-weight:500;color:var(--blue)}
+.meter-axis{position:relative;height:30px;margin-top:-10px;font:12px/1.5 Consolas,"Microsoft YaHei",monospace;color:#596a63}
+.meter-axis span{position:absolute;top:8px;white-space:nowrap}
+.meter-axis span::before{content:"";position:absolute;top:-8px;height:6px;border-left:1px solid #596a63}
+.meter-axis span:first-child{left:0}.meter-axis span:first-child::before{left:0}
+.meter-axis span:nth-child(2){left:50%;transform:translateX(-50%)}.meter-axis span:nth-child(2)::before{left:50%}
+.meter-axis span:last-child{right:0}.meter-axis span:last-child::before{right:0}
+.steps{display:grid;grid-template-columns:40px 1fr;gap:12px 18px}.step-number{font:24px Consolas,monospace;color:var(--green)}.step-body{min-width:0}.step-body+.step-number{margin-top:16px}
+.command{position:relative;background:#eff4f3;border-left:2px solid #9bbcb0;margin:14px 0;padding:14px 52px 14px 14px}.command pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:13px/1.85 Consolas,monospace}.copy{position:absolute;right:8px;top:8px;width:32px;height:32px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--green);cursor:pointer}.copy span{display:block;width:12px;height:14px;border:1.5px solid currentColor;margin:auto;box-shadow:-3px -3px 0 -1px white,-3px -3px 0 0 currentColor}.command-feedback{font-size:13px;line-height:1.8;color:var(--green);margin:0 0 16px;overflow-wrap:anywhere}
+.meanings{margin:14px 0 20px}.meanings dt{font-size:14px;font-weight:500;margin-top:12px}.meanings dd{font-size:14px;margin:4px 0 0}code{font-family:Consolas,monospace;overflow-wrap:anywhere}
+details{margin:16px 0}summary{cursor:pointer;color:var(--green)}details>div{padding-top:14px}.raw{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.8 Consolas,monospace;background:#eff4f3;padding:14px}.table-scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px;margin:14px 0}td,th{border-bottom:1px solid var(--line);padding:10px 8px;text-align:left;vertical-align:top}th{font-weight:500}footer{font-size:13px;padding-top:24px}
+@media(max-width:700px){main{padding:18px 18px 40px}h1{font-size:26px}h2{font-size:21px}.compare,.facts,.objects{grid-template-columns:1fr;gap:20px}.compare>article+article{border-top:1px solid var(--line);padding-top:18px}.state{font-size:32px}.steps{grid-template-columns:28px 1fr;gap:12px}.stages{display:grid;grid-template-columns:1fr 1fr}.stages button{padding:12px 6px;font-size:13px}.current{min-height:120px}.object .action{min-height:0}}
+</style>
+</head>
+<body>
+<main>
+<nav aria-label="CPU 虚拟化实验导航"><a href="cpu-virtualization-experiments.html">CPU 虚拟化实验</a><a href="index.html">进程知识</a></nav>
+<header>
+<div class="eyebrow">CPU 虚拟化实验 · 任务二 · 进程状态</div>
+<h1>计算、等待与暂停：观察进程状态</h1>
+<p class="lead">本实验在 Ubuntu 中观察进程的三种状态：可以执行计算、等待数据、被信号暂停。每次只改变一个条件，再比较改变前后的状态记录。</p>
+<p class="lead">运行参考程序后，终端中的控制程序会创建两个进程 A、B：</p>
+<dl class="intro-processes">
+<dt>进程 A</dt><dd>启动后持续执行计算。</dd>
+<dt>进程 B</dt><dd>启动后等待管道中的数据，收到一个字节后开始持续计算。</dd>
+</dl>
+<p class="lead">管道是进程之间传递数据的通道。本实验把一个字节的数据作为通知，用来让 B 开始计算。</p>
+<p class="lead">A、B 使用同一个逻辑 CPU。实验过程中，可以单独暂停和恢复 A，B 的计算或等待条件不受这些命令影响。</p>
+</header>
+<nav class="section-links" aria-label="实验章节">
+<a href="#setup-heading">准备程序</a><a href="#reading-heading">输出说明</a><a href="#practice-heading">实验步骤</a><a href="#stages-heading">实测对照</a><a href="#meaning-heading">状态与恢复条件</a><a href="#guide-heading">程序说明</a>
+</nav>
+
+<section aria-labelledby="setup-heading">
+<h2 id="setup-heading">准备程序并启动</h2>
+<p>下载 <a href="process-state-work.c" download>参考程序 process-state-work.c</a>，放到 Ubuntu 的实验目录。需要已有的 GCC、Python 3 和 taskset，不需要管理员权限。</p>
+<p>在这个目录的 Bash 终端中执行以下命令：</p>
+<div class="command"><button class="copy" aria-label="复制编译与启动命令" title="复制编译与启动命令"><span></span></button><pre>gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror process-state-work.c -o process-state-work
+CPU=$(python3 -c 'import os; print(min(os.sched_getaffinity(0)))')
+taskset -c "$CPU" ./process-state-work</pre></div>
+<dl class="meanings">
+<dt>编译</dt><dd>第一行把参考源码编译成可运行的 process-state-work 程序。</dd>
+<dt>选择 CPU</dt><dd>第二行把一个允许使用的逻辑 CPU 编号保存到变量 CPU 中。第三行用 taskset 将程序限制在这个 CPU 上，程序创建的 A、B 也继承此限制。</dd>
+</dl>
+<p>启动后会显示两个进程的编号，以及等待输入的提示符：</p>
+<pre class="raw">READY A=7779 B=7780
+Commands: observe / send / stop / resume / quit
+state&gt;</pre>
+<p>这里的编号只是示例，以你实际得到的编号为准。出现 <code>state&gt;</code> 后，输入的是本实验程序的命令；只有退出程序后，终端才重新接受 Bash 命令。</p>
+</section>
+
+<section aria-labelledby="reading-heading">
+<h2 id="reading-heading">先了解输出中的状态和时间</h2>
+<p><code>observe</code> 观察约一秒，再分别输出 A、B 的记录。每次输出中，一个进程对应一行。</p>
+<div class="table-scroll"><table class="output-guide"><thead><tr><th>输出字段</th><th>含义</th></tr></thead><tbody>
+<tr><td>NAME</td><td>进程名称 A 或 B。</td></tr>
+<tr><td>PID</td><td>进程编号。同一轮实验中不变；重新启动后，以新的 READY 输出为准。</td></tr>
+<tr><td>BEFORE</td><td>观察开始时的状态。</td></tr>
+<tr><td>AFTER</td><td>观察结束时的状态。以下步骤主要比较这一列。</td></tr>
+<tr><td>CPU_DELTA(s)</td><td>本次观察中，CPU 为该进程执行指令所用的时间，单位为秒。例如 0.530 表示用了 0.530 秒 CPU 时间。</td></tr>
+<tr><td>elapsed</td><td>本次观察实际经过的秒数，通常略大于一秒。</td></tr>
+</tbody></table></div>
+<p>CPU 时间不包含进程等待数据或等待分配 CPU 的时间。它与实际经过的时间不是同一个数值。</p>
+<div class="table-scroll"><table><thead><tr><th>状态</th><th>Linux 中的含义</th><th>本实验中的条件</th></tr></thead><tbody>
+<tr><td><code>R</code></td><td>正在运行，或已经就绪、等待 CPU。</td><td>进程有计算可做，并且没有被暂停。</td></tr>
+<tr><td><code>S</code></td><td>可被信号中断的睡眠。</td><td>B 的管道中没有数据，读取操作正在等待。</td></tr>
+<tr><td><code>T</code></td><td>被暂停。</td><td>A 收到了 SIGSTOP 暂停信号。</td></tr>
+</tbody></table></div>
+<p>R 不保证采样的那个瞬间正在执行。判断一个进程是否在观察期间用过 CPU，还要看 CPU_DELTA(s) 是否大于零。0.000 表示本次采样没有记录到它使用 CPU 的时间。</p>
+</section>
+
+<section aria-labelledby="practice-heading">
+<h2 id="practice-heading">实验步骤</h2>
+<p>从刚启动的状态开始，按以下顺序操作。每个步骤先比较记录，再结合参考解释核对原因。</p>
+
+<article class="exercise" id="wait-exercise">
+<h3>1. 不发送通知，观察 B 的等待状态</h3>
+<p>此时 A 持续计算，B 的管道中没有数据。先不改变任何条件，连续观察两次：</p>
+<div class="command"><button class="copy" aria-label="复制初始观察命令" title="复制初始观察命令"><span></span></button><pre>observe
+observe</pre></div>
+<h4>观察什么</h4>
+<ul><li>在每次输出中，比较 A、B 两行的 AFTER 列和 CPU_DELTA(s) 列。</li><li>两次观察之间没有发送数据。B 的状态和 CPU 时间读数是否保持一致？</li></ul>
+<div class="reference-answer"><h4>参考结果与原因</h4>
+<p>观察结束时，A 的状态为 R，CPU 时间大于零；B 的状态为 S，CPU 时间为 0.000 秒。</p>
+<p>B 正在等待管道中的数据，不能执行读取之后的计算。再等一秒并不会产生数据，所以第二次观察时它仍然等待。</p>
+</div>
+</article>
+
+<article class="exercise" id="send-exercise">
+<h3>2. 发送通知，观察 B 开始计算</h3>
+<p>只改变 B 的数据条件，A 仍然持续计算。<code>send</code> 向管道写入一个字节，随后再观察：</p>
+<div class="command"><button class="copy" aria-label="复制发送与观察命令" title="复制发送与观察命令"><span></span></button><pre>send
+observe</pre></div>
+<h4>观察什么</h4>
+<ul><li>比较上一步与本次观察的 AFTER 列，B 的状态是否从 S 变为 R？本次使用的 CPU 时间是否大于零？</li><li>A 那一行的 CPU 时间是否也大于零？</li></ul>
+<div class="reference-answer"><h4>参考结果与原因</h4>
+<p>观察结束时，A、B 的状态均为 R，两者在本次观察中都用过 CPU。</p>
+<p>管道有了数据，B 的读取操作可以完成，它随后进入计算。A、B 使用同一个逻辑 CPU，通过调度轮流执行；两行都有 CPU 时间，不表示两个进程在同一时刻执行指令。</p>
+</div>
+</article>
+
+<article class="exercise" id="stop-exercise">
+<h3>3. 暂停 A，观察 B 是否继续计算</h3>
+<p>保持 B 的计算不变。<code>stop</code> 只向 A 发送 SIGSTOP 暂停信号：</p>
+<div class="command"><button class="copy" aria-label="复制暂停与观察命令" title="复制暂停与观察命令"><span></span></button><pre>stop
+observe</pre></div>
+<h4>观察什么</h4>
+<ul><li>观察结束时，A 的状态是否为 T？CPU 时间是否为零或接近零？</li><li>B 的状态是否仍为 R？CPU 时间是否仍大于零？</li></ul>
+<div class="reference-answer"><h4>参考结果与原因</h4>
+<p>观察结束时，A 的状态为 T：它已被暂停，不再执行计算。B 没有收到暂停信号，继续计算。</p>
+<p>A 的暂停与等待管道数据不同：即使还有计算可做，暂停期间也不能执行。它需要继续信号才能恢复。</p>
+</div>
+</article>
+
+<article class="exercise" id="resume-exercise">
+<h3>4. 恢复 A，观察它是否重新计算</h3>
+<p><code>resume</code> 只向 A 发送 SIGCONT 继续信号，不给 B 发送新的数据：</p>
+<div class="command"><button class="copy" aria-label="复制恢复与观察命令" title="复制恢复与观察命令"><span></span></button><pre>resume
+observe</pre></div>
+<h4>观察什么</h4>
+<ul><li>观察结束时，A 的状态是否重新为 R？本次使用的 CPU 时间是否大于零？</li><li>比较暂停前、暂停后和恢复后的 PID 列，A 的进程编号是否相同？</li></ul>
+<div class="reference-answer"><h4>参考结果与原因</h4>
+<p>A 恢复后继续计算，再次与 B 共享 CPU。恢复没有创建新的进程，因此 A 的 PID 没有变化。</p>
+</div>
+</article>
+
+<article class="exercise" id="quit-exercise">
+<h3>5. 退出程序，结束两个计算进程</h3>
+<div class="command"><button class="copy" aria-label="复制退出命令" title="复制退出命令"><span></span></button><pre>quit</pre></div>
+<p>程序终止并回收 A、B，显示 <code>DONE: A and B terminated and reaped.</code>，然后返回 Bash 终端。</p>
+<p>程序不会因完成一次观察而自动退出。完成实验后应执行 quit；关闭标准输入或按 Ctrl+C 也会清理子进程。</p>
+</article>
+</section>
+
+<section aria-labelledby="stages-heading">
+<h2 id="stages-heading">四个条件的实测对照</h2>
+<p>以下记录对应实验步骤 1 至 4。状态取自 AFTER 列，时间取自 CPU_DELTA(s) 列。</p>
+<div class="stages" role="tablist" aria-label="实测条件"><button id="stage-0" role="tab" aria-selected="true" aria-controls="state-panel" data-stage="0">B 等待数据</button><button id="stage-1" role="tab" aria-selected="false" aria-controls="state-panel" data-stage="1" tabindex="-1">给 B 发送通知后</button><button id="stage-2" role="tab" aria-selected="false" aria-controls="state-panel" data-stage="2" tabindex="-1">暂停 A 后</button><button id="stage-3" role="tab" aria-selected="false" aria-controls="state-panel" data-stage="3" tabindex="-1">恢复 A 后</button></div>
+<div id="state-panel" role="tabpanel" aria-labelledby="stage-0">
+<div class="current"><h3 id="stage-title"></h3><p id="stage-reason"></p></div>
+<div class="objects">
+<article class="object"><h3>进程 A <span class="badge" id="state-a"></span></h3><p class="action" id="action-a"></p><div class="cpu-label">本次观察中使用 CPU 的时间</div><div class="cpu-value" id="cpu-a"></div><div class="meter" aria-hidden="true"><span id="bar-a"></span></div></article>
+<article class="object"><h3>进程 B <span class="badge" id="state-b"></span></h3><p class="action" id="action-b"></p><div class="cpu-label">本次观察中使用 CPU 的时间</div><div class="cpu-value" id="cpu-b"></div><div class="meter" aria-hidden="true"><span id="bar-b"></span></div></article>
+</div>
+<p class="caption">彩色条越长，表示本次观察中使用的 CPU 时间越多。读数为 0.000 秒时，只有灰色底条。两条色条的刻度相同，右端的 1.10 秒只是绘图范围，不是观察时长或 CPU 占用百分比。</p>
+<div class="pipe"><strong>管道中的通知</strong> · <span id="pipe-state"></span></div>
+</div>
+<details><summary>查看原始输出节选与测量条件</summary><div>
+<p>这些参考记录采集于 Ubuntu 22.04.5 LTS、WSL2，内核为 6.6.87.2-microsoft-standard-WSL2。CPU 时间来自 Linux 的 /proc 进程记录。</p>
+<p>PID 和具体秒数以实际运行结果为准。后台负载、计时粒度和宿主机活动会影响读数，不要求复现同样的小数。</p>
+<p>WSL 中 CPU 计时与经过时间可能存在偏差。受这些差异影响，两者的比值不能作为精确的 CPU 占用率，差值也不能直接解释为等待时间。</p>
+<pre class="raw">READY A=7779 B=7780
+Commands: observe / send / stop / resume / quit
+
+初始观察：
+OBSERVE elapsed=1.004 s
+NAME  PID       BEFORE AFTER CPU_DELTA(s)
+A     7779      R      R     1.050
+B     7780      R      S     0.000
+
+send 后观察：
+OBSERVE elapsed=1.004 s
+NAME  PID       BEFORE AFTER CPU_DELTA(s)
+A     7779      R      R     0.530
+B     7780      R      R     0.530
+
+stop 后观察：
+OBSERVE elapsed=1.000 s
+NAME  PID       BEFORE AFTER CPU_DELTA(s)
+A     7779      R      T     0.000
+B     7780      R      R     1.050
+
+resume 后观察：
+OBSERVE elapsed=1.004 s
+NAME  PID       BEFORE AFTER CPU_DELTA(s)
+A     7779      R      R     0.530
+B     7780      R      R     0.520
+
+DONE: A and B terminated and reaped.</pre>
+<p>状态是两次采样的结果，不是完整轨迹。刚启动或刚发送信号后，BEFORE 列可能仍为 R，AFTER 列才读到 S 或 T。若结果与当前条件不符，再执行一次 observe 核对。</p>
+</div></details>
+</section>
+
+<section aria-labelledby="meaning-heading">
+<h2 id="meaning-heading">状态变化取决于什么条件</h2>
+<div class="table-scroll"><table><thead><tr><th>本实验中的状态</th><th>为什么不能继续计算</th><th>如何继续</th></tr></thead><tbody>
+<tr><td>B 等待数据：S</td><td>管道中没有数据，读取操作不能完成。</td><td>向管道写入数据，使读取操作能够完成。</td></tr>
+<tr><td>A 被暂停：T</td><td>暂停信号阻止了执行，即使 A 有计算可做。</td><td>发送 SIGCONT 继续信号，解除暂停。</td></tr>
+</tbody></table></div>
+<p>这两个状态下都可能得到零 CPU 时间，但继续执行所需的条件不同。给 B 发送数据不会恢复 A；恢复 A 也不会给 B 的管道添加数据。</p>
+<p>条件满足后，进程可以重新参与 CPU 调度。是否马上执行、先执行 A 还是 B，由调度决定。</p>
+<details><summary>进一步验证：先暂停 A，再给 B 发送通知</summary><div>
+<p>先退出上一轮程序，再从 Bash 终端重新启动，恢复 A 计算、B 等待的初始条件：</p>
+<div class="command"><button class="copy" aria-label="复制重新启动命令" title="复制重新启动命令"><span></span></button><pre>taskset -c "$CPU" ./process-state-work</pre></div>
+<p>在 state&gt; 提示符下执行以下命令：</p>
+<div class="command"><button class="copy" aria-label="复制额外对照命令" title="复制额外对照命令"><span></span></button><pre>stop
+observe
+send
+observe
+resume
+observe
+quit</pre></div>
+<p>第一次观察：A 被暂停，B 等待数据。第二次观察：B 收到数据后开始计算，但 A 应仍为 T。第三次观察：A 收到继续信号后恢复计算。</p>
+<p>通过这个顺序核对两种恢复条件：数据解决 B 的等待，继续信号解决 A 的暂停。</p>
+</div></details>
+</section>
+
+<section aria-labelledby="guide-heading">
+<h2 id="guide-heading">程序说明</h2>
+<p>process-state-work 在当前终端接收命令，控制两个子进程 A、B。输入格式为每行一个命令，不带参数；结果直接显示在终端，不保存文件。</p>
+<div class="table-scroll"><table><thead><tr><th>命令</th><th>作用</th></tr></thead><tbody>
+<tr><td><code>observe</code></td><td>观察约一秒，输出两个进程的状态和本次使用的 CPU 时间，不改变计算、数据或暂停条件。</td></tr>
+<tr><td><code>send</code></td><td>给 B 的管道发送一个字节，一轮程序中只发送一次。B 开始计算后不会再等待管道。</td></tr>
+<tr><td><code>stop</code></td><td>向 A 发送 SIGSTOP 暂停信号。</td></tr>
+<tr><td><code>resume</code></td><td>向 A 发送 SIGCONT 继续信号。</td></tr>
+<tr><td><code>quit</code></td><td>终止并回收两个子进程，包括仍处于暂停状态的 A。</td></tr>
+</tbody></table></div>
+<p>要重新进行实验，先 quit，再从同一个 Bash 终端启动程序。帮助命令也在 Bash 中执行：</p>
+<div class="command"><button class="copy" aria-label="复制帮助命令" title="复制帮助命令"><span></span></button><pre>./process-state-work --help</pre></div>
+<p>重复 send 会提示通知已发送，不会重新开始 B 的等待。未知命令会显示可用命令列表，不改变当前条件。</p>
+</section>
+<footer><a href="cpu-virtualization-experiments.html">返回 CPU 虚拟化实验目录</a><br>上一项：<a href="cpu-sharing.html">任务一：一个 CPU，两个计算进程</a> · 下一项：<a href="fork-private.html">任务三：fork 创建子进程后的变量变化</a><br>相关实践：<a href="process-api-homework.html">进程 API 实践</a></footer>
+</main>
+<script src="process-states.js"></script>
+</body>
+</html>

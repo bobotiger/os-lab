@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>fork 创建子进程后的变量变化 · OSLab</title>
+<style>
+:root{--ink:#253330;--green:#176754;--blue:#315f7b;--rust:#9d493b;--line:#d9e1dc;--paper:#fbfcfa}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.85 "Noto Sans SC","Source Han Sans SC","Microsoft YaHei",sans-serif;letter-spacing:0}
+main{max-width:1100px;margin:auto;padding:28px 36px 60px}a{color:var(--green);text-underline-offset:4px}nav{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:24px}
+header{padding:26px 0 22px}h1{font-size:32px;line-height:1.4;margin:8px 0 14px}h2{font-size:23px;line-height:1.5;margin:0 0 14px}h3{font-size:18px;line-height:1.6;margin:0 0 12px}h4{font-size:15px;margin:18px 0 8px}p{margin:0 0 14px}.eyebrow{font-size:13px;color:var(--green)}.lead{max-width:68ch}
+.conditions{display:grid;grid-template-columns:100px minmax(0,1fr);gap:12px 18px;border-block:1px solid var(--line);padding:16px 0;margin:18px 0}.conditions dt{font-weight:500}.conditions dd{margin:0}
+.section-links{justify-content:flex-start;gap:12px 24px;padding:10px 0 18px}section{padding:28px 0;border-bottom:1px solid var(--line);scroll-margin-top:20px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:32px}.pair>article{min-width:0}.scenario{font-size:13px;color:#596a63}ul{padding-left:22px}li+li{margin-top:8px}
+.command{position:relative;background:#eff4f3;border-left:2px solid #9bbcb0;padding:14px 52px 14px 14px;margin:14px 0}pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.85 Consolas,monospace}.raw{padding:14px;background:#f0f3f5;border-left:2px solid #8ca8ba;margin:12px 0 16px}code{font-family:Consolas,monospace;overflow-wrap:anywhere}
+.copy{position:absolute;right:8px;top:8px;width:32px;height:32px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--green);cursor:pointer}.copy span{display:block;width:12px;height:14px;border:1.5px solid currentColor;margin:auto;box-shadow:-3px -3px 0 -1px white,-3px -3px 0 0 currentColor}.command-feedback{font-size:13px;color:var(--green);margin:0 0 16px;overflow-wrap:anywhere}
+.answer{border-left:2px solid #9bbcb0;padding-left:16px;margin-top:18px}.answer h4{color:var(--green);margin-top:0}.table-scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px;margin:14px 0}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:10px 8px}th{font-weight:500}
+.stage-controls{border:0;padding:0;margin:18px 0 24px;min-width:0}.stage-controls legend{font-size:14px;margin-bottom:10px}.stage-options{display:flex;flex-wrap:wrap;gap:10px 22px}.stage-options label{display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer}.stage-options input{accent-color:var(--green);width:17px;height:17px;flex-shrink:0}
+.stage-summary{min-height:108px}.stage-summary h3{margin-bottom:8px}.processes{display:grid;grid-template-columns:1fr 1fr;gap:24px}.process{border-top:3px solid var(--green);background:#eef4f1;padding:18px;min-width:0;min-height:190px}.process.child{border-color:var(--blue);background:#eef3f6}.process h3{margin-bottom:6px}.status{font-size:14px;min-height:28px;margin-bottom:18px}.variable{display:flex;align-items:baseline;gap:18px;font-family:Consolas,monospace}.value{font-size:36px;line-height:1.3;min-width:3ch;color:var(--green)}.child .value{color:var(--blue)}.child.changed .value{color:var(--rust)}.process.absent{border-color:var(--line);background:transparent}.process.absent .value{color:#68776f}
+.caption{font-size:13px;color:#596a63;margin-top:14px}.question{border-left:3px solid var(--rust);padding-left:16px;margin-top:18px}details{margin:16px 0}summary{cursor:pointer;color:var(--green)}details>div{padding-top:14px}.parameters dt{font-weight:500;margin-top:16px}.parameters dd{margin:4px 0 0}footer{font-size:13px;padding-top:24px}button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid var(--green);outline-offset:4px}
+@media(max-width:700px){main{padding:18px 18px 40px}h1{font-size:26px}h2{font-size:21px}.pair,.processes{grid-template-columns:1fr;gap:22px}.pair>article+article{border-top:1px solid var(--line);padding-top:22px}.conditions{grid-template-columns:76px minmax(0,1fr);gap:12px}.stage-summary{min-height:150px}.process{min-height:180px}.stage-options{flex-direction:column}}
+</style>
+</head>
+<body>
+<main>
+<nav aria-label="CPU 虚拟化实验导航"><a href="cpu-virtualization-experiments.html">CPU 虚拟化实验</a><a href="process-api.html">进程 API 知识</a></nav>
+<header>
+<div class="eyebrow">CPU 虚拟化实验 · 任务三 · fork 创建子进程</div>
+<h1>fork 创建子进程后的变量变化</h1>
+<p class="lead">参考程序先把变量 value 设为 100，再调用 fork() 创建子进程。原来的进程称为父进程，新创建的进程称为子进程。</p>
+<p class="lead">这次要弄清楚：子进程把 value 改为 200 后，父进程中的 value 会不会也变成 200？</p>
+<dl class="conditions"><dt>两次都相同</dt><dd>创建前，value 为 100；父进程不修改变量，并等待子进程完成后才输出自己的值。</dd><dt>两次的区别</dt><dd>第一次，子进程也不修改变量。第二次，子进程把自己的 value 改为 200。</dd></dl>
+</header>
+<nav class="section-links" aria-label="实验章节"><a href="#setup">准备程序</a><a href="#practice">比较变量值</a><a href="#mechanism">为什么互不影响</a><a href="#transfer">改变等待时间</a><a href="#guide">程序说明</a></nav>
+<section id="setup" aria-labelledby="setup-heading">
+<h2 id="setup-heading">准备程序</h2>
+<p>下载 <a href="fork-private-work.c" download>参考源码 fork-private-work.c</a>，放到 Ubuntu 的实验目录，在该目录的 Bash 终端中编译。需要已有的 GCC，不需要管理员权限。</p>
+<div class="command"><button class="copy" aria-label="复制编译命令" title="复制编译命令"><span></span></button><pre>gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror fork-private-work.c -o fork-private-work</pre></div>
+<p>程序输出两行：child 那一行是子进程的变量值，parent 那一行是父进程的变量值。程序保证先输出子进程的值，再输出父进程的值，然后自动退出。</p>
+</section>
+<section id="practice" aria-labelledby="practice-heading">
+<h2 id="practice-heading">比较父子进程的变量值</h2>
+<div class="pair">
+<article id="keep-exercise"><div class="scenario">第一次运行</div><h3>1. 父子进程都不修改变量</h3>
+<p>keep 表示保留原值。先运行这条命令，看看创建子进程后，两者各自读到什么：</p>
+<div class="command"><button class="copy" aria-label="复制不修改变量的命令" title="复制不修改变量的命令"><span></span></button><pre>./fork-private-work keep</pre></div>
+<p>比较 child 和 parent 两行，两个值是否都为 100？</p><h4>参考输出</h4><pre class="raw">child value=100
+parent value=100</pre>
+<p>父进程和子进程都读到 100。因为这次没有修改变量，还不能判断子进程修改后会不会影响父进程。</p>
+</article>
+<article id="change-exercise"><div class="scenario">第二次运行</div><h3>2. 子进程把 value 改为 200</h3>
+<p>change 表示让子进程修改变量。重新运行程序，初值仍是 100，父进程仍然不修改：</p>
+<div class="command"><button class="copy" aria-label="复制子进程修改变量的命令" title="复制子进程修改变量的命令"><span></span></button><pre>./fork-private-work change</pre></div>
+<p>先看 child 那一行：是不是 200？再看 parent 那一行：它是变成了 200，还是仍为 100？</p><h4>参考输出</h4><pre class="raw">child value=200
+parent value=100</pre>
+<p>child 输出 200，说明子进程确实改了变量；parent 输出 100，说明父进程的变量没有跟着改变。</p>
+</article>
+</div>
+<div class="answer"><h4>父进程是不是还没来得及读到新值？</h4><p>不是。第二次运行时，父进程等到子进程完成后再输出，因此子进程的修改发生在父进程读取之前。为什么修改已经完成，父进程的值却仍是 100？</p></div>
+</section>
+<section id="mechanism" aria-labelledby="mechanism-heading">
+<h2 id="mechanism-heading">为什么子进程的修改不影响父进程</h2>
+<p>fork() 创建的是一个新进程。子进程开始执行时，value 的初值来自创建时的父进程，因此两者最初都为 100。此后，父进程使用自己的 value，子进程使用自己的 value；不是两个进程共同修改一份变量。</p>
+<p>操作系统分别保存每个进程的执行状态，并管理它使用的内存。一个进程使用的内存地址及这些地址到物理内存的映射关系，称为它的虚拟地址空间。父子进程各有自己的虚拟地址空间，其中的普通私有变量可以独立修改。</p>
+<fieldset class="stage-controls"><legend>第二次运行中，父子进程的 value 如何变化</legend><div class="stage-options"><label><input type="radio" name="stage" value="0">创建子进程前</label><label><input type="radio" name="stage" value="1">刚创建子进程</label><label><input type="radio" name="stage" value="2" checked>子进程修改后</label></div></fieldset>
+<div class="stage-summary" aria-live="polite"><h3 id="stage-title"></h3><p id="stage-reason"></p></div>
+<div class="processes" aria-label="父子进程各自的变量">
+<article class="process"><h3>父进程</h3><p class="status" id="parent-status"></p><div class="variable"><span>value</span><strong class="value" id="parent-value">100</strong></div></article>
+<article class="process child" id="child-process"><h3>子进程</h3><p class="status" id="child-status"></p><div class="variable"><span>value</span><strong class="value" id="child-value">200</strong></div></article>
+</div>
+<p class="caption">value 后的数字是变量值，不是变量的内存地址。</p>
+<div class="answer"><h4>初值一样，不代表共用一份变量</h4><p>创建时继承原值，所以第一次运行输出 100 和 100。子进程后来修改的是自己的变量，所以第二次运行输出 200 和 100。</p></div>
+<details><summary>Linux 怎样在避免立即复制全部内存的同时，保证修改互不影响？</summary><div>
+<p>物理内存按页管理，物理页是保存数据的内存单位。刚创建子进程时，父子进程的私有内存可以暂时映射到相同的物理页，避免立即复制所有内容。</p>
+<p>这些暂时共享的私有页受到写保护。当一方要写入仍由双方共享的页时，内核为写入方复制这一页，并修改它的映射，再允许写入。另一方仍使用原来的页，内容不变。</p>
+<p>这种做法称为写时复制（Copy-on-Write）：需要写入时才复制，而不是创建时就复制全部私有内存。因此，暂时使用同一个物理页，也不代表父子可以直接修改对方的普通私有变量。</p>
+<p>变量值的输出没有记录物理页映射。变量也可能被编译器保存在寄存器中，所以不能仅凭 200 和 100 判断这次运行实际复制了哪个物理页。</p>
+</div></details>
+</section>
+<section id="transfer" aria-labelledby="transfer-heading">
+<h2 id="transfer-heading">父进程再等一秒，会读到 200 吗？</h2>
+<p>假设第二次运行时，父进程在子进程完成后再等一秒。父进程不修改自己的 value，子进程也没有给它传递数据。父进程再次读取自己的 value，会得到多少？为什么？</p>
+<details><summary>参考答案</summary><div><p>仍是 100。父进程读取的是自己的变量，再等一秒不会把子进程的值传过来。</p><p>如果父进程需要取得子进程计算出的 200，就要让子进程把数据传给它，例如通过管道发送，再由父进程读取。管道是进程间传递数据的通道。等待子进程完成，并不等于接收了它的变量值。</p></div></details>
+</section>
+<section id="guide" aria-labelledby="guide-heading">
+<h2 id="guide-heading">程序说明</h2>
+<p>程序创建一个子进程，分别输出父子进程的变量值。运行格式为 <code>./fork-private-work MODE</code>，将 MODE 替换为下面的 keep 或 change，不需要其他输入。</p>
+<dl class="parameters"><dt>keep</dt><dd>父子进程都不修改变量。</dd><dt>change</dt><dd>只让子进程把变量从 100 改为 200，父进程不修改。</dd><dt>--help</dt><dd>显示用法，不进行实验。</dd></dl>
+<div class="command"><button class="copy" aria-label="复制帮助命令" title="复制帮助命令"><span></span></button><pre>./fork-private-work --help</pre></div>
+<p>每次运行都从 value 为 100 开始。keep 和 change 是两次独立运行，不是先执行 keep 再修改同一轮程序的值。</p>
+<p>正常运行先输出 child value，再输出 parent value，随后自动退出。缺少参数、未知模式或多余参数会显示用法并以失败状态退出。</p>
+</section>
+<footer><a href="cpu-virtualization-experiments.html">返回 CPU 虚拟化实验目录</a><br>上一项：<a href="process-states.html">任务二：计算、等待与暂停</a> · 下一项：<a href="exec-reap.html">任务四：程序替换与进程回收</a><br><a href="fork-private.md">实验说明文档</a> · <a href="process-api.html">进程 API 知识</a></footer>
+</main>
+<script src="fork-private.js"></script>
+</body>
+</html>

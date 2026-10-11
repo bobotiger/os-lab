@@ -1,7 +1,7 @@
 function renderMlfqPage(root) {
   const {levels, scenarios, buildRun} = OSLabMlfq;
   root.innerHTML = `<div class="page rr-page mlfq-page" id="top">
-    ${wikiHeader('mlfq', [{href: '#demo', title: '反馈队列'}, {href: '#rules', title: '调度规则'}, {href: '#knowledge-related-title', title: '相关知识'}])}
+    ${wikiHeader('mlfq', [{href: '#demo', title: '反馈队列'}, {href: '#rules', title: '调度规则'}, {href: 'mlfq-homework.html', title: '作业'}, {href: '#knowledge-related-title', title: '相关知识'}])}
     <main>
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">CPU 虚拟化 / 调度</p>
@@ -9,6 +9,7 @@ function renderMlfqPage(root) {
         <p class="lead">根据累计 CPU 使用量调整优先级，不预先比较任务总时长。</p>
         <p class="definition">MLFQ（Multi-Level Feedback Queue）将就绪进程分入不同优先级的队列，优先级越高，越先获得 CPU。新进程先进入最高层，累计使用 CPU 达到本层配额后再降低层级。调度器选择最高的非空队列，同层采用<a class="inline-link" href="round-robin.html">时间片轮转</a>，不需要像<a class="inline-link" href="srtf.html">SRTF</a>那样比较已知的剩余时长。</p>
         <p class="model-note">单核、零切换开销、三个固定队列；Q0 最高，Q2 最低。时间片长度为 1 / 2 / 4，本层配额为 2 / 4 / 8 个示意时间单位。I/O 固定延迟且可并行，无设备争用；不同操作系统的反馈规则和参数并不相同。</p>
+        <p class="model-note"><a class="inline-link" href="mlfq-homework.html">多级反馈队列作业：程序说明与六题参考实践</a></p>
       </section>
       <section class="mlfq-demo" id="demo" aria-labelledby="demo-title">
         <div class="section-heading"><div><p class="section-index">01 / FEEDBACK QUEUES</p><h2 id="demo-title">先选最高优先级的非空队列，再取队首进程</h2></div><p class="rr-clock">当前时刻 <strong id="mlfq-time">0</strong> / <span id="mlfq-total"></span></p></div>

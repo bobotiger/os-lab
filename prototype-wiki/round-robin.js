@@ -79,7 +79,7 @@ function schedulingExplanation(run, frame, quantum) {
   return {title: `${frame.running} 继续运行`, text: `本轮已用 ${frame.sliceUsed}/${quantum}，尚未触发时间片耗尽或任务完成。${frame.queue.length ? `${frame.queue.join('、')} 正在等待 CPU。` : '就绪队列为空。'}`};
 }
 
-function renderSchedulingPage(root, pageId) {
+function renderSchedulingPage(root, pageId, combined = false) {
   const page = WIKI_PAGES[pageId];
   const isRoundRobin = pageId === 'roundRobin';
   const isShortestJob = pageId === 'sjf';
@@ -88,17 +88,18 @@ function renderSchedulingPage(root, pageId) {
   const strategyKind = isRoundRobin ? 'RR' : isShortestJob ? 'SJF' : isShortestRemaining ? 'SRTF' : 'FCFS';
   const homeworkSection = isRoundRobin ? 'rr' : isShortestRemaining ? 'comparison' : 'fifo-sjf';
   root.innerHTML = `<div class="page rr-page" id="top">
-    ${wikiHeader(pageId, [{href: '#demo', title: isRoundRobin ? '轮转演示' : isShortestRemaining ? '抢占演示' : isShortestJob ? '最短任务选择' : '排队演示'}, {href: '#rules', title: isRoundRobin ? '轮转规则' : '调度规则'}, {href: '#knowledge-related-title', title: '相关知识'}])}
+    ${wikiHeader(combined ? 'schedulingBasics' : pageId, [{href: '#demo', title: '调度演示'}, {href: '#rules', title: '调度规则'}, {href: '#knowledge-related-title', title: '相关知识'}])}
     <main>
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">${page.theme} / 调度</p>
-        <h1 id="page-title">${page.title} <span>${page.english}</span></h1>
+        <h1 id="page-title">${combined ? 'CPU 调度基础' : page.title} <span>${combined ? 'CPU Scheduling' : page.english}</span></h1>
+        ${combined ? `<div class="scheduling-policy-tabs" role="tablist" aria-label="调度策略">${['fcfs', 'sjf', 'srtf', 'roundRobin'].map(id => `<button type="button" role="tab" id="policy-${id}" aria-controls="demo" aria-selected="${id === pageId}" tabindex="${id === pageId ? 0 : -1}" data-scheduling-policy="${id}">${WIKI_PAGES[id].title} <span>${WIKI_PAGES[id].english}</span></button>`).join('')}</div><h2 class="scheduling-policy-title">${page.title}</h2>` : ''}
         <p class="lead">${isRoundRobin ? '进程按时间片使用 CPU；时间片耗尽且尚未完成时，回到就绪队列队尾。' : isShortestRemaining ? '就绪进程的剩余 CPU 时间严格更短时，抢占当前运行进程。' : isShortestJob ? '选择下一 CPU 段最短的就绪进程；运行期间不因更短任务到达而抢占。' : '按就绪入队顺序分配 CPU；当前进程完成或阻塞后，再选择下一个就绪进程。'}</p>
         <p class="definition">${isRoundRobin ? `时间片是一次连续使用 CPU 的时长上限。调度器按就绪队列顺序选择<a class="inline-link" href="${WIKI_PAGES.process.href}">进程</a>；时间片耗尽时，未完成的进程回到队尾。一个进程可能需要多个时间片才能完成全部 CPU 工作。` : isShortestRemaining ? `CPU 段是进程连续执行 CPU 工作的一段时间。SRTF（Shortest Remaining Time First）是抢占式的<a class="inline-link" href="${WIKI_PAGES.sjf.href}">SJF</a>，比较当前运行进程与就绪进程的剩余 CPU 段时长。就绪候选严格更短时，操作系统暂停当前进程，将它放回就绪队列，并保留已执行的进度。` : isShortestJob ? `CPU 段是进程连续执行 CPU 工作的一段时间。SJF（Shortest Job First）在 CPU 可以重新分配时，从就绪的<a class="inline-link" href="${WIKI_PAGES.process.href}">进程</a>中选择下一段 CPU 时长最短的一个。它是非抢占策略：运行进程完成或阻塞前，不因更短任务到达而暂停执行。` : `就绪队列包含已具备运行条件、正在等待 CPU 的<a class="inline-link" href="${WIKI_PAGES.process.href}">进程</a>。FCFS（First Come, First Served）按入队顺序选择进程，不中途抢占。当前进程完成或阻塞后，调度器才选择下一个就绪进程。`}</p>
         <p class="model-note">${isShortestRemaining ? '单核、无 I/O，切换开销取零；CPU 段时长已知，A 为 5、B 为 3。A 在 t=0 到达，B 按场景到达。约定剩余时间相等时保留运行者；CPU 空闲时，并列候选按入队顺序选择。实际系统通常需要估计时长。' : isShortestJob ? '单核、无 I/O，切换开销取零；下一段 CPU 时长已知，A 为 5、B 为 3。A 在 t=0 到达，B 按场景到达；同时到达时按 A、B 入队，时长并列时按入队顺序选择。实际系统通常需要估计 CPU 段时长。' : '单核，两个进程同时到达，无 I/O，切换开销取零。A 需要 5 个时间单位，B 需要 3 个；初始入队顺序为 A、B。'}</p>
         <p class="process-homework-link"><a class="inline-link" href="scheduling-homework.html#${homeworkSection}">CPU 调度基础作业：程序使用与调度实验</a></p>
       </section>
-      <section class="rr-demo" id="demo" aria-labelledby="demo-title">
+      <section class="rr-demo" id="demo" ${combined ? `role="tabpanel" aria-labelledby="policy-${pageId}"` : 'aria-labelledby="demo-title"'}>
         <div class="section-heading"><div><p class="section-index">01 / ${isRoundRobin ? 'ROUND ROBIN' : isShortestRemaining ? 'SHORTEST REMAINING TIME' : isShortestJob ? 'SHORTEST JOB FIRST' : 'FIRST COME, FIRST SERVED'}</p><h2 id="demo-title">${isRoundRobin ? 'CPU 时间片分配与就绪队列轮转' : isShortestRemaining ? '比较剩余 CPU 时间，决定是否抢占' : isShortestJob ? '根据下一 CPU 段时长选择就绪进程' : '按就绪入队顺序执行，不抢占运行进程'}</h2></div><p class="rr-clock">当前时刻 <strong id="rr-time">0</strong> / 8</p></div>
         <div class="rr-toolbar">
           <div class="rr-transport" role="group" aria-label="播放控制">
@@ -150,7 +151,7 @@ function renderSchedulingPage(root, pageId) {
         </dl>
         ${isRoundRobin ? '<div class="rr-tradeoff"><h3>时间片大小与响应、切换开销</h3><p>响应时间是进程到达后，到第一次获得 CPU 的间隔。较小的时间片通常让排在后面的进程更早获得 CPU，但也可能增加切换次数。本例切换开销取零，A、B 的总 CPU 需求始终是 8；如果每次切换需要额外时间，总耗时还要计入这些开销。较大的时间片减少轮转次数，却可能增加后续进程首次运行前的等待。</p></div>' : isShortestRemaining ? `<div class="rr-tradeoff"><h3>短任务更早完成，运行者也要重新等待</h3><p>B 在 t=1 到达时，<a class="inline-link" href="${WIKI_PAGES.sjf.href}">非抢占 SJF</a>让 B 等到 t=5 才运行、t=8 完成；SRTF 让 B 在 t=1 立即运行、t=4 完成，但 A 被推迟到 t=8 完成。SRTF 的平均等待为 (3 + 0) ÷ 2 = 1.5，SJF 为 2。此比较仅针对 B 在 t=1 到达的场景。</p><p>响应时间计算到首次获得 CPU 为止；累计等待时间还包括被抢占后的排队。本例没有 I/O，累计等待 = 完成时刻 − 到达时刻 − CPU 需求，因此 A 的响应时间是 0，累计等待却是 3。切换开销取零。若短任务持续到来，长任务可能长期得不到 CPU，这种情况称为饥饿。</p></div>` : isShortestJob ? `<div class="rr-tradeoff"><h3>平均等待减少，不代表每个任务都更快</h3><p>本例无 I/O，也不抢占，等待时间等于首次运行时刻减去到达时刻。同时到达时，<a class="inline-link" href="${WIKI_PAGES.fcfs.href}">FCFS</a>的平均等待为 (0 + 5) ÷ 2 = 2.5，SJF 为 (0 + 3) ÷ 2 = 1.5；但 A 从立即运行变为等待 3 个单位。这些数值只适用于同时到达的场景。</p><p>如果短任务持续到来，长任务可能始终未被选中，长期得不到 CPU。这种情况称为饥饿；平均等待时间较低并不保证每个进程都能及时运行。</p></div>` : `<div class="rr-tradeoff"><h3>相同任务与入队顺序下的轮转比较</h3><p>响应时间是到达后到首次获得 CPU 的间隔。本例 B 在 t=5 才首次运行。相同入队顺序下，<a class="inline-link" href="${WIKI_PAGES.roundRobin.href}">时间片轮转</a>取 q=2 时，B 在 t=2 获得 CPU，t=7 完成；FCFS 下则在 t=8 完成。轮转改变了首次响应与完成时刻，但这个结果不能推广为所有任务组合都更快。</p></div>`}
       </section>
-      ${wikiRelated(pageId)}
+      ${wikiRelated(combined ? 'schedulingBasics' : pageId)}
     </main><footer><span>OSLab / CPU 虚拟化</span><a href="#top">回到页首 ↑</a></footer>
   </div>`;
 
@@ -252,9 +253,70 @@ function renderSchedulingPage(root, pageId) {
   root.querySelector('#rr-speed').addEventListener('change', () => {
     if (timer !== null) { pause(); play(); }
   });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+  const onVisibility = () => { if (document.hidden) pause(); };
+  document.addEventListener('visibilitychange', onVisibility);
   window.addEventListener('pagehide', pause);
   paint();
+  return () => { pause(); document.removeEventListener('visibilitychange', onVisibility); window.removeEventListener('pagehide', pause); };
 }
 
-renderSchedulingPage(document.getElementById('root'), document.body.dataset.page ?? 'roundRobin');
+if (document.body.dataset.page === 'schedulingBasics') {
+  const policies = ['fcfs', 'sjf', 'srtf', 'roundRobin'];
+  const root = document.getElementById('root');
+  let dispose;
+  let current;
+  const savedViews = new Map();
+  const requestedPolicy = () => {
+    const hash = location.hash.slice(1);
+    const query = new URLSearchParams(location.search).get('policy');
+    return policies.includes(hash) ? hash : policies.includes(query) ? query : current || 'fcfs';
+  };
+  const navigate = policy => {
+    const target = new URL(location.href);
+    target.searchParams.set('policy', policy);
+    target.hash = policy;
+    history.pushState(null, '', target);
+  };
+  const select = (policy, focus = false) => {
+    if (!policies.includes(policy) || policy === current) return;
+    if (current) savedViews.set(current, {quantum: root.querySelector('#rr-quantum')?.value, scenario: root.querySelector('#sjf-scenario')?.value, position: root.querySelector('#rr-position').value, speed: root.querySelector('#rr-speed').value});
+    dispose?.();
+    current = policy;
+    dispose = renderSchedulingPage(root, policy, true);
+    for (const link of root.querySelectorAll('a[href]')) {
+      const linked = policies.find(id => WIKI_PAGES[id].href === link.getAttribute('href'));
+      if (linked) link.setAttribute('href', `#${linked}`);
+    }
+    const saved = savedViews.get(policy);
+    if (saved) {
+      for (const [selector, value, event] of [['#rr-quantum', saved.quantum, 'input'], ['#sjf-scenario', saved.scenario, 'change'], ['#rr-speed', saved.speed, 'change'], ['#rr-position', saved.position, 'input']]) {
+        const control = root.querySelector(selector);
+        if (control && value !== undefined) { control.value = value; control.dispatchEvent(new Event(event, {bubbles: true})); }
+      }
+    }
+    if (document.readyState !== 'loading') setupWikiNavigation();
+    if (focus) root.querySelector(`[data-scheduling-policy="${policy}"]`).focus();
+  };
+  root.addEventListener('click', event => {
+    const button = event.target.closest('[data-scheduling-policy]');
+    const link = event.target.closest('a[href]');
+    const linkedPolicy = link?.getAttribute('href').split('#')[1];
+    const policy = button?.dataset.schedulingPolicy || (policies.includes(linkedPolicy) ? linkedPolicy : null);
+    if (!policy) return;
+    event.preventDefault();
+    navigate(policy);
+    select(policy, !!button);
+  });
+  root.addEventListener('keydown', event => {
+    const button = event.target.closest('[data-scheduling-policy]');
+    if (!button || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const index = policies.indexOf(current);
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? 3 : (index + (event.key === 'ArrowRight' ? 1 : 3)) % 4;
+    navigate(policies[next]);
+    select(policies[next], true);
+  });
+  addEventListener('hashchange', () => { if (policies.includes(location.hash.slice(1))) select(requestedPolicy()); });
+  addEventListener('popstate', () => select(requestedPolicy()));
+  select(requestedPolicy());
+} else renderSchedulingPage(document.getElementById('root'), document.body.dataset.page ?? 'roundRobin');

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>系统调用与内核控制 · OSLab</title>
+<style>
+:root{--ink:#253330;--green:#176754;--blue:#315f7b;--rust:#9d493b;--line:#d9e1dc;--paper:#fbfcfa}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.85 "Noto Sans SC","Source Han Sans SC","Microsoft YaHei",sans-serif;letter-spacing:0}
+main{max-width:1100px;margin:auto;padding:28px 36px 60px}a{color:var(--green);text-underline-offset:4px}nav{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:24px}
+header{padding:26px 0 22px}h1{font-size:32px;line-height:1.4;margin:8px 0 14px}h2{font-size:23px;line-height:1.5;margin:0 0 14px}h3{font-size:18px;line-height:1.6;margin:0 0 12px}h4{font-size:15px;margin:18px 0 8px}p{margin:0 0 14px}.eyebrow{font-size:13px;color:var(--green)}.lead{max-width:68ch}
+.conditions,.fields{display:grid;grid-template-columns:100px minmax(0,1fr);gap:12px 18px;padding:16px 0;margin:18px 0}.conditions{border-block:1px solid var(--line)}dt{font-weight:500}dd{margin:0}
+.section-links{justify-content:flex-start;gap:12px 24px;padding:10px 0 18px}section{padding:28px 0;border-bottom:1px solid var(--line);scroll-margin-top:20px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:32px}.pair>article{min-width:0}.caption{font-size:13px;color:#596a63;margin-top:14px}
+.command{position:relative;background:#eff4f3;border-left:2px solid #9bbcb0;padding:14px 52px 14px 14px;margin:14px 0}pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.85 Consolas,monospace}.raw{padding:14px;background:#f0f3f5;border-left:2px solid #8ca8ba;margin:12px 0 16px}code{font-family:Consolas,monospace;overflow-wrap:anywhere}
+.copy{position:absolute;right:8px;top:8px;width:32px;height:32px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--green);cursor:pointer}.copy span{display:block;width:12px;height:14px;border:1.5px solid currentColor;margin:auto;box-shadow:-3px -3px 0 -1px white,-3px -3px 0 0 currentColor}.command-feedback{font-size:13px;color:var(--green);margin:0 0 16px;overflow-wrap:anywhere}
+.observations{padding-left:22px}.observations li+li{margin-top:12px}.observations code{color:var(--blue)}.comparison{display:grid;grid-template-columns:1fr 1fr;gap:0 32px;margin:18px 0}.comparison>div{padding:14px 0;border-top:1px solid var(--line)}.comparison dt{color:var(--blue)}.comparison dd{margin-top:6px}
+.controls{margin:18px 0 24px}.mode-label{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:18px}select{font:inherit;width:240px;max-width:100%;padding:6px 30px 6px 8px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--ink)}fieldset{border:0;padding:0;margin:0;min-width:0}legend{font-size:14px;margin-bottom:10px}.stage-options{display:flex;flex-wrap:wrap;gap:12px 24px}.stage-options label{display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer}.stage-options input{accent-color:var(--green);width:17px;height:17px;flex-shrink:0}
+.flow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:20px 0;list-style:none;padding:0}.flow li{min-width:0;border-top:3px solid var(--line);padding:16px 12px;min-height:176px;background:#f1f4f2}.flow li:nth-child(2){background:#eef3f6}.flow li[aria-current="step"]{border-color:var(--green)}.flow li:nth-child(2)[aria-current="step"]{border-color:var(--blue)}.flow li:nth-child(3)[aria-current="step"]{border-color:var(--rust)}.flow h3{font-size:16px}.flow p{font-size:14px;margin:0;overflow-wrap:anywhere}.stage-summary{min-height:132px}.parameters dt{margin-top:16px}.parameters dd{margin:4px 0 0}details{margin:16px 0}summary{cursor:pointer;color:var(--green)}details>div{padding-top:14px}footer{font-size:13px;padding-top:24px}button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--green);outline-offset:4px}
+@media(max-width:700px){main{padding:18px 18px 40px}h1{font-size:26px}h2{font-size:21px}.pair,.comparison,.flow{grid-template-columns:1fr}.pair{gap:22px}.pair>article+article{border-top:1px solid var(--line);padding-top:22px}.conditions{grid-template-columns:76px minmax(0,1fr);gap:12px}.flow li{min-height:104px}.stage-summary{min-height:210px}}
+</style>
+</head>
+<body>
+<main>
+<nav aria-label="CPU 虚拟化实验导航"><a href="cpu-virtualization-experiments.html">CPU 虚拟化实验</a><a href="limited-direct-execution.html">受限直接执行知识</a></nav>
+<header>
+<div class="eyebrow">CPU 虚拟化实验 · 任务五</div>
+<h1>系统调用与内核控制</h1>
+<p class="lead">一个程序打印了 OS 并正常结束，能说明它的每一次读写都成功了吗？任务四的子进程能够装入目标程序，内核究竟接受了什么请求；目标路径不存在时，又怎样把错误交回原程序？</p>
+<p class="lead">系统调用是用户程序请求内核服务的接口。strace 记录调用名称、参数和结果。这次先跟踪文件读写，再跟踪任务四的进程创建与程序替换，用这些记录判断每个请求实际完成了什么。</p>
+<dl class="conditions"><dt>读写条件</dt><dd>文件含 O、S 和换行，共 3 字节。程序每次最多读取 8 字节，读完后关闭文件，再用已关闭的编号发起读写。</dd><dt>替换条件</dt><dd>使用任务四的两个程序，分别尝试装入已编译的目标程序和不存在的目标路径。</dd><dt>要区分的事</dt><dd>请求进入内核、请求成功或失败、调度器切换进程，是含义不同的事件。</dd></dl>
+</header>
+<nav class="section-links" aria-label="任务章节"><a href="#setup">准备程序</a><a href="#io">读写请求</a><a href="#process">创建与替换</a><a href="#kernel">进入内核与返回</a><a href="#transfer">改变文件大小</a><a href="#guide">程序说明</a></nav>
+<section id="setup" aria-labelledby="setup-heading">
+<h2 id="setup-heading">准备程序与 3 字节样本</h2>
+<p>在 Ubuntu 的 Bash 终端中运行 <code>strace -V</code>，确认已有 strace。下载 <a href="syscall-work.c" download>读写程序 syscall-work.c</a>、<a href="exec-reap-work.c" download>任务四参考程序</a> 和 <a href="exec-reap-target.c" download>任务四目标程序</a>，放在同一个实验目录。需要已有 GCC；跟踪自己启动的程序不需要管理员权限。</p>
+<div class="command"><button class="copy" aria-label="复制编译和样本准备命令" title="复制准备命令"><span></span></button><pre>gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror syscall-work.c -o syscall-work
+gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror exec-reap-work.c -o exec-reap-work
+gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror exec-reap-target.c -o exec-reap-target
+printf 'OS\n' > syscall-input.txt</pre></div>
+<p>已完成任务四，可以沿用原有两个可执行程序。样本与后面的跟踪文件会覆盖同名旧文件，请在自己的实验目录中执行。后续命令都在这个目录运行。</p>
+<p>下面的参考记录来自 WSL Ubuntu-22.04、strace 5.16 的实际运行。PID、文件描述符、路径和地址可能不同，比较同一次运行中相互对应的记录，不要求编号与参考记录相同。</p>
+</section>
+<section id="io" aria-labelledby="io-heading">
+<h2 id="io-heading">读到数据、读到文件末尾，与读取失败有什么区别？</h2>
+<p>文件描述符（fd）是进程用来访问已打开文件或通道的编号，不是进程编号 PID。标准输出通常使用 fd 1；本次打开样本得到 fd 3。</p>
+<div class="command"><button class="copy" aria-label="复制读写跟踪命令" title="复制跟踪命令"><span></span></button><pre>strace -f -y -e trace=openat,read,write,close -o io.trace ./syscall-work syscall-input.txt
+cat io.trace</pre></div>
+<p>程序在终端输出 OS 和换行。跟踪记录保存在 io.trace；<code>-y</code> 为有效文件描述符标出路径。先找到打开 syscall-input.txt 的 openat 行，再沿它返回的编号查找读取和关闭，避免把装入共享库时的读取当成样本读取。</p>
+<h3>样本读写的实际记录摘录</h3>
+<pre class="raw" id="io-output">34974 openat(AT_FDCWD&lt;/tmp/oslab-syscalls-tuoROL&gt;, "syscall-input.txt", O_RDONLY) = 3&lt;/tmp/oslab-syscalls-tuoROL/syscall-input.txt&gt;
+34974 read(3&lt;/tmp/oslab-syscalls-tuoROL/syscall-input.txt&gt;, "OS\n", 8) = 3
+34974 write(1&lt;/dev/pts/6&gt;, "OS\n", 3)   = 3
+34974 read(3&lt;/tmp/oslab-syscalls-tuoROL/syscall-input.txt&gt;, "", 8) = 0
+34974 close(3&lt;/tmp/oslab-syscalls-tuoROL/syscall-input.txt&gt;) = 0
+34974 read(3, 0x7ffe713dba70, 8)        = -1 EBADF (Bad file descriptor)
+34974 write(3, "X", 1)                  = -1 EBADF (Bad file descriptor)</pre>
+<p class="caption">每行开头的 34974 是调用者 PID。AT_FDCWD 表示相对当前工作目录打开文件，尖括号内是 strace 解码的路径；/dev/pts/6 是这次运行的终端。记录中的 \n 表示一个换行字节。</p>
+<p>分别圈出每次 read、write 的请求字节数与返回值，再看 close 在哪里。哪些请求取得了数据，哪些只是没有更多数据，哪些使用的编号已经无效？</p>
+<dl class="comparison">
+<div><dt>第一次 read：8 与 3</dt><dd>8 是最多想读的字节数，3 是实际读到的字节数。文件只有 3 字节，返回少于请求大小不表示失败。</dd></div>
+<div><dt>write 到标准输出：3 与 3</dt><dd>请求写入 3 字节，返回 3，表示这次写入接受了这 3 字节。这里的 fd 是 1，不是样本文件的 3。</dd></div>
+<div><dt>第二次 read：返回 0</dt><dd>样本的 3 字节已读完，当前文件位置到达末尾。0 表示没有更多数据，不是错误。</dd></div>
+<div><dt>close 之后：两次 EBADF</dt><dd>fd 3 已被关闭，不能再用它读写。内核拒绝请求，返回 -1，并给出无效文件描述符错误；X 没有被写入。</dd></div>
+</dl>
+<p>缓冲区是程序提供的一段内存，用来接收读入的数据。成功的 read 记录在引号中显示已读数据；失败的 read 可能只显示这段内存的地址，不代表已经读入了数据。write 的引号则显示程序请求写入的内容。</p>
+<p>程序能正常结束，是因为它处理了预期的错误，不代表每一次系统调用都成功。</p>
+</section>
+<section id="process" aria-labelledby="process-heading">
+<h2 id="process-heading">谁创建了子进程，谁请求装入目标程序？</h2>
+<p>继续使用任务四的程序。<code>-f</code> 同时跟踪子进程；<code>%process</code> 选择进程相关调用，<code>write</code> 保留程序输出对应的写入记录。两次运行的 PID 不同，要在各自的文件中比较。</p>
+<div class="pair">
+<article><h3>目标程序存在</h3>
+<div class="command"><button class="copy" aria-label="复制成功替换跟踪命令" title="复制成功路径命令"><span></span></button><pre>strace -f -e trace=%process,write -o replace.trace ./exec-reap-work replace
+cat replace.trace</pre></div>
+<p>找出创建调用返回的子进程 PID，再找该 PID 的 execve 和 target 输出。目标程序装入后，这个 PID 是否改变？</p>
+<h4>创建与替换的实际记录摘录</h4><pre class="raw" id="replace-trace">34978 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7e6a58a6aa10) = 34979
+34979 write(1, "before exec: pid=34979 value=100"..., 33) = 33
+34979 execve("./exec-reap-target", ["./exec-reap-target"], 0x7ffeb3c91b20 /* 22 vars */) = 0
+34979 write(1, "target: pid=34979 value=300\ntarg"..., 43) = 43</pre>
+<p>父进程 34978 的创建调用返回 34979，随后子进程 34979 请求装入目标程序。成功后，target 的输出仍来自 34979，没有因为 exec 再创建一个进程。</p>
+</article>
+<article><h3>目标路径不存在</h3>
+<div class="command"><button class="copy" aria-label="复制失败替换跟踪命令" title="复制失败路径命令"><span></span></button><pre>strace -f -e trace=%process,write -o missing.trace ./exec-reap-work missing
+cat missing.trace</pre></div>
+<p>当前目录不能存在 exec-reap-no-such-target。找出 execve 的错误，再查看 after failed exec 的写入来自哪个 PID。</p>
+<h4>创建与替换的实际记录摘录</h4><pre class="raw" id="missing-trace">34983 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x71756d640a10) = 34984
+34984 write(1, "before exec: pid=34984 value=100"..., 33) = 33
+34984 execve("./exec-reap-no-such-target", ["./exec-reap-no-such-target"], 0x7ffd94583e80 /* 22 vars */) = -1 ENOENT (No such file or directory)
+34984 write(1, "exec failed: ENOENT\n", 20) = 20
+34984 write(1, "after failed exec: pid=34984 val"..., 55) = 55</pre>
+<p>创建子进程成功，但装入程序失败：路径不存在，返回 -1 ENOENT。原程序仍由 34984 执行，可以处理错误并输出 after failed exec。</p>
+</article>
+</div>
+<dl class="parameters"><dt>fork 与 clone</dt><dd>fork 是程序使用的接口；本次 x86-64 Ubuntu 的底层创建请求显示为 clone。其他环境可能显示 clone3 或 fork，应依据调用者和返回 PID 判断创建关系。</dd><dt>exec 与 execve</dt><dd>exec 系列接口的装入请求显示为 execve。参数包含目标路径、程序参数列表和环境变量地址；/* 22 vars */ 表示这次传入的环境变量数量，不是退出码。</dd><dt>成功的 0 与退出码 7</dt><dd>strace 用 execve 的 = 0 显示装入成功；原程序不会继续执行 exec 后面的语句。目标程序后来的退出码 7 是它的结束状态，不表示装入失败。</dd></dl>
+<details><summary>怎样辨认记录中的其他行？</summary><div><p>最开始装入 exec-reap-work 的 execve，是 strace 启动被跟踪程序，不是子进程的替换请求。程序的退出与等待记录仍可按任务四的方法辨认。</p><p>unfinished 与 resumed 可能将一次调用分成两行显示：先记录进入，随后补上返回。应按同一 PID 和调用名称配对，不要数成两次调用，更不能把记录的行序当成 CPU 调度时间线。</p><p>write 中的省略号表示字符串显示被截短，不表示只写了可见的部分；返回值给出这次实际接受的字节数。</p></div></details>
+</section>
+<section id="kernel" aria-labelledby="kernel-heading">
+<h2 id="kernel-heading">进入内核后，调用进程发生了什么？</h2>
+<p>用户态限制普通程序直接操作受保护的系统资源；内核态允许内核执行这些操作。系统调用让 CPU 进入内核态，处理调用进程的请求。对下面这些 read、write 请求，无论成功还是失败，结果都返回调用它的进程。</p>
+<div class="controls"><label class="mode-label" for="call-mode">读写请求<select id="call-mode"><option value="read-data">read：读取 3 字节</option><option value="write-data">write：输出 3 字节</option><option value="read-eof">read：到达文件末尾</option><option value="read-bad">read：描述符已关闭</option><option value="write-bad">write：描述符已关闭</option></select></label>
+<fieldset><legend>一次系统调用的三个阶段</legend><div class="stage-options"><label><input type="radio" name="stage" value="0" checked>发起请求</label><label><input type="radio" name="stage" value="1">内核处理</label><label><input type="radio" name="stage" value="2">返回结果</label></div></fieldset></div>
+<ol class="flow" aria-label="同一调用进程进入内核并取得结果"><li aria-current="step"><h3>1. 用户态 · PID 34974</h3><p id="request-state"></p></li><li><h3>2. 内核态 · 处理请求</h3><p id="kernel-state"></p></li><li><h3>3. 用户态 · PID 34974</h3><p id="return-state"></p></li></ol>
+<div class="stage-summary" aria-live="polite"><h3 id="stage-title"></h3><p id="stage-reason"></p></div>
+<p>对应的实际记录</p><pre class="raw" id="stage-evidence"></pre>
+<p>进入内核是执行权限与执行位置的变化，不是创建了一个“内核进程”。调度器选择另一个进程执行，才是进程切换；如果一次读取需要等待数据，调用进程可能阻塞，调度器可以让其他进程执行。</p>
+<p>相同 PID 能说明这些请求属于同一进程，不能证明它在两行记录之间一直占用 CPU。既不能把每一行系统调用数成一次进程切换，也不能据此认定期间完全没有切换。exec 成功的情形则是同一进程开始执行新程序，而不是返回原程序继续。</p>
+</section>
+<section id="transfer" aria-labelledby="transfer-heading">
+<h2 id="transfer-heading">文件变成 9 字节，第二次 read 还会返回 0 吗？</h2>
+<p>不改变程序和每次最多读取 8 字节的条件，另建一个含 OS123456 和换行的文件，共 9 字节。先判断两次 read 应各返回多少，再按新文件路径找到记录核对。</p>
+<div class="command"><button class="copy" aria-label="复制九字节文件对照命令" title="复制对照命令"><span></span></button><pre>printf 'OS123456\n' > syscall-long.txt
+strace -f -y -e trace=openat,read,write,close -o long.trace ./syscall-work syscall-long.txt
+cat long.trace</pre></div>
+<details><summary>参考结果与原因</summary><div><p>第一次 read 取得 OS123456，共 8 字节，返回 8；文件位置向后移动 8 字节。第二次仍有一个换行字节，返回 1，不是 0。两次都没有失败。</p><p>程序只将第一次读到的数据写到标准输出，因此终端显示 OS123456，没有换行；第二次读到的换行应在跟踪记录中核对。返回值取决于实际取得的数据量，而不是必须等于请求上限，也不是“第二次读取就一定到末尾”。</p><p>关闭描述符之后的两次 EBADF 仍然出现。文件内容变多，不会使已关闭的描述符重新有效。</p></div></details>
+</section>
+<section id="guide" aria-labelledby="guide-heading">
+<h2 id="guide-heading">程序说明与 strace 选项</h2>
+<p>读写程序格式为 <code>./syscall-work FILE</code>。FILE 是可读取的文件路径，本任务先使用 syscall-input.txt。程序读最多 8 字节，向标准输出写出第一次取得的数据，再读一次，关闭文件，检查关闭后的读写错误，然后自动结束。</p>
+<dl class="parameters"><dt>FILE</dt><dd>可以使用当前目录的文件名，也可以使用完整路径。3 字节样本使第二次读取到达末尾；文件超过 8 字节时，第二次仍可能取得数据。</dd><dt>--help</dt><dd>显示用法，不执行文件读写实验。</dd><dt>输出与结束结果</dt><dd>标准输出只显示第一次读取的数据。找不到文件或出现非预期读写错误时程序返回失败；预期的两次 EBADF 正确出现时返回 0。</dd></dl>
+<div class="command"><button class="copy" aria-label="复制读写程序帮助命令" title="复制帮助命令"><span></span></button><pre>./syscall-work --help</pre></div>
+<h3>strace 用法</h3><p>基本格式为 <code>strace [选项] 程序 [程序参数]</code>。strace 先启动指定程序，再把符合条件的系统调用记入跟踪文件。</p>
+<dl class="parameters"><dt>-f</dt><dd>跟踪本次启动的进程及其子进程；任务四的替换发生在子进程中。</dd><dt>-y</dt><dd>为有效文件描述符显示关联路径，便于区分样本、共享库与标准输出。</dd><dt>-e trace=...</dt><dd>只显示指定调用；本任务的 %process 表示进程相关调用组。</dd><dt>-o FILE</dt><dd>将跟踪记录写入 FILE；终端仍显示程序自己的标准输出。cat FILE 查看完整记录。</dd></dl>
+<p>任务四程序的 replace、missing 参数保持原用法。若 strace 提示没有跟踪权限，应先核对运行环境的安全策略，不能把跟踪权限错误当成样本程序的读写失败。strace 会干预被跟踪程序的执行，这些运行的耗时不用于与任务一测量比较。</p>
+</section>
+<footer><a href="cpu-virtualization-experiments.html">返回 CPU 虚拟化实验目录</a> · 上一项：<a href="exec-reap.html">任务四：程序替换与进程回收</a><br><a href="syscalls.md">实验说明文档</a> · <a href="limited-direct-execution.html">受限直接执行知识</a></footer>
+</main>
+<script src="syscalls.js"></script>
+</body>
+</html>

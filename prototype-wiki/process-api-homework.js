@@ -1,158 +1,300 @@
-const PROCESS_API_TREE_TASKS = [
-  {title: '逐步推导进程树', command: 'python3 fork.py -s 10', text: '从初始进程 a 开始，为每个动作画出执行后的父子关系。保持种子不变，加 -c 核对；再改变 -s 或增加 -a 的动作数量。'},
-  {title: '改变创建进程的概率', command: 'python3 fork.py -s 10 -a 100 -f 0.1 -F', text: '保持种子和动作数量不变，分别将 -f 设为 0.1、0.5、0.9。先预测最终存活进程的数量和树的层次，再加 -c 核对。概率不是本次序列中创建动作比例的保证。'},
-  {title: '由进程树推断动作', command: 'python3 fork.py -s 10 -t', text: '比较相邻的进程树，记录新增或退出的进程，并确定发生创建时的父进程。使用相同参数加 -c 核对动作。'},
-  {title: '进程退出后的父子关系', command: 'python3 fork.py -A a+b,b+c,c+d,d+e,c-', text: '先推导 c 退出前的父子关系，再分别预测默认规则和加 -R 后的结果。特别比较 d 与 e 是否仍保持父子关系；使用同一动作序列加 -c 核对。'},
-  {title: '从全部动作推导最终树', command: 'python3 fork.py -s 20 -F', text: '只根据动作序列写出最终存活的进程及其父进程，再加 -c 核对。换用其他种子重复练习，保留自己的中间推导。'},
-  {title: '最终树能否唯一确定动作', command: 'python3 fork.py -s 20 -t -F', text: '根据最终树构造一个可能的动作序列，再考虑是否存在其他序列得到同一结果。区分最终存活的父子关系与已经退出、因而不再出现在树中的进程；加 -c 查看本次实际生成的动作。'},
+const apiPracticeEscape = value => String(value).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+const apiPracticeCommand = command => `<div class="practice-command"><pre><code>${command.split(/(\s+)/).map(part => /\s/.test(part) ? part : `<span class="practice-command-argument">${apiPracticeEscape(part)}</span>`).join('')}</code></pre><button type="button" data-practice-copy aria-label="复制命令" title="复制命令"><span class="practice-copy-icon" aria-hidden="true"></span></button></div>`;
+const apiPracticeSteps = task => `<h3>解题过程</h3><ol>${task.steps.map(([title, lines], index) => `<li><span class="practice-step">${index + 1}</span><div><h4>${title}</h4><div class="practice-step-lines">${lines.map(text => `<p>${apiPracticeEscape(text)}</p>`).join('')}</div></div></li>`).join('')}</ol><div class="practice-conclusion"><h4>结果与原因</h4><dl class="practice-conclusion-items">${task.conclusion.map(([title,text]) => `<div><dt>${apiPracticeEscape(title)}</dt><dd>${apiPracticeEscape(text)}</dd></div>`).join('')}</dl></div>${(task.supplements || []).map(([title,text]) => `<details class="practice-trace api-practice-supplement"><summary>${title}</summary><p>${text}</p></details>`).join('')}`;
+const apiPracticeTree = parents => {
+  const node = name => `<li><span class="api-tree-node">${name}</span>${Object.keys(parents).some(child => parents[child] === name) ? `<ul>${Object.keys(parents).filter(child => parents[child] === name).map(node).join('')}</ul>` : ''}</li>`;
+  return `<ul class="api-tree" aria-label="进程树">${node('a')}</ul>`;
+};
+const apiFinalParents = {a:null,b:'a',d:'a',e:'a'};
+const apiTreeStages = [
+  {action:'初始只有 a', parents:{a:null}},
+  {action:'a 创建 b', parents:{a:null,b:'a'}},
+  {action:'a 创建 c', parents:{a:null,b:'a',c:'a'}},
+  {action:'c 退出', parents:{a:null,b:'a'}},
+  {action:'a 创建 d', parents:{a:null,b:'a',d:'a'}},
+  {action:'a 创建 e', parents:apiFinalParents},
 ];
-
-const PROCESS_API_GENERATOR_TASKS = [
-  {title: '父进程等待一个子进程', program: 'fork b,1 {} wait', text: '在 read.c 中标出父子分支、休眠和等待的位置。预测哪些事件必须先发生，再编译运行 run.c，解释 a<-b 为什么出现在 b- 之后。'},
-  {title: '两个子进程与两次等待', program: 'fork b,1 {} fork c,2 {} wait wait', text: '标出两个 fork 和两次 wait 的调用者，预测父进程可能等待到哪个子进程。多次运行同一个可执行文件，比较事件顺序；wait 收集的是一个已结束的子进程，不按创建顺序指定对象。'},
-  {title: '嵌套创建与分层等待', program: 'fork b,1 {fork c,1 {} fork d,2 {} wait wait} wait', text: '画出 a、b、c、d 的父子关系，区分 a 的等待与 b 的等待。根据代码确定必须满足的退出、收集顺序，并与实际输出逐项对照。'},
-  {title: '固定种子的随机程序', program: null, text: '使用 -s 10 -n 5 -S 2 生成程序。先阅读 read.c 并推导进程关系，再保持相同参数加 -c 执行；随后换一个种子重新推导。对同一程序的重复观测直接运行 ./run，不重新生成源码。'},
-];
-
-const PROCESS_API_C_TASKS = [
-  {title: 'fork 前后的私有变量', api: 'fork()', steps: ['编写一个程序，在 fork 前定义整数 x，并赋值为 100；只创建一个子进程。', '父子分别输出自己的 PID、fork 返回值和 x 的初始值；随后父进程将 x 改为 300，子进程将 x 改为 200，各自再次输出。', '父进程等待子进程结束。每行输出标明父进程或子进程，多次运行同一个程序。'], observe: '记录父子各自的初始值与修改后值。解释子进程从哪条语句继续执行、为何修改普通私有变量不会直接改变另一进程中的值，并区分输出顺序与变量取值。'},
-  {title: '继承的文件描述符', api: 'open() · fork() · write()', steps: ['父进程在 fork 前创建并打开一个练习文件，只在此时清空文件内容，然后创建一个子进程。', '父子通过继承的文件描述符各写入 10 行不同标记，例如 parent 与 child；每行使用一次 write 调用，检查实际写入的字节数。', '各自关闭不再使用的描述符，父进程等待子进程结束后读取文件。多次运行并比较文件中的行序。'], observe: '记录文件内容和 write 返回值。说明父子各自的描述符表与共享的内核打开文件描述之间的关系，以及共享文件偏移如何影响写入位置；不要把一次观察到的行序当成固定调度顺序。'},
-  {title: '子进程先输出，父进程后输出', api: 'fork() · 进程同步', steps: ['创建一个子进程，让子进程输出 hello，父进程输出 goodbye；先运行没有同步的版本，记录输出顺序。', '设计并实现同步，使子进程完成 hello 的输出后，父进程才能输出 goodbye。父进程打印前不使用 wait 或 waitpid 等待子进程。', '打印后的子进程退出回收单独处理。多次运行，并改变父子打印前的工作量，检查同步条件是否仍然成立。'], observe: '写明双方通过什么事件确定 hello 已经输出，以及父进程何时被允许继续。固定时长的 sleep 只能延后执行，不能证明另一个进程已经完成输出。'},
-  {title: 'exec 的参数与环境', api: 'exec 函数族', steps: ['编写程序创建一个子进程，在子进程中运行 ls -l；父进程等待并检查子进程的退出状态。', '分别用 execl、execle、execlp、execv、execvp、execvpe 实现六个版本。非 p 版本给出 /bin/ls，带 p 的版本使用 ls 并通过 PATH 查找；明确参数列表或参数数组及结尾。', '为接收显式环境的版本提供环境数组。使用 execvpe 时，在头文件之前定义 _GNU_SOURCE。另做一次不存在的程序路径测试，记录错误。'], observe: '整理六种接口如何接收参数、如何查找可执行文件、如何提供环境。记录成功与失败时 exec 后面的语句是否执行，以及父进程取得的退出状态。'},
-  {title: 'wait 的返回值和退出状态', api: 'wait() · errno', steps: ['创建一个子进程。子进程不再创建其他进程，在其中调用 wait 并记录返回值；失败时立即保存 errno，再以退出码 7 结束。', '父进程调用 wait(&status)，保存返回值，并与 fork 返回的子 PID 比较。', '仅在 wait 成功返回且 WIFEXITED(status) 为真时读取 WEXITSTATUS(status)；父子输出分别注明调用者。'], observe: '分别记录子进程 wait 的返回值与错误原因、父进程 wait 返回的 PID，以及解码后的退出码。解释为什么 PID、原始 status 和正常退出码是三种不同的数据。'},
-  {title: '用 waitpid 选择等待对象', api: 'waitpid()', steps: ['独立编写一个程序，由同一个父进程创建两个子进程，并保存各自的 PID。子进程 B 休眠 1 秒后以退出码 11 结束，子进程 C 休眠 3 秒后以退出码 22 结束；两者都不再创建子进程。', '版本一：父进程先调用 waitpid(pid_c, &status, 0) 等待 C，再调用 waitpid(pid_b, &status, 0) 收集 B。每次分别记录返回的 PID 和退出状态。', '版本二：保持相同的两个子进程，父进程连续两次调用 waitpid(-1, &status, 0)，每次允许收集任意一个子进程。多次运行两个版本，比较收集顺序。'], observe: '将每次成功返回的 PID 对应到 B 或 C，使用 WIFEXITED 与 WEXITSTATUS 解码正常退出码。解释 pid_c 与 -1 各自限定的等待对象，以及 options 为 0 时的阻塞条件。返回 -1 时保存 errno，不读取本次未取得的 status。'},
-  {title: '关闭子进程的标准输出', api: 'close() · printf() · fflush()', steps: ['创建一个子进程。在子进程中关闭 STDOUT_FILENO，检查 close 返回值，然后调用 printf 输出一段文字。', '记录 printf 的返回值，再调用 fflush(stdout)，记录其返回值和错误原因；这些诊断使用 stderr 输出。', '父进程继续向自己的标准输出打印一行文字，并等待子进程结束。分别在终端执行和将标准输出重定向到文件后执行。'], observe: '比较终端与重定向情况下的错误报告时机。说明文字进入标准 I/O 缓冲与真正写入文件描述符之间的区别，以及关闭子进程描述符为什么不等于关闭父进程的描述符。'},
-  {title: '用管道连接两个子进程', api: 'pipe() · dup2() · waitpid()', steps: ['父进程先创建一条管道，再创建写入子进程和读取子进程。写入者把标准输出连接到管道写端，读取者把标准输入连接到管道读端。', '写入者输出三行固定文本；读取者持续读取标准输入，将收到的内容写到自己的标准输出，直到读到文件结束。检查读写返回值。', '用 dup2 设置标准描述符后，关闭重复和不再使用的管道端。父进程也关闭两端，并分别等待两个子进程结束。'], observe: '记录接收到的完整文本和两个子进程的退出状态。列出父进程、写入者、读取者最终保留的描述符；解释读取端观察到文件结束需要满足的条件。'},
-];
+const apiTreeFigure = (caption, parents) => `<figure class="api-tree-figure"><figcaption>${caption}</figcaption><div class="api-tree-scroll" role="region" aria-label="${caption}" tabindex="0">${apiPracticeTree(parents)}</div></figure>`;
+const apiSimulationVisual = index => [
+  `<figure class="api-tree-figure"><figcaption id="api-tree-action" aria-live="polite">初始只有 a</figcaption><div id="api-tree-stage" class="api-tree-scroll" role="region" aria-label="种子 10 的当前进程树" tabindex="0">${apiPracticeTree(apiTreeStages[0].parents)}</div><div class="api-stage-controls" role="group" aria-label="种子 10 的动作阶段">${apiTreeStages.map((stage, stageIndex) => `<button type="button" data-api-stage="${stageIndex}" aria-pressed="${stageIndex === 0}" aria-label="${stageIndex === 0 ? '初始状态' : `动作 ${stageIndex}：${stage.action}`}" title="${stage.action}">${stageIndex}</button>`).join('')}</div><p class="api-figure-note">初始状态后依次执行五个动作，连线表示当前父子关系。</p></figure>`,
+  `<figure class="api-probability"><figcaption>种子 10 · 100 个动作</figcaption><div class="practice-table-scroll"><table><thead><tr><th scope="col">-f</th><th scope="col">创建</th><th scope="col">退出</th><th scope="col">最终存活</th></tr></thead><tbody>${[[0.1,50,50,1],[0.5,53,47,7],[0.9,92,8,85]].map(([probability,forks,exits,remaining]) => `<tr><th scope="row">${probability}</th><td>${forks}</td><td>${exits}</td><td><div class="api-count"><span>${remaining}</span><i style="--api-count:${remaining}%" aria-hidden="true"></i></div></td></tr>`).join('')}</tbody></table></div></figure>`,
+  `<dl class="api-action-changes">${[['新增 b，父节点 a','a forks b'],['新增 c，父节点 a','a forks c'],['c 消失','c EXITS'],['新增 d，父节点 a','a forks d'],['新增 e，父节点 a','a forks e']].map(([change,action]) => `<div><dt>${change}</dt><dd>${action}</dd></div>`).join('')}</dl>`,
+  `<div class="api-tree-comparison">${apiTreeFigure('c 退出前', {a:null,b:'a',c:'b',d:'c',e:'c'})}${apiTreeFigure('默认：d、e 改归 a', apiFinalParents)}${apiTreeFigure('-R：d、e 改归 b', {a:null,b:'a',d:'b',e:'b'})}</div>`,
+  apiTreeFigure('种子 10 的最终树', apiFinalParents),
+  apiTreeFigure('两段历史得到的相同最终树', apiFinalParents),
+][index];
+const apiCodeVisual = index => {
+  if (index === 0) return `<figure class="api-mechanism"><figcaption>父子分别从初始值 100 修改自己的变量</figcaption><div class="api-pair"><div><span>父进程</span><strong>x：100 → 300</strong><small>父进程的虚拟地址空间</small></div><div><span>子进程</span><strong>x：100 → 200</strong><small>子进程的虚拟地址空间</small></div></div></figure>`;
+  if (index === 1) return `<figure class="api-mechanism api-file-demo"><figcaption>父子进程写入同一个文件时，位置怎样变化</figcaption><p class="api-file-definition">文件描述符（fd）是进程访问已打开文件的编号。“打开文件描述”是内核保存这次打开状态的对象，其中记录下一次读写的位置，称为文件偏移。</p><div class="api-pair"><div id="api-file-parent" class="api-file-reference"><span>父进程的描述符表</span><strong>fd：已打开</strong><small>引用下方同一个内核对象</small></div><div id="api-file-child" class="api-file-reference"><span>子进程的描述符表</span><strong>fd：已打开</strong><small>引用下方同一个内核对象</small></div></div><div class="api-shared-object"><strong>同一个打开文件描述</strong><span>共享偏移：<b id="api-file-offset">0</b> 字节</span><small>下一次写入从这个位置开始</small></div><div class="api-file-content"><h4>q2-output.txt 当前内容</h4><pre id="api-file-content">（空文件）</pre></div><p id="api-file-action" class="api-file-action" aria-live="polite">fork 已完成。父子各有一个 fd，引用同一个打开文件描述，文件偏移为 0。</p><div class="api-file-controls" role="group" aria-label="共享文件偏移演示"><button type="button" data-api-file-control="play" aria-label="播放写入过程" title="播放写入过程"><span aria-hidden="true">▶</span></button><button type="button" data-api-file-control="next" aria-label="下一步" title="下一步"><span aria-hidden="true">→</span></button><button type="button" data-api-file-control="reset" aria-label="回到初始状态" title="回到初始状态"><span aria-hidden="true">↺</span></button><span id="api-file-progress">0 / 4</span></div><p class="api-figure-note">以下按所示顺序执行三次完整写入。实际参考程序父子各写 50 条记录，调度顺序不固定。</p></figure>`;
+  if (index === 2) return `<figure class="api-mechanism"><figcaption>成功运行时的输出依赖</figcaption><ol class="api-dependency"><li><span>子进程</span><strong>写入 hello</strong></li><li><span>子进程</span><strong>发送通知字节</strong></li><li><span>父进程</span><strong>收到通知，再写入 goodbye</strong></li></ol></figure>`;
+  if (index === 3) return `<div class="practice-table-scroll api-exec-table"><table><caption>六种接口的三个选择</caption><thead><tr><th scope="col">接口</th><th scope="col">参数</th><th scope="col">定位</th><th scope="col">环境</th></tr></thead><tbody>${[['execl','列表','显式路径','继承'],['execle','列表','显式路径','envp'],['execlp','列表','PATH','继承'],['execv','数组','显式路径','继承'],['execvp','数组','PATH','继承'],['execvpe','数组','PATH','envp']].map(([variant,argumentsType,path,environment]) => `<tr><th scope="row">${variant}</th><td>${argumentsType}</td><td>${path}</td><td>${environment}</td></tr>`).join('')}</tbody></table></div>`;
+  if (index === 7) return `<figure class="api-mechanism api-pipe"><figcaption>两个子进程之间的数据通路</figcaption><div class="api-pipe-path"><div><span>writer 子进程</span><strong>stdout · fd 1</strong><small>引用管道写端</small></div><div><span>内核管道</span><strong>单向字节流</strong><small>写入 → 读取</small></div><div><span>reader 子进程</span><strong>stdin · fd 0</strong><small>引用管道读端</small></div></div><p>父进程关闭两端，只等待子进程；reader 的 stdout 仍连接终端。</p></figure>`;
+  return '';
+};
+const apiExerciseNav = (group, index, tasks) => `<nav class="practice-exercise-nav" aria-label="${group === 'simulation' ? '模拟' : '代码'}练习 ${index + 1} 导航">${index > 0 ? `<a href="#${group}-${index}">← ${tasks[index - 1].title}</a>` : `<a href="#${group === 'simulation' ? 'simulation' : 'coding'}">练习目录</a>`}${index < tasks.length - 1 ? `<a href="#${group}-${index + 2}">${tasks[index + 1].title} →</a>` : `<a href="#${group === 'simulation' ? 'coding' : 'top'}">${group === 'simulation' ? 'C 程序练习' : '回到页首'} →</a>`}</nav>`;
+const apiExerciseHeading = (task, index, topic) => `<header class="practice-exercise-heading"><span class="practice-number" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span><div><p class="practice-topic">${topic}</p><h2>${task.title}</h2></div></header><p class="practice-question">${task.question}</p>`;
+const renderApiSimulation = (task, index) => `<article class="practice-exercise" id="simulation-${index + 1}">${apiExerciseHeading(task, index, task.topic)}<div class="practice-body"><section class="practice-run"><h3>运行与核对</h3>${apiPracticeCommand(task.command)}${apiPracticeCommand(`${task.command} -c`)}${apiSimulationVisual(index)}${task.extra ? `<h3 class="api-extra-heading">比较运行</h3>${apiPracticeCommand(task.extra)}` : ''}</section><section class="practice-reasoning">${apiPracticeSteps(task)}</section></div>${apiExerciseNav('simulation',index,API_SIMULATION_PRACTICE)}</article>`;
+const renderApiCode = (task, index) => `<article class="practice-exercise" id="code-${index + 1}">${apiExerciseHeading(task, index, task.api)}<div class="practice-body"><section class="practice-run">${task.basic ? `<section class="api-basic"><h3>${task.basic.title}</h3><div class="practice-command"><pre><code>${apiPracticeEscape(task.basic.code)}</code></pre></div><p>${task.basic.explanation}</p></section>` : ''}<details class="api-source"><summary>${task.sourceLabel || '参考源码'} · ${task.file}.c</summary><div class="api-source-actions"><button type="button" data-copy-source="${index}" aria-label="复制 ${task.file}.c 源码" title="复制源码"><span class="practice-copy-icon" aria-hidden="true"></span></button><button type="button" data-download-source="${index}" aria-label="下载 ${task.file}.c" title="下载 C 源码"><span class="api-download-icon" aria-hidden="true">↓</span></button></div><pre tabindex="0" aria-label="${task.file}.c 完整源码"><code>${apiPracticeEscape(API_PRACTICE_SOURCES[index])}</code></pre></details><h3>编译与运行</h3>${apiPracticeCommand(`gcc -std=c11 -Wall -Wextra -Wpedantic -Werror ${task.file}.c -o ${task.file}`)}${apiPracticeCommand(task.run || `./${task.file}`)}${task.extra ? apiPracticeCommand(task.extra) : ''}${apiCodeVisual(index)}<figure class="api-output"><figcaption>${task.outputLabel || (index === 1 ? '运行结果与文件记录核对' : '程序运行结果')}</figcaption><pre><code>${apiPracticeEscape(task.output)}</code></pre><p>${task.note}</p></figure></section><section class="practice-reasoning">${apiPracticeSteps(task)}</section></div>${apiExerciseNav('code',index,API_CODE_PRACTICE)}</article>`;
+const apiPracticeIndex = (group, tasks) => `<nav class="practice-index api-exercise-index" aria-label="${group === 'simulation' ? '模拟' : '代码'}练习目录">${tasks.map((task,index) => `<a href="#${group}-${index + 1}"><span>${String(index + 1).padStart(2,'0')}</span><strong>${task.title}</strong></a>`).join('')}</nav>`;
+const apiProgramOptions = rows => `<div class="api-program-table"><table><thead><tr><th scope="col">参数</th><th scope="col">用途与默认值</th></tr></thead><tbody>${rows.map(([option,defaultValue,description]) => `<tr><th scope="row"><code>${apiPracticeEscape(option)}</code></th><td>${apiPracticeEscape(description)}<span class="api-param-default">默认：${apiPracticeEscape(defaultValue)}</span></td></tr>`).join('')}</tbody></table></div>`;
 
 const processApiHomeworkHeader = wikiHeader('processApi', [
+  {href: '#simulation', title: '模拟练习'},
+  {href: '#coding', title: '代码练习'},
   {href: '#tree', title: '进程树'},
-  {href: '#generator', title: '生成 C 程序'},
-  {href: '#coding', title: 'C 编程'},
 ]);
 
 document.querySelector('#root').innerHTML = `
-  <div class="page hw-page api-hw-page" id="top">
+  <div class="page hw-page api-hw-page process-practice-page api-practice-page" id="top">
     ${processApiHomeworkHeader}
     <main>
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">CPU 虚拟化 / UNIX 接口 / 作业</p>
         <h1 id="page-title">进程 API 作业 <span>Process API Homework</span></h1>
-        <p class="lead">推导父子进程关系，阅读生成的 C 程序，再编写进程接口实验。</p>
-        <p class="definition"><code>fork.py</code> 根据创建与退出动作计算进程树；<code>generator.py</code> 生成 C 程序，其中 fork 创建子进程，wait 等待并收集子进程的退出状态，sleep 暂停调用者一段时间。exec 成功后用新程序替换当前进程的程序内容，进程编号保持不变。</p>
-        <p>文件描述符是进程用于引用已打开文件或其他 I/O 对象的整数编号。管道把一端写入的字节提供给另一端读取。C 编程任务比较父子进程的描述符、返回值和输出顺序，区分资源共享与执行顺序。</p>
+        <p class="lead">从进程树的创建与退出，到真实程序中的 fork、exec、wait 和管道通信。</p>
         <dl class="hw-meta"><div><dt>运行环境</dt><dd>Ubuntu 22.04</dd></div><div><dt>程序与编译器</dt><dd>Python 3 · GCC</dd></div></dl>
         <p class="hw-back"><a class="inline-link" href="process-api.html">进程 API：fork、exec 与 wait</a></p>
-        <nav class="api-hw-outline" aria-label="作业分组"><a href="#tree"><span>01</span><strong>进程树</strong><small>6 项关系推导</small></a><a href="#generator"><span>02</span><strong>C 程序推导</strong><small>4 项代码练习</small></a><a href="#coding"><span>03</span><strong>接口编程</strong><small>8 项独立实验</small></a></nav>
       </section>
 
-      <section class="hw-section" id="tree" aria-labelledby="tree-title">
-        <div class="api-hw-section-heading"><p class="section-index">01 / PROCESS TREE</p><h2 id="tree-title">进程树：创建、退出与父子关系</h2></div>
-        <p>进程树用连线表示父子关系，初始进程为 a。<code>a+b</code> 表示 a 创建 b，<code>b-</code> 表示 b 退出；退出后 b 不再出现在存活进程树中。以下命令在程序目录执行；程序位于其他目录时，相应调整路径。</p>
-        <pre><code>cd ~/ostep-homework/cpu-api
-python3 fork.py -s 10
-python3 fork.py -s 10 -c</code></pre>
-        <p>不加 <code>-c</code> 时，按给出的动作推导树；加 <code>-c</code> 后显示结果。两次命令保持相同种子和参数，才能核对同一序列。</p>
-        <dl class="hw-rules">
-          <div><dt><code>-s</code> 与 <code>-a</code></dt><dd>指定随机种子和动作数量。默认不固定种子，生成 5 个动作。</dd></div>
-          <div><dt><code>-f</code></dt><dd>创建动作的概率，默认 0.7，即 70%；使用 0.1、0.5、0.9 这样的比例值。</dd></div>
-          <div><dt><code>-A</code></dt><dd>直接指定逗号分隔的动作序列，例如 <code>a+b,b+c,c-</code>，替代随机生成。</dd></div>
-          <div><dt><code>-t</code> 与 <code>-F</code></dt><dd><code>-t</code> 给出树并要求推断动作；<code>-F</code> 只要求最终结果。二者可以组合。</dd></div>
-          <div><dt><code>-R</code> 与 <code>-L</code></dt><dd><code>-R</code> 将退出进程的直接子进程改归它的父进程；<code>-L</code> 在随机序列中只允许没有子进程的叶进程退出。</dd></div>
-          <div><dt><code>-P</code> 与 <code>-c</code></dt><dd><code>-P</code> 选择树的打印样式：basic、line1、line2、fancy，默认 fancy；<code>-c</code> 显示树或动作的答案。</dd></div>
-        </dl>
-        <h3>创建与退出的运行结果</h3>
-        <pre><code>python3 fork.py -A a+b,b+c,c+d,c+e,c- -c</code></pre>
-        <p>输出中的动作与进程树：</p>
-        <pre class="api-hw-terminal" aria-label="进程树程序输出节选"><code>                           Process Tree:
-                               a
-
+      <div class="practice-tabs" role="tablist" aria-label="进程 API 作业内容"><button type="button" id="practice-tab" role="tab" aria-controls="practice-view" aria-selected="true">模拟与代码练习</button><button type="button" id="program-tab" role="tab" aria-controls="program-view" aria-selected="false" tabindex="-1">程序说明与参数</button></div>
+      <div id="practice-view" role="tabpanel" aria-labelledby="practice-tab" tabindex="0">
+        <nav class="practice-index" aria-label="练习目录"><a href="#simulation"><span>01</span><strong>进程树模拟</strong></a><a href="#coding"><span>02</span><strong>C 程序练习</strong></a></nav>
+        <section id="simulation" aria-labelledby="simulation-title"><div class="practice-section-heading"><p class="eyebrow">HOMEWORK / SIMULATION</p><h2 id="simulation-title">创建、退出与进程树</h2><p>a、b、c 是模拟进程的名称，连线表示父子关系，不是系统中的实际 PID。</p></div>${apiPracticeIndex('simulation', API_SIMULATION_PRACTICE)}<div class="practice-setup"><h3>进入脚本目录</h3>${apiPracticeCommand('cd ~/ostep-homework/cpu-api')}<p><code>-c</code> 显示答案；<code>-t</code> 由树推断动作；<code>-F</code> 只查看最终结果。<a href="#tree" class="inline-link">fork.py 参数与输出</a></p></div>${API_SIMULATION_PRACTICE.map(renderApiSimulation).join('')}</section>
+        <section id="coding" aria-labelledby="coding-title"><div class="practice-section-heading"><p class="eyebrow">HOMEWORK / CODE</p><h2 id="coding-title">进程 API 的 C 程序练习</h2><p>fork 创建子进程，exec 替换当前进程的程序，wait 收集直接子进程的终止状态。下面分别考察变量、文件、输出顺序、执行程序、等待和管道。</p></div>${apiPracticeIndex('code', API_CODE_PRACTICE)}<div class="practice-setup"><h3>准备练习目录</h3>${apiPracticeCommand('mkdir -p ~/process-api-practice\ncd ~/process-api-practice')}<p>每题使用独立的源码文件和可执行文件。终端输出中的 PID 和没有同步约束的行序可能随运行改变。</p></div>${API_CODE_PRACTICE.map(renderApiCode).join('')}</section>
+      </div>
+      <div id="program-view" role="tabpanel" aria-labelledby="program-tab" tabindex="0" hidden>
+        <nav class="practice-index api-program-index" aria-label="程序说明目录"><a href="#tree"><span>01</span><strong>fork.py · 进程树模拟</strong></a><a href="#generator"><span>02</span><strong>generator.py · C 程序生成</strong></a></nav>
+        <section class="api-program-guide" id="tree" aria-labelledby="tree-title">
+          <header class="api-program-heading"><p class="eyebrow">PROCESS TREE</p><h2 id="tree-title">fork.py：创建、退出与进程树</h2><p>模拟进程的创建与退出，并给出动作或进程树。初始进程为 a；其他进程只有一个父进程，可以有多个子进程。连线表示父子关系，a、b、c 是模拟进程名称，不是 Linux 的 PID。</p></header>
+          <section class="api-program-start" aria-labelledby="fork-start-title"><h3 id="fork-start-title">基本运行</h3><p>先进入脚本目录。种子 4 固定本次动作序列；不加 <code>-c</code> 时，输出动作和待推导的树；加 <code>-c</code> 后，显示同一序列的树变化。</p>${apiPracticeCommand('cd ~/ostep-homework/cpu-api')}<div class="api-program-commands"><div><h4>给出动作，推导进程树</h4>${apiPracticeCommand('python3 fork.py -s 4')}</div><div><h4>显示对应的树变化</h4>${apiPracticeCommand('python3 fork.py -s 4 -c')}</div></div></section>
+          <div class="api-program-layout">
+            <section aria-labelledby="fork-options-title"><h3 id="fork-options-title">选项参数</h3>${apiProgramOptions([
+              ['-s SEED','不固定种子','指定随机种子；相同种子和生成参数得到相同动作序列。'],
+              ['-a COUNT','5','随机生成的创建、退出动作数量。'],
+              ['-f PROB','0.7','随机选择创建动作的概率，用小数比例表示，例如 0.7 表示 70%；需大于 0.001。'],
+              ['-A LIST','随机生成','使用指定的动作序列，替代随机生成。'],
+              ['-t','关闭','给出进程树，隐藏需要推导的动作。'],
+              ['-F','关闭','只针对最终状态出题，不逐次展示中间树。'],
+              ['-c','关闭','显示当前模式中隐藏的答案。'],
+              ['-P STYLE','fancy','树的输出样式：basic、line1、line2、fancy。'],
+              ['-L','关闭','随机生成时，仅允许没有子进程的叶进程退出。'],
+              ['-R','关闭','退出时将直接子进程改归退出进程的父进程。'],
+              ['-h','关闭','显示命令帮助并退出。'],
+            ])}<p class="api-program-note">根进程 a 不退出，因此随机选择的创建概率不等于每次运行中创建动作的实际比例。</p></section>
+            <div class="api-program-examples">
+              <section aria-labelledby="fork-input-title"><h3 id="fork-input-title">指定动作：-A 的输入格式</h3><p>动作之间用逗号分隔。<code>a+b</code> 表示 a 创建 b，<code>b-</code> 表示 b 退出。下面让 a 创建 b、b 创建 c、c 退出，最后由 a 创建 d。</p>${apiPracticeCommand('python3 fork.py -A a+b,b+c,c-,a+d -c')}<p>最终 a 的直接子进程为 b、d，c 已退出。</p></section>
+              <section aria-labelledby="fork-modes-title"><h3 id="fork-modes-title">输出模式与问题标记</h3><dl class="api-program-modes"><div><dt>默认模式</dt><dd>给出初始树与逐次动作；<code>Process Tree?</code> 表示需要推导动作后的树。</dd></div><div><dt><code>-t</code></dt><dd>给出逐次变化后的树；<code>Action?</code> 表示需要推导相邻两棵树之间的动作。</dd></div><div><dt><code>-F</code></dt><dd>给出完整动作序列；<code>Final Process Tree?</code> 表示需要推导最终树。</dd></div><div><dt><code>-t -F</code></dt><dd>给出最终树，推导可能的动作序列。已退出的节点不再保留，因此序列可能不唯一。</dd></div></dl><p><code>-c</code> 显示本次实际生成的答案，不改变创建与退出的规则。</p></section>
+              <section aria-labelledby="fork-output-title"><h3 id="fork-output-title">种子 4 的输出</h3><p><code>Action: a forks b</code> 表示 a 创建 b；<code>Action: d EXITS</code> 表示 d 退出。树的缩进和连线表示当前父子关系。</p><details class="practice-trace api-program-trace"><summary>python3 fork.py -s 4 -c · 动作与进程树</summary><pre tabindex="0" aria-label="种子 4 的动作与进程树"><code>Process Tree:
+    a
 Action: a forks b
-                               a
-                               └── b
-Action: b forks c
-                               a
-                               └── b
-                                   └── c
-Action: c forks d
-                               a
-                               └── b
-                                   └── c
-                                       └── d
-Action: c forks e
-                               a
-                               └── b
-                                   └── c
-                                       ├── d
-                                       └── e
-Action: c EXITS
-                               a
-                               ├── b
-                               ├── d
-                               └── e</code></pre>
-        <p>默认退出规则把退出进程的全部后代直接改归根进程 a，包括更深层的后代，因此可能改变原有的多层关系。使用 <code>-R</code> 时，只有直接子进程改归退出进程的父进程，其余后代保留原有关系。Linux 中孤儿进程的接收者取决于子进程收养者（subreaper）、进程所在的 PID 命名空间等条件，不能由这两个选项推断真实系统的结果。</p>
-        <h3>进程树作业</h3>
-        <ol class="hw-questions" id="tree-tasks">${PROCESS_API_TREE_TASKS.map(task => `<li><h3>${task.title}</h3><pre><code>${task.command}</code></pre><p>${task.text}</p></li>`).join('')}</ol>
-      </section>
-
-      <section class="hw-section" id="generator" aria-labelledby="generator-title">
-        <div class="api-hw-section-heading"><p class="section-index">02 / GENERATED C</p><h2 id="generator-title">生成 C 程序：阅读、编译与执行</h2></div>
-        <p><code>generator.py</code> 每次都会写出两份源码：<code>read.c</code> 省去事件打印，便于阅读父子分支；<code>run.c</code> 增加打印语句，编译后能观察创建、退出和等待返回。生成文件写入当前目录，同名文件会被覆盖。</p>
-        <p>以下命令在 <code>~/process-api-practice</code> 中生成文件。先阅读 <code>read.c</code> 并预测执行顺序，再编译运行 <code>run.c</code>：</p>
-        <pre><code>mkdir -p ~/process-api-practice
-cd ~/process-api-practice
-python3 ~/ostep-homework/cpu-api/generator.py -A "fork b,1 {} wait"
-cat read.c
-gcc -Wall -o run run.c
-./run</code></pre>
-        <p><code>fork b,1 {}</code> 让当前进程创建 b，子进程先休眠 1 秒，随后执行花括号中的代码；空花括号表示没有其他动作。花括号之后的 <code>wait</code> 由父进程执行，等待并收集一个子进程的退出状态。</p>
-        <div class="api-hw-example"><div>
-        <h3>源码 / read.c 的 main 函数</h3>
-        <pre><code>int main(int argc, char *argv[]) {
-    // process a
-    if (fork_or_die() == 0) {
-        sleep(1);
-        // process b
-        exit(0);
-    }
-    wait_or_die();
-    return 0;
-}</code></pre>
-        <p><code>fork_or_die()</code> 检查 fork 返回值：子进程得到 0，进入花括号内；父进程得到子 PID，跳过这一分支并执行 <code>wait_or_die()</code>。这两个封装遇到失败时通过断言终止；子进程从 fork 之后继续，不从 main 开头重新执行。</p>
-        </div><div>
-        <h3>终端 / run.c 编译后的结果</h3>
-        <pre class="api-hw-terminal" aria-label="生成的 C 程序运行输出"><code>  0 a+
-  0 a-&gt;b
-  1      b+
-  1      b-
-  1 a&lt;-b</code></pre>
-        <p><code>a+</code> 是 a 的开始记录，<code>a-&gt;b</code> 在 fork 调用前打印，记录即将创建 b；<code>b+</code> 在 b 休眠结束后打印，不是 b 刚创建的时刻。<code>b-</code> 在子进程退出前打印，<code>a&lt;-b</code> 表示父进程的 wait 已返回并收集 b 的退出状态。</p>
-        <p>第一列为程序开始后经过的实际秒数，截去小数部分。同一秒的记录仍有先后顺序；调度和运行负载可能改变时间数值及没有同步约束的事件顺序。需要核对的是代码规定的父子关系与等待条件，而不是要求每次输出完全相同。</p>
-        </div></div>
-        <dl class="hw-rules">
-          <div><dt><code>-A</code></dt><dd>指定程序结构，例如 <code>fork b,1 {} wait</code>；花括号可以嵌套，每个进程必须为它创建的直接子进程提供匹配的 wait。</dd></div>
-          <div><dt><code>-s</code>、<code>-n</code>、<code>-S</code></dt><dd>随机程序的种子、动作数量和最大休眠秒数。默认种子不固定，动作数 10，最大休眠 10 秒；短练习可用 <code>-s 10 -n 5 -S 2</code>。</dd></div>
-          <div><dt><code>-f</code>、<code>-w</code>、<code>-e</code></dt><dd>随机生成 fork、wait、退出动作的整数百分比，默认 30、40、30，三者必须合计 100，且每项为 1–99。这里的 <code>-f 30</code> 与 fork.py 的 <code>-f 0.3</code> 使用不同单位。</dd></div>
-          <div><dt><code>-r</code> 与 <code>-R</code></dt><dd>指定可读版和可运行版的文件名基名，默认 read、run，自动附加 .c。这里的 <code>-R</code> 指定文件名，不改变进程树的退出规则。</dd></div>
-          <div><dt><code>-c</code></dt><dd>重新生成两份 C 文件，调用 GCC 编译可运行版并执行。保持同一个 <code>-A</code> 描述或相同种子及参数，才能与之前阅读的程序对照。</dd></div>
-          <div><dt>重复执行</dt><dd>直接运行 <code>./run</code> 观察同一程序的多次结果；再次执行生成器可能覆盖源码与可执行文件。修改 run.c 后，需要重新编译再运行。</dd></div>
-        </dl>
-        <p>以下命令对相同的程序结构自动完成生成、编译和执行：</p>
-        <pre><code>python3 ~/ostep-homework/cpu-api/generator.py -A "fork b,1 {} wait" -c</code></pre>
-        <h3>C 程序推导练习</h3>
-        <ol class="hw-questions" id="generator-tasks">${PROCESS_API_GENERATOR_TASKS.map(task => `<li><h3>${task.title}</h3><pre><code>python3 ~/ostep-homework/cpu-api/generator.py ${task.program ? `-A "${task.program}"` : '-s 10 -n 5 -S 2'}</code></pre><p>${task.text}</p></li>`).join('')}</ol>
-      </section>
-
-      <section class="hw-section" id="coding" aria-labelledby="coding-title">
-        <div class="api-hw-section-heading"><p class="section-index">03 / C PROGRAMMING</p><h2 id="coding-title">C 编程：进程接口与资源关系</h2></div>
-        <p>为每项任务编写一个独立 C 程序，在练习目录中保存、编译并运行。例如第一项保存为 <code>q1.c</code>：</p>
-        <pre><code>cd ~/process-api-practice
-gcc -Wall -Wextra -o q1 q1.c
-./q1</code></pre>
-        <p>检查 fork、open、dup2、pipe、exec、wait 等调用的返回值；失败时记录 errno 或用 perror 输出原因。每项记录必要代码、实际输出与解释。涉及父子执行顺序时，多次运行并区分代码保证的顺序和一次观测到的顺序。</p>
-        <ol class="hw-questions api-hw-coding-tasks" id="coding-tasks">${PROCESS_API_C_TASKS.map((task, index) => `<li><header class="api-hw-task-heading"><span class="api-hw-task-number" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span><div><p class="api-hw-task-api">${task.api}</p><h3>${task.title}</h3></div></header><dl class="api-hw-task-body"><div><dt>实验要求</dt><dd><ul>${task.steps.map(step => `<li>${step}</li>`).join('')}</ul></dd></div><div><dt>记录与解释</dt><dd>${task.observe}</dd></div></dl></li>`).join('')}</ol>
-      </section>
+    a
+    └── b
+Action: a forks c
+    a
+    ├── b
+    └── c
+Action: b forks d
+    a
+    ├── b
+    │   └── d
+    └── c
+Action: d EXITS
+    a
+    ├── b
+    └── c
+Action: a forks e
+    a
+    ├── b
+    ├── c
+    └── e</code></pre></details><p>最终 b、c、e 都是 a 的直接子进程。d 曾是 b 的子进程，但已退出。</p></section>
+              <section aria-labelledby="fork-exit-title"><h3 id="fork-exit-title">退出时的父子关系</h3><p>默认规则将退出进程的全部后代直接改归根进程 a；<code>-R</code> 只将其直接子进程改归它的父进程，其余后代关系保留。</p><p>例如原关系为 <code>a → b → c → d → e</code>，c 退出后：默认 d、e 都成为 a 的子进程；使用 <code>-R</code> 后，d 成为 b 的子进程，e 仍是 d 的子进程。这两项是模拟树的更新规则；Linux 中孤儿进程的接收者由实际进程关系和系统设置决定。</p></section>
+            </div>
+          </div>
+        </section>
+        <section class="api-program-guide" id="generator" aria-labelledby="generator-title">
+          <header class="api-program-heading"><p class="eyebrow">PROGRAM GENERATOR</p><h2 id="generator-title">generator.py：生成并运行进程练习程序</h2><p>根据随机参数或指定的动作描述生成 C 程序，观察 fork 创建子进程、wait 等待子进程结束的过程。不加 <code>-c</code> 时生成并显示源码；加 <code>-c</code> 时还会调用 GCC 编译并运行。</p></header>
+          <section class="api-program-start" aria-labelledby="generator-start-title"><h3 id="generator-start-title">基本运行</h3><p>在独立练习目录生成文件。种子 0、一个随机生成动作的示例中，a 创建 b，b 休眠 6 秒后退出，a 等待 b 结束。</p>${apiPracticeCommand('mkdir -p ~/process-api-practice\ncd ~/process-api-practice')}<div class="api-program-commands"><div><h4>生成并查看程序</h4>${apiPracticeCommand('python3 ~/ostep-homework/cpu-api/generator.py -n 1 -s 0')}</div><div><h4>生成、编译并运行</h4>${apiPracticeCommand('python3 ~/ostep-homework/cpu-api/generator.py -n 1 -s 0 -c')}</div></div><p class="api-program-note">需要 Python 3；编译运行还需要 GCC。默认生成 read.c、run.c；使用 -c 时还编译生成并执行 run。相同名称的已有文件会被覆盖。</p></section>
+          <div class="api-program-layout">
+            <section aria-labelledby="generator-options-title"><h3 id="generator-options-title">选项参数</h3>${apiProgramOptions([
+              ['-s SEED','不固定种子','固定随机种子；相同种子和生成参数得到相同源码。'],
+              ['-n COUNT','10','随机生成的动作目标数；补充的等待和退出可能使最终动作数更多。'],
+              ['-S SECONDS','10','随机生成的休眠秒数在 1 到该值之间；指定输入时按输入中的秒数休眠。'],
+              ['-f PERCENT','30','随机生成 fork 动作的整数百分比。'],
+              ['-w PERCENT','40','随机生成 wait 动作的整数百分比；需有尚未等待的直接子进程。'],
+              ['-e PERCENT','30','随机生成 exit 动作的整数百分比。'],
+              ['-A PROGRAM','随机生成','用完整的程序描述代替随机生成，描述整体放在引号内。'],
+              ['-r NAME','read','可读源码的文件名主体，例如 example 生成 example.c。'],
+              ['-R NAME','run','可运行源码的文件名主体；配合 -c 时，也作为可执行文件名。'],
+              ['-c','关闭','生成源码后编译并执行可运行程序。'],
+              ['-h','关闭','显示命令帮助并退出。'],
+            ])}<p class="api-program-note"><code>-f</code>、<code>-w</code>、<code>-e</code> 每项取 1–99，总和为 100。这里使用整数百分比，例如 <code>-f 30</code>；fork.py 使用小数比例，例如 <code>-f 0.7</code>。</p><h4 class="api-program-subheading">自定义生成文件名</h4>${apiPracticeCommand('python3 ~/ostep-homework/cpu-api/generator.py -n 1 -s 0 -r example -R example-run -c')}<p>生成 example.c、example-run.c，并编译运行 example-run。</p></section>
+            <div class="api-program-examples">
+              <section aria-labelledby="generator-input-title"><h3 id="generator-input-title">指定程序：-A 的输入格式</h3><p>外层动作由初始进程 a 执行。<code>fork b,1 {}</code> 创建子进程 b，b 先休眠 1 秒，再执行花括号内的动作；空花括号表示没有后续动作，随后退出。<code>wait</code> 等待一个直接子进程结束，不按名称指定对象。</p>${apiPracticeCommand('python3 ~/ostep-homework/cpu-api/generator.py -A "fork b,1 {} wait" -c')}<p>动作之间用空格分隔；名称与休眠秒数用逗号分隔；花括号限定子进程的动作范围。每个进程为自己创建的直接子进程安排对应的 wait。</p><h4>两个直接子进程</h4>${apiPracticeCommand('python3 ~/ostep-homework/cpu-api/generator.py -A "fork b,1 {} fork c,2 {} wait wait" -c')}<p>a 先创建 b 和 c，再等待两次。b、c 分别休眠 1 秒、2 秒后退出。</p><h4>子进程继续创建子进程</h4>${apiPracticeCommand('python3 ~/ostep-homework/cpu-api/generator.py -A "fork b,1 {fork c,2 {} fork d,3 {} wait wait} wait" -c')}<p>a 创建 b，并等待 b；b 休眠 1 秒后创建 c、d，再等待它们。c、d 分别休眠 2 秒、3 秒后退出，b 收集它们的状态后退出，最后 a 的等待返回。</p></section>
+              <section aria-labelledby="generator-files-title"><h3 id="generator-files-title">生成文件的用途</h3><dl class="api-program-modes"><div><dt><code>read.c</code></dt><dd>便于阅读的源码，也是命令运行后显示的程序。</dd></div><div><dt><code>run.c</code></dt><dd>包含运行事件输出的源码。</dd></div><div><dt><code>run</code></dt><dd>加 -c 后由 run.c 编译得到的可执行文件。生成器编译后直接执行，也可在同一目录用 <code>./run</code> 再次运行。</dd></div></dl></section>
+              <section aria-labelledby="generator-output-title"><h3 id="generator-output-title">运行输出的含义</h3><p>以下是 <code>-n 1 -s 0 -c</code> 的事件输出示例。第一列是从程序开始运行起经过的秒数；a、b 是程序描述中的进程名称，不是实际 PID。</p><figure class="api-program-output"><figcaption>a 创建 b，并等待 b 结束</figcaption><pre tabindex="0" aria-label="单个子进程的事件输出"><code>0 a+
+0 a-&gt;b
+6      b+
+6      b-
+6 a&lt;-b</code></pre></figure><dl class="api-program-modes"><div><dt><code>a+</code></dt><dd>初始进程 a 开始执行动作。</dd></div><div><dt><code>a-&gt;b</code></dt><dd>a 创建子进程 b。b 从创建后开始休眠。</dd></div><div><dt><code>b+</code></dt><dd>b 的休眠结束，开始执行自己的动作；不表示 b 到这一刻才被创建。</dd></div><div><dt><code>b-</code></dt><dd>b 即将退出。</dd></div><div><dt><code>a&lt;-b</code></dt><dd>a 的 wait 已返回，取得 b 的终止状态。</dd></div></dl><p>这里 b+、b-、a&lt;-b 都显示 6 秒，仍有先后关系：b 的休眠先结束，再退出，最后 a 的等待返回。时间显示到整数秒，不代表这些事件同时发生。相同源码的实际调度顺序和时间仍可能变化。</p></section>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
     <footer><a href="process-api.html">返回进程 API 知识页</a><a href="#top">回到页首 ↑</a></footer>
   </div>`;
 document.title = '进程 API 作业 Process API Homework · OSLab';
+const apiFileStages = [
+  {record:'', actor:null, closed:false, action:'fork 已完成。父子各有一个 fd，引用同一个打开文件描述，文件偏移为 0。'},
+  {record:'parent: 0\n', actor:'parent', closed:false, action:'父进程从偏移 0 写入 parent: 0 和换行，共 10 字节；共享偏移变为 10。'},
+  {record:'child: 0\n', actor:'child', closed:false, action:'子进程使用更新后的偏移 10，写入 child: 0 和换行，共 9 字节；共享偏移变为 19，没有覆盖父进程的记录。'},
+  {record:'', actor:'parent', closed:true, action:'父进程关闭自己的 fd，父进程到内核对象的引用被移除。子进程的 fd 仍有效，共享偏移仍为 19。'},
+  {record:'child: 1\n', actor:'child', closed:true, action:'子进程继续从偏移 19 写入 child: 1 和换行，共 9 字节；共享偏移变为 28。父进程关闭 fd 没有关闭子进程的 fd。'},
+];
+let apiFileStage = 0;
+let apiFileTimer = null;
+const stopApiFilePlayback = () => {
+  clearInterval(apiFileTimer);
+  apiFileTimer = null;
+  const button = document.querySelector('[data-api-file-control="play"]');
+  button.setAttribute('aria-label', '播放写入过程');
+  button.title = '播放写入过程';
+  button.firstElementChild.textContent = '▶';
+};
+const renderApiFileStage = () => {
+  const stage = apiFileStages[apiFileStage];
+  const content = apiFileStages.slice(0, apiFileStage + 1).map(item => item.record).join('');
+  document.querySelector('#api-file-content').textContent = content || '（空文件）';
+  document.querySelector('#api-file-offset').textContent = String(new TextEncoder().encode(content).length);
+  document.querySelector('#api-file-action').textContent = stage.action;
+  document.querySelector('#api-file-progress').textContent = `${apiFileStage} / 4`;
+  for (const actor of ['parent', 'child']) {
+    const node = document.querySelector(`#api-file-${actor}`);
+    node.classList.toggle('api-file-active', stage.actor === actor);
+    node.classList.toggle('api-file-closed', actor === 'parent' && stage.closed);
+    node.querySelector('strong').textContent = actor === 'parent' && stage.closed ? 'fd：已关闭' : 'fd：已打开';
+    node.querySelector('small').textContent = actor === 'parent' && stage.closed ? '此进程的引用已移除' : '引用下方同一个内核对象';
+  }
+  document.querySelector('[data-api-file-control="next"]').disabled = apiFileStage === apiFileStages.length - 1;
+};
+const advanceApiFileStage = () => {
+  if (apiFileStage < apiFileStages.length - 1) apiFileStage++;
+  renderApiFileStage();
+  if (apiFileStage === apiFileStages.length - 1) stopApiFilePlayback();
+};
+const apiPracticeTabs = [...document.querySelectorAll('.practice-tabs [role="tab"]')];
+const selectApiPracticeView = panelId => {
+  if (panelId !== 'practice-view') stopApiFilePlayback();
+  apiPracticeTabs.forEach(tab => {
+    const selected = tab.getAttribute('aria-controls') === panelId;
+    tab.setAttribute('aria-selected', String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    document.getElementById(tab.getAttribute('aria-controls')).hidden = !selected;
+  });
+};
+const apiPracticeAnchor = hash => {
+  const target = document.getElementById(hash.slice(1));
+  const panel = target?.closest('[role="tabpanel"]');
+  if (panel) selectApiPracticeView(panel.id);
+  if (target?.matches('details')) target.open = true;
+  return target;
+};
+apiPracticeTabs.forEach((tab, index) => {
+  tab.addEventListener('click', () => {
+    const panelId = tab.getAttribute('aria-controls');
+    selectApiPracticeView(panelId);
+    if (location.hash !== `#${panelId}`) history.pushState(null, '', `#${panelId}`);
+  });
+  tab.addEventListener('keydown', event => {
+    const next = {ArrowRight:(index + 1) % apiPracticeTabs.length, ArrowLeft:(index + apiPracticeTabs.length - 1) % apiPracticeTabs.length, Home:0, End:apiPracticeTabs.length - 1}[event.key];
+    if (next === undefined) return;
+    event.preventDefault();
+    apiPracticeTabs[next].focus();
+    apiPracticeTabs[next].click();
+  });
+});
+document.querySelector('#root').addEventListener('click', async event => {
+  const link = event.target.closest('a[href^="#"]');
+  if (link) apiPracticeAnchor(link.getAttribute('href'));
+  const fileControl = event.target.closest('[data-api-file-control]');
+  if (fileControl) {
+    const action = fileControl.dataset.apiFileControl;
+    if (action === 'reset') {
+      stopApiFilePlayback();
+      apiFileStage = 0;
+      renderApiFileStage();
+    } else if (action === 'next') {
+      stopApiFilePlayback();
+      advanceApiFileStage();
+    } else if (apiFileTimer !== null) {
+      stopApiFilePlayback();
+    } else {
+      if (apiFileStage === apiFileStages.length - 1) apiFileStage = 0;
+      advanceApiFileStage();
+      if (apiFileStage < apiFileStages.length - 1) {
+        apiFileTimer = setInterval(advanceApiFileStage, 2000);
+        fileControl.setAttribute('aria-label', '暂停写入过程');
+        fileControl.title = '暂停写入过程';
+        fileControl.firstElementChild.textContent = 'Ⅱ';
+      }
+    }
+  }
+  const stageButton = event.target.closest('[data-api-stage]');
+  if (stageButton) {
+    const stage = apiTreeStages[Number(stageButton.dataset.apiStage)];
+    document.querySelector('#api-tree-stage').innerHTML = apiPracticeTree(stage.parents);
+    document.querySelector('#api-tree-action').textContent = stage.action;
+    document.querySelectorAll('[data-api-stage]').forEach(button => button.setAttribute('aria-pressed', String(button === stageButton)));
+  }
+  const download = event.target.closest('[data-download-source]');
+  if (download) {
+    const index = Number(download.dataset.downloadSource);
+    const url = URL.createObjectURL(new Blob([`${API_PRACTICE_SOURCES[index]}\n`], {type:'text/plain;charset=utf-8'}));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${API_CODE_PRACTICE[index].file}.c`;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  const sourceButton = event.target.closest('[data-copy-source]');
+  if (sourceButton) {
+    const code = sourceButton.closest('.api-source').querySelector('pre');
+    try {
+      await navigator.clipboard.writeText(`${code.textContent}\n`);
+      sourceButton.title = '已复制源码';
+      sourceButton.setAttribute('aria-label', '已复制源码');
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(code);
+      const selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      sourceButton.title = '源码已选中，可复制';
+      sourceButton.setAttribute('aria-label', '源码已选中，可复制');
+    }
+  }
+  const button = event.target.closest('[data-practice-copy]');
+  if (!button) return;
+  const command = button.previousElementSibling.textContent;
+  try {
+    await navigator.clipboard.writeText(command);
+    button.title = '已复制';
+    button.setAttribute('aria-label', '已复制命令');
+  } catch {
+    const range = document.createRange();
+    range.selectNodeContents(button.previousElementSibling);
+    const selection = getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    button.title = '命令已选中，可复制';
+    button.setAttribute('aria-label', '命令已选中，可复制');
+  }
+});
+window.addEventListener('hashchange', () => {
+  const target = apiPracticeAnchor(location.hash);
+  if (target) target.scrollIntoView({behavior:'instant'});
+});
+apiPracticeAnchor(location.hash);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopApiFilePlayback();
+});

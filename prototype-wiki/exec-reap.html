@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>程序替换与进程回收 · OSLab</title>
+<style>
+:root{--ink:#253330;--green:#176754;--blue:#315f7b;--rust:#9d493b;--line:#d9e1dc;--paper:#fbfcfa}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.85 "Noto Sans SC","Source Han Sans SC","Microsoft YaHei",sans-serif;letter-spacing:0}
+main{max-width:1100px;margin:auto;padding:28px 36px 60px}a{color:var(--green);text-underline-offset:4px}nav{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:24px}
+header{padding:26px 0 22px}h1{font-size:32px;line-height:1.4;margin:8px 0 14px}h2{font-size:23px;line-height:1.5;margin:0 0 14px}h3{font-size:18px;line-height:1.6;margin:0 0 12px}h4{font-size:15px;margin:18px 0 8px}p{margin:0 0 14px}.eyebrow{font-size:13px;color:var(--green)}.lead{max-width:68ch}
+.conditions,.fields{display:grid;grid-template-columns:100px minmax(0,1fr);gap:12px 18px;padding:16px 0;margin:18px 0}.conditions{border-block:1px solid var(--line)}dt{font-weight:500}dd{margin:0}
+.section-links{justify-content:flex-start;gap:12px 24px;padding:10px 0 18px}section{padding:28px 0;border-bottom:1px solid var(--line);scroll-margin-top:20px}.pair,.processes{display:grid;grid-template-columns:1fr 1fr;gap:32px}.pair>article,.processes>article{min-width:0}.scenario,.caption{font-size:13px;color:#596a63}.caption{margin-top:14px}
+.command{position:relative;background:#eff4f3;border-left:2px solid #9bbcb0;padding:14px 52px 14px 14px;margin:14px 0}pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.85 Consolas,monospace}.raw{padding:14px;background:#f0f3f5;border-left:2px solid #8ca8ba;margin:12px 0 16px}code{font-family:Consolas,monospace;overflow-wrap:anywhere}
+.copy{position:absolute;right:8px;top:8px;width:32px;height:32px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--green);cursor:pointer}.copy span{display:block;width:12px;height:14px;border:1.5px solid currentColor;margin:auto;box-shadow:-3px -3px 0 -1px white,-3px -3px 0 0 currentColor}.command-feedback{font-size:13px;color:var(--green);margin:0 0 16px;overflow-wrap:anywhere}
+.answer{border-left:2px solid #9bbcb0;padding-left:16px;margin-top:18px}.answer h4{color:var(--green);margin-top:0}.observations{padding-left:22px}.observations li+li{margin-top:12px}.observations code{color:var(--blue)}
+.controls{margin:18px 0 24px}.mode-label{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:18px}select{font:inherit;max-width:100%;padding:6px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--ink)}fieldset{border:0;padding:0;margin:0;min-width:0}legend{font-size:14px;margin-bottom:10px}.stage-options{display:flex;flex-wrap:wrap;gap:10px 20px}.stage-options label{display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer}.stage-options input{accent-color:var(--green);width:17px;height:17px;flex-shrink:0}
+.stage-summary{min-height:110px}.process{border-top:3px solid var(--green);padding:18px;background:#eef4f1;min-height:290px}.process.child{border-color:var(--blue);background:#eef3f6}.process .fields{font-size:14px;margin:0;grid-template-columns:90px minmax(0,1fr);gap:10px 16px}.process dd{overflow-wrap:anywhere}.process.reaped{border-color:var(--line);background:transparent}.status{font-size:14px;min-height:52px;margin-bottom:14px}.evidence-label{font-size:14px;margin-top:20px}.parameters dt{margin-top:16px}.parameters dd{margin:4px 0 0}details{margin:16px 0}summary{cursor:pointer;color:var(--green)}details>div{padding-top:14px}footer{font-size:13px;padding-top:24px}button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--green);outline-offset:4px}
+@media(max-width:700px){main{padding:18px 18px 40px}h1{font-size:26px}h2{font-size:21px}.pair,.processes{grid-template-columns:1fr;gap:22px}.pair>article+article{border-top:1px solid var(--line);padding-top:22px}.conditions{grid-template-columns:76px minmax(0,1fr);gap:12px}.stage-summary{min-height:150px}.stage-options{display:grid;grid-template-columns:1fr 1fr;gap:12px}.process{min-height:280px}.status{min-height:0}}
+</style>
+</head>
+<body>
+<main>
+<nav aria-label="CPU 虚拟化实验导航"><a href="cpu-virtualization-experiments.html">CPU 虚拟化实验</a><a href="process-api.html">进程 API 知识</a></nav>
+<header>
+<div class="eyebrow">CPU 虚拟化实验 · 任务四</div>
+<h1>程序替换与进程回收</h1>
+<p class="lead">上一个任务用 fork() 创建了子进程。这次让子进程装入另一个程序：执行的程序换了，进程编号会不会也换？子进程已经退出，父进程为什么还要等待它？</p>
+<p class="lead">进程编号称为 PID。exec 系列接口替换调用进程的程序映像，也就是它执行的代码和程序内存内容；waitpid() 用来等待指定子进程，并收集退出状态。下面用成功和失败两次运行，观察它们分别改变了什么。</p>
+<dl class="conditions"><dt>两次都相同</dt><dd>父进程创建一个子进程。子进程尝试替换程序；父进程先观察子进程退出后的状态，再用 waitpid() 回收。</dd><dt>两次的区别</dt><dd>第一次使用编译好的目标程序，第二次使用不存在的目标路径。</dd></dl>
+</header>
+<nav class="section-links" aria-label="实验章节"><a href="#setup">准备程序</a><a href="#replacement">比较程序替换</a><a href="#reaping">比较退出与回收</a><a href="#mechanism">过程与原因</a><a href="#transfer">判断退出码</a><a href="#guide">程序说明</a></nav>
+<section id="setup" aria-labelledby="setup-heading">
+<h2 id="setup-heading">准备两个程序</h2>
+<p>下载 <a href="exec-reap-work.c" download>参考程序 exec-reap-work.c</a> 和 <a href="exec-reap-target.c" download>目标程序 exec-reap-target.c</a>，放到 Ubuntu 的同一个实验目录。需要已有的 GCC，不需要绑定 CPU 或管理员权限。</p>
+<div class="command"><button class="copy" aria-label="复制两个程序的编译命令" title="复制编译命令"><span></span></button><pre>gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror exec-reap-work.c -o exec-reap-work
+gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror exec-reap-target.c -o exec-reap-target</pre></div>
+<p>后续命令仍在这个目录的 Bash 终端中执行。参考程序创建子进程并记录整个过程；目标程序输出自己的 PID 和变量初值 300，随后以退出码 7 结束。</p>
+<p>退出码是程序结束时返回的整数，用来说明结束结果。目标程序的 value 为 300，退出码为 7，二者含义不同。</p>
+</section>
+<section id="replacement" aria-labelledby="replacement-heading">
+<h2 id="replacement-heading">成功装入目标程序，与找不到目标程序有什么不同？</h2>
+<p>两次程序都自动完成。下面的参考记录来自 Ubuntu 实测，PID 每次可能不同；只比较同一次运行中的 PID，不要拿两次运行的编号判断是否发生替换。</p>
+<div class="pair">
+<article><div class="scenario">第一次运行 · 目标程序存在</div><h3>1. 成功装入目标程序</h3>
+<div class="command"><button class="copy" aria-label="复制成功替换的命令" title="复制运行命令"><span></span></button><pre>./exec-reap-work replace</pre></div>
+<p>比较 before exec 与 target 两行：PID 是否相同？原程序与目标程序各自的 value 是多少？再查找是否出现 after failed exec。</p>
+<h4>参考输出</h4><pre class="raw" id="replace-output">before exec: pid=25621 value=100
+target: pid=25621 value=300
+target: exit=7
+before waitpid: pid=25621 state=Z
+waitpid: pid=25621 exit=7
+after waitpid: pid=25621 /proc entry=absent
+second waitpid: ECHILD</pre>
+<p>原程序与目标程序输出相同 PID。目标程序从自己的初值 300 开始执行，原程序没有继续输出 after failed exec。替换发生在原来的子进程中，没有再次创建一个进程。</p>
+</article>
+<article><div class="scenario">第二次运行 · 目标路径不存在</div><h3>2. 找不到目标程序</h3>
+<div class="command"><button class="copy" aria-label="复制路径不存在的命令" title="复制运行命令"><span></span></button><pre>./exec-reap-work missing</pre></div>
+<p>当前目录中不能存在 exec-reap-no-such-target。观察有没有 target 输出；再看 after failed exec 的 PID 和变量值。</p>
+<h4>参考输出</h4><pre class="raw" id="missing-output">before exec: pid=25661 value=100
+exec failed: ENOENT
+after failed exec: pid=25661 value=100
+child: exit=127
+before waitpid: pid=25661 state=Z
+waitpid: pid=25661 exit=127
+after waitpid: pid=25661 /proc entry=absent
+second waitpid: ECHILD</pre>
+<p>ENOENT 表示目标路径不存在。原程序仍然执行，PID 和变量值都不变。exec 失败后返回错误，并没有自动结束进程；退出码 127 是参考程序随后主动选择的。</p>
+</article>
+</div>
+</section>
+<section id="reaping" aria-labelledby="reaping-heading">
+<h2 id="reaping-heading">子进程已退出，父进程还要回收什么？</h2>
+<p>继续看刚才两次运行的后四行。子进程退出与父进程收集退出状态是先后两个步骤：</p>
+<ol class="observations">
+<li><strong>回收前：</strong>before waitpid 中的 state 是 <code>Z</code>。Z 称为僵尸状态：程序已不再执行，内核仍保存退出状态等记录，等待父进程收集。</li>
+<li><strong>调用 waitpid()：</strong>waitpid 那一行的 PID 是返回的子进程编号，exit 是从退出状态中取得的退出码。第一次为 7，第二次为 127。</li>
+<li><strong>回收后：</strong>after waitpid 的 <code>/proc entry=absent</code> 表示紧接着检查时，该 PID 的进程记录目录已不存在。second waitpid 得到 <code>ECHILD</code>，表示没有可等待的对应子进程，不能把同一份退出状态取两次。</li>
+</ol>
+<p>本实验调用 waitpid() 时，子进程已经退出，因此可以直接收集退出状态。如果子进程还没有退出，就调用本实验使用的等待接口，父进程会暂停执行，直到指定子进程退出。</p>
+<div class="answer"><h4>Z 状态不是程序还在计算</h4><p>子进程退出时会释放程序内存等资源。保留的是退出记录，不是整个程序仍在运行。父进程通过等待接口取得退出状态，内核随后移除这份记录；只是让时间过去，不会代替父进程完成这个动作。</p></div>
+<p class="caption">PID 可以被后续新进程重新使用。这里的目录检查针对本次回收后的紧接观察，不表示该编号永远不会再次出现。</p>
+</section>
+<section id="mechanism" aria-labelledby="mechanism-heading">
+<h2 id="mechanism-heading">程序替换、退出和回收分别改变什么？</h2>
+<p>成功替换后，进程使用目标程序的代码和内存，从目标程序的入口开始执行。失败时，原程序还在，调用处返回错误。无论替换是否成功，子进程随后都可以退出，而父进程仍需要收集它的退出状态。</p>
+<div class="controls"><label class="mode-label" for="demo-mode">运行条件<select id="demo-mode"><option value="replace">目标程序存在</option><option value="missing">目标路径不存在</option></select></label>
+<fieldset><legend>子进程与退出记录的变化</legend><div class="stage-options"><label><input type="radio" name="stage" value="0" checked>调用 exec 前</label><label><input type="radio" name="stage" value="1"><span id="attempt-label">成功替换后</span></label><label><input type="radio" name="stage" value="2">退出后，回收前</label><label><input type="radio" name="stage" value="3">回收后</label></div></fieldset></div>
+<div class="stage-summary" aria-live="polite"><h3 id="stage-title"></h3><p id="stage-reason"></p></div>
+<div class="processes" aria-label="子进程的程序状态与父进程的等待结果">
+<article class="process child" id="child-process"><h3>子进程</h3><p class="status" id="child-status"></p><dl class="fields"><dt id="pid-label">子进程 PID</dt><dd id="child-pid"></dd><dt>执行的程序</dt><dd id="child-program"></dd><dt>变量 value</dt><dd id="child-value"></dd><dt>退出记录</dt><dd id="child-record"></dd></dl></article>
+<article class="process"><h3>父进程</h3><p class="status" id="parent-status"></p><dl class="fields"><dt>waitpid 返回</dt><dd id="waited-pid"></dd><dt>取得的退出码</dt><dd id="exit-code"></dd></dl></article>
+</div>
+<p class="evidence-label">对应的参考记录</p><pre class="raw" id="stage-evidence"></pre>
+<p class="caption">PID 使用上方两次参考运行中的编号。程序退出后，普通变量不再作为该进程正在使用的数据；已取得的退出码保存在父进程中。</p>
+</section>
+<section id="transfer" aria-labelledby="transfer-heading">
+<h2 id="transfer-heading">退出码是 7，能说明 exec 失败了吗？</h2>
+<p>第一次运行中，父进程取得退出码 7，而不是 0。有人据此认为目标程序没有成功装入。哪些输出可以支持或反驳这个判断？父进程得到的 7，是目标程序的变量值吗？</p>
+<details><summary>参考答案</summary><div><p>不能只用退出码判断 exec 是否成功。第一次运行已经有 target 的输出，PID 与替换前相同，原程序也没有继续输出 after failed exec，说明目标程序已经装入并执行。7 是目标程序明确设定的退出码。</p><p>目标程序的变量值是 300。父进程收到的是退出码 7，不是变量 value 的内容。与上一个任务相同，等待子进程不会把它的普通私有变量传给父进程。</p></div></details>
+</section>
+<section id="guide" aria-labelledby="guide-heading">
+<h2 id="guide-heading">程序说明</h2>
+<p>参考程序记录子进程替换程序、退出和被回收的过程。运行格式为 <code>./exec-reap-work MODE</code>，把 MODE 替换为下面的模式，不需要其他输入。</p>
+<dl class="parameters"><dt>replace</dt><dd>装入当前目录的 exec-reap-target。目标程序的变量初值是 300，退出码是 7。</dd><dt>missing</dt><dd>尝试装入不存在的 exec-reap-no-such-target。替换失败后，原程序继续输出并以 127 退出；若该路径已存在，参考程序会拒绝运行。</dd><dt>--help</dt><dd>显示用法，不创建子进程。</dd></dl>
+<div class="command"><button class="copy" aria-label="复制帮助命令" title="复制帮助命令"><span></span></button><pre>./exec-reap-work --help</pre></div>
+<p>程序先输出子进程的记录，再输出回收前状态、等待结果与回收后检查，随后自动结束。PID 每次可能不同。参考程序自身成功完成观察时返回 0，即使实验中的子进程退出码是 7 或 127。</p>
+<p>replace 如果也显示 ENOENT，请检查两份源码是否都已编译，以及终端是否仍在程序所在目录。缺少参数、未知模式或多余参数会显示用法并返回失败。</p>
+</section>
+<footer><a href="cpu-virtualization-experiments.html">返回 CPU 虚拟化实验目录</a> · 上一项：<a href="fork-private.html">任务三：fork 创建子进程后的变量变化</a> · 下一项：<a href="syscalls.html">任务五：系统调用与内核控制</a><br><a href="exec-reap.md">实验说明文档</a> · <a href="process-api.html">进程 API 知识</a></footer>
+</main>
+<script src="exec-reap.js"></script>
+</body>
+</html>

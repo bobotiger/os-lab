@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>一个 CPU，两个计算进程 · OSLab</title>
+<style>
+:root{--ink:#253330;--green:#176754;--blue:#315f7b;--rust:#9d493b;--line:#d9e1dc;--paper:#fbfcfa}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.85 "Noto Sans SC","Source Han Sans SC","Microsoft YaHei",sans-serif;letter-spacing:0}a{color:var(--green);text-underline-offset:4px}main{max-width:1100px;margin:auto;padding:28px 36px 60px}nav{display:flex;justify-content:space-between;gap:16px;font-size:13px;padding-bottom:24px;border-bottom:1px solid var(--line)}header{padding:26px 0 22px}h1{font-size:32px;line-height:1.4;margin:8px 0 14px}h2{font-size:23px;line-height:1.5;margin:0 0 14px}h3{font-size:18px;line-height:1.6;margin:0 0 12px}p{margin:0 0 14px}.eyebrow{font-size:13px;color:var(--green)}.lead{max-width:68ch}.conditions{display:flex;flex-wrap:wrap;gap:8px 24px;font-size:14px;padding:12px 0;border-block:1px solid var(--line)}section{padding:28px 0;border-bottom:1px solid var(--line)}.compare{display:grid;grid-template-columns:1fr 1fr;gap:32px}.comparison{min-width:0}.comparison+.comparison{border-left:1px solid var(--line);padding-left:32px}.scenario{font-size:13px;color:#596a63}.numbers{display:flex;flex-wrap:wrap;gap:16px 32px;margin:14px 0}.numbers dt{font-size:13px}.numbers dd{font:32px/1.4 Consolas,monospace;margin:4px 0}.numbers small{font:14px "Microsoft YaHei",sans-serif}.green{color:var(--green)}.blue{color:var(--blue)}.rust{color:var(--rust)}.measure{height:18px;position:relative;background:#edf1ee;margin:10px 0}.measure span{display:block;height:100%;background:var(--green)}.comparison:nth-child(2) .measure span{background:var(--blue)}.caption{font-size:13px;color:#596a63}.question{margin-top:22px;border-left:3px solid var(--rust);padding-left:16px}.toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:18px 0}button{font:inherit;cursor:pointer;border:1px solid var(--line);border-radius:4px;background:white;color:var(--green)}.icon{width:40px;height:40px;font:22px/1 Consolas,monospace}button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--green);outline-offset:4px}.toolbar label{display:flex;align-items:center;gap:12px;flex:1;min-width:180px}.toolbar input{width:100%;min-width:80px;accent-color:var(--green)}output{font:14px Consolas,monospace;width:76px;flex-shrink:0}.lanes{display:grid;gap:14px}.lane{display:grid;grid-template-columns:112px 1fr 70px;gap:12px;align-items:center;font-size:14px}.tiles{display:grid;grid-template-columns:repeat(24,minmax(0,1fr));gap:3px;height:26px}.tile{background:#e6ece7;border:1px solid #d3ddd6}.lane[data-track="solo"] .done{background:var(--green);border-color:var(--green)}.lane[data-track="a"] .done{background:var(--blue);border-color:var(--blue)}.lane[data-track="b"] .done{background:var(--rust);border-color:var(--rust)}.count{font:14px Consolas,monospace;text-align:right}.chart{margin:24px 0 0}.chart svg{display:block;width:100%;height:auto;background:#fff;border-bottom:1px solid var(--line)}.chart text{font:13px "Microsoft YaHei",sans-serif;fill:#596a63}.chart .grid{stroke:#e3e9e4}.chart .curve{fill:none;stroke-width:2.5}.chart figcaption{font-size:13px;margin-top:10px}.legend{display:flex;flex-wrap:wrap;gap:18px;font-size:13px;margin:12px 0}.legend span::before{content:"";display:inline-block;width:18px;height:3px;background:currentColor;margin-right:8px;vertical-align:middle}.milestone{font-size:15px;margin:18px 0 0;min-height:56px}.steps{display:grid;grid-template-columns:40px 1fr;gap:12px 18px}.step-number{font:24px Consolas,monospace;color:var(--green)}.step-body{min-width:0}.command{position:relative;background:#eff4f3;border-left:2px solid #9bbcb0;margin:14px 0;padding:14px 52px 14px 14px}.command pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:13px/1.85 Consolas,monospace}.copy{position:absolute;right:8px;top:8px;width:32px;height:32px}.copy span{display:block;width:12px;height:14px;border:1.5px solid currentColor;margin:auto;box-shadow:-3px -3px 0 -1px #eff4f3,-3px -3px 0 0 currentColor}details{margin:16px 0}summary{cursor:pointer;color:var(--green)}details>div{padding-top:14px}code{font-family:Consolas,monospace;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;font-size:14px;margin:14px 0}td,th{border-bottom:1px solid var(--line);padding:10px 8px;text-align:left;vertical-align:top}th{font-weight:500}.facts{display:grid;grid-template-columns:1fr 1fr;gap:28px}.facts article{min-width:0}.raw{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.8 Consolas,monospace;background:#eff4f3;padding:14px;max-height:320px;overflow:auto}.status{font-size:13px;color:var(--green);min-height:24px}footer{font-size:13px;padding-top:24px}@media(max-width:700px){main{padding:18px 18px 40px}h1{font-size:26px}h2{font-size:21px}.compare,.facts{grid-template-columns:1fr;gap:22px}.comparison+.comparison{border-left:0;border-top:1px solid var(--line);padding:20px 0 0}.lane{grid-template-columns:82px 1fr 50px;gap:8px;font-size:13px}.tiles{gap:2px;height:22px}.count{font-size:12px}.numbers dd{font-size:28px}.steps{grid-template-columns:28px 1fr;gap:12px}.chart text{font-size:15px}.conditions{gap:6px 16px}}
+.comparison+.comparison{border-left:0;padding-left:0}
+.toolbar label{white-space:nowrap}
+.command-feedback{font-size:13px;line-height:1.8;color:var(--green);margin:0 0 16px;overflow-wrap:anywhere}
+.command-meanings{margin:14px 0 20px}
+.command-meanings dt{font-size:14px;font-weight:500;margin-top:12px}
+.command-meanings dd{font-size:14px;margin:4px 0 0}
+.section-links{justify-content:flex-start;flex-wrap:wrap;gap:12px 24px;padding:10px 0 18px}
+.exercise{padding:22px 0;border-top:1px solid var(--line);scroll-margin-top:20px}
+.exercise h4{font-size:15px;font-weight:500;margin:18px 0 8px}
+.exercise ul{padding-left:22px;margin:0 0 14px}.exercise li+li{margin-top:8px}
+.reference-answer{border-left:2px solid #9bbcb0;padding-left:16px;margin:18px 0 0}
+.reference-answer h4{color:var(--green);margin-top:0}
+.table-scroll{overflow-x:auto}.measure-axis{position:relative;height:28px;font:12px/1.5 Consolas,monospace;color:#596a63;margin-bottom:14px}
+.measure-axis span{position:absolute;top:0;white-space:nowrap}.measure-axis span:first-child{left:0}.measure-axis span:nth-child(2){left:50%;transform:translateX(-50%)}.measure-axis span:last-child{right:0}
+.parameters dt{font-weight:500;margin-top:16px}.parameters dd{margin:4px 0 0}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<main>
+<nav aria-label="CPU 虚拟化实验导航"><a href="cpu-virtualization-experiments.html">CPU 虚拟化实验</a><a href="cpu-scheduling.html">CPU 调度基础</a></nav>
+<header>
+<div class="eyebrow">CPU 虚拟化实验 · 任务一 · CPU 共享</div>
+<h1>一个 CPU，两个计算进程</h1>
+<p class="lead">本实验比较两种条件：A 单独计算，以及 A、B 在同一个逻辑 CPU 上计算。每个进程的计算量相同，比较它们的完成进度、耗时和最终结果。</p>
+<p class="lead">第二种条件不等 A 结束就启动 B，两个进程的运行时段重叠，称为并发运行。同一个逻辑 CPU 在同一时刻只能执行一个线程；A、B 都是单线程进程，通过调度轮流执行。</p>
+<div class="conditions"><span>每个进程：24 段相同计算</span><span>每段：4,000 万次迭代</span><span>单独与并发运行：绑定同一个 CPU</span></div>
+</header>
+<nav class="section-links" aria-label="实验章节"><a href="#setup-heading">准备程序</a><a href="#reading-heading">记录说明</a><a href="#practice-heading">实验步骤</a><a href="#result-heading">实测对照</a><a href="#why-heading">机制解释</a><a href="#guide-heading">程序说明</a></nav>
+<section aria-labelledby="setup-heading">
+<h2 id="setup-heading">准备程序并选择 CPU</h2>
+<p>下载 <a href="cpu-sharing-work.c" download>参考程序 cpu-sharing-work.c</a>，放到 Ubuntu 的实验目录。需要已有的 GCC、Python 3 和 taskset；原生 Ubuntu 与 WSL Ubuntu 均可运行。</p>
+<p>在这个目录的 Bash 终端执行以下命令。后续实验也使用同一个终端：</p>
+<div class="command"><button class="copy" title="复制编译命令" aria-label="复制编译命令"><span></span></button><pre>gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror cpu-sharing-work.c -o cpu-sharing-work
+CPU=$(python3 -c 'import os; print(min(os.sched_getaffinity(0)))')
+printf 'Selected CPU: %s\n' "$CPU"</pre></div>
+<dl class="command-meanings"><dt>编译</dt><dd>第一行把源码编译成可运行的 cpu-sharing-work 程序。</dd><dt>选择 CPU</dt><dd>第二行把一个允许使用的逻辑 CPU 编号保存到变量 CPU 中，第三行显示这个编号。后续的 <code>taskset -c "$CPU"</code> 将各次运行限制在同一个逻辑 CPU 上；它不会排除其他系统进程使用这个 CPU。</dd></dl>
+</section>
+<section aria-labelledby="reading-heading">
+<h2 id="reading-heading">先了解进度记录</h2>
+<p>程序连续执行 24 段计算，不主动休眠。启动时输出一条记录，每完成一段再输出一条，共 25 条。每一行都是一条 JSON 格式的记录，保存这些记录的文件使用 .jsonl 后缀。</p>
+<div class="table-scroll"><table><thead><tr><th>字段</th><th>含义</th></tr></thead><tbody>
+<tr><td><code>name</code></td><td>本次运行的名称 A 或 B。名称不影响计算量。</td></tr>
+<tr><td><code>batch</code></td><td>已完成的段数。0 表示开始，24 表示全部计算完成。</td></tr>
+<tr><td><code>wall</code></td><td>该进程从开始到这条记录的经过时间，单位为秒。它包括计算和等待 CPU 的时间，不是 CPU 实际为该进程执行指令的时间。</td></tr>
+<tr><td><code>timestamp</code></td><td>同一系统的单调时钟读数，单位为秒，用于比较不同进程的记录先后；它不是日历时间。</td></tr>
+<tr><td><code>checksum</code></td><td>当前计算结果的校验值。在本程序中，相同计算量、相同已完成段数应得到相同值。</td></tr>
+</tbody></table></div>
+<p>比较每个进程的完成耗时，使用最后一条记录的 wall；判断 A、B 的运行时段是否重叠，使用 timestamp，不能比较各自从零开始的 wall。</p>
+</section>
+<section aria-labelledby="practice-heading">
+<h2 id="practice-heading">实验步骤</h2>
+<p>先运行一个计算进程，再运行两个。两种条件下都使用默认计算量，不更改程序参数。</p>
+<article class="exercise" id="solo-exercise"><h3>1. 运行 A，记录单进程的完成耗时</h3>
+<div class="command"><button class="copy" title="复制单进程命令" aria-label="复制单进程命令"><span></span></button><pre>taskset -c "$CPU" ./cpu-sharing-work A | tee solo.jsonl</pre></div>
+<p>A 是输出中的名称。<code>tee</code> 把记录显示在终端，同时保存到当前目录的 solo.jsonl 文件。</p>
+<h4>观察什么</h4><ul><li>记录中的 batch 是否从 0 增加到 24？</li><li>查看最后一条记录的 wall 和 checksum，分别得到完成耗时和最终校验值。</li></ul>
+<div class="reference-answer"><h4>参考结果</h4><p>本次参考运行完成了 24 段计算，耗时约 0.706 秒，最终校验值为 <code>5470079412014018561</code>。你的耗时可以不同；使用默认计算量时，最终校验值应相同。</p></div>
+</article>
+<article class="exercise" id="pair-exercise"><h3>2. 不等 A 完成就启动 B，比较完成结果</h3>
+<p>运行以下整组命令，分别保存 A、B 的记录：</p>
+<div class="command"><button class="copy" title="复制双进程命令" aria-label="复制双进程命令"><span></span></button><pre>taskset -c "$CPU" ./cpu-sharing-work A > pair-a.jsonl &amp;
+PID_A=$!
+taskset -c "$CPU" ./cpu-sharing-work B > pair-b.jsonl &amp;
+PID_B=$!
+wait "$PID_A"
+wait "$PID_B"
+tail -n 1 solo.jsonl pair-a.jsonl pair-b.jsonl</pre></div>
+<dl class="command-meanings"><dt><code>&gt;</code> 与行末的 <code>&amp;</code></dt><dd>&gt; 将输出写入指定文件，不显示在终端；&amp; 让命令在后台运行，终端不等待 A 完成就可以启动 B。tee 和 &gt; 都会覆盖同名旧文件。</dd><dt><code>PID_A=$!</code> 与 <code>PID_B=$!</code></dt><dd>分别保存刚启动的后台进程编号。</dd><dt><code>wait</code></dt><dd>等待已启动的 A、B 完成。两个进程都在 wait 之前启动，先等待 A 不会推迟 B 的启动。</dd><dt><code>tail -n 1</code></dt><dd>显示三个文件各自的最后一条记录，文件中的其他记录仍然保留。</dd></dl>
+<h4>观察什么</h4><ul><li>比较三个文件的末行：batch 是否都为 24，checksum 是否相同？</li><li>比较 solo.jsonl 与 pair-a.jsonl 的 wall：A 加入这组并发运行后，完成耗时如何变化？再看 B 的完成耗时。</li></ul>
+<div class="reference-answer"><h4>参考结果与原因</h4><p>单独运行的 A 与并发运行的 A、B 都完成了相同计算，最终校验值一致。并发条件下，A、B 各自耗时约 1.4 秒，A 的耗时约为单独运行的 1.98 倍。</p><p>每个进程的计算量没有减少，但两个进程需要轮流使用同一个 CPU，经过时间中包含等待 CPU 的时间。接近两倍是本次测量结果，不是每次运行的固定比例。</p></div>
+</article>
+<article class="exercise" id="progress-exercise"><h3>3. 按共同时间排列记录，核对两者的进度</h3>
+<p>最后一条记录能说明计算完成，却不能说明两者何时开始、怎样推进。将并发运行的记录按 timestamp 排序，比较开始和完成的先后：</p>
+<div class="command"><button class="copy" title="复制进度查看命令" aria-label="复制进度查看命令"><span></span></button><pre>python3 - &lt;&lt;'PY'
+import json
+from pathlib import Path
+events = [json.loads(line) for name in ('pair-a.jsonl', 'pair-b.jsonl')
+          for line in Path(name).read_text().splitlines()]
+events.sort(key=lambda event: event['timestamp'])
+start = events[0]['timestamp']
+for event in events:
+    print(f"{event['timestamp'] - start:.3f}s  {event['name']}  {event['batch']:2}/24")
+PY</pre></div>
+<h4>观察什么</h4><ul><li>B 的 0/24 记录是否出现在 A 的 24/24 记录之前？</li><li>在第一个进程完成 24 段之前，是否已经出现 A、B 各自完成若干段的记录？</li></ul>
+<div class="reference-answer"><h4>参考结果与原因</h4><p>参考记录中，B 在 A 完成前开始，两者都在另一方完成前推进了计算。它们不需要等对方全部完成才获得 CPU。</p><p>这些记录只标记每段计算的完成时刻，不能确定中间的每次调度切换。若 A 已经完成才启动 B，本次没有形成所需对照；应使用更大的相同计算量重新进行两种运行。</p></div>
+</article>
+</section>
+<section aria-labelledby="result-heading"><h2 id="result-heading">两种条件的实测对照</h2>
+<p>以下结果来自同一次对照实验，每个进程都完成了 24 段计算。数字是各自从开始到完成的经过时间：</p>
+<div class="compare">
+<article class="comparison"><div class="scenario">条件一 / A 单独运行</div><h3>A 的完成耗时</h3><dl class="numbers"><div><dt>单独运行 A</dt><dd class="green">0.706 <small>秒</small></dd></div></dl><div class="measure" aria-label="A 单独运行耗时 0.706 秒"><span style="width:50.30%"></span></div><div class="measure-axis" aria-hidden="true"><span>0 秒</span><span>0.702 秒</span><span>1.404 秒</span></div></article>
+<article class="comparison"><div class="scenario">条件二 / A、B 并发运行</div><h3>A、B 各自的完成耗时</h3><dl class="numbers"><div><dt>并发运行 A</dt><dd class="blue">1.398 <small>秒</small></dd></div><div><dt>并发运行 B</dt><dd class="rust">1.394 <small>秒</small></dd></div></dl><div class="measure" aria-label="并发运行从 A 开始到两者全部完成耗时 1.399 秒"><span style="width:99.62%"></span></div><div class="measure-axis" aria-hidden="true"><span>0 秒</span><span>0.702 秒</span><span>1.404 秒</span></div></article>
+</div>
+<p class="caption">两条色条使用相同刻度。绿色条表示 A 单独运行的耗时；蓝色条表示并发运行从 A 开始到两者全部完成的耗时，约 1.399 秒。上方数字分别从各进程自己的开始时刻计时。</p>
+<h3 id="progress-heading">相同经过时间下的完成进度</h3>
+<p>两种条件分别从本次运行开始计时。并发条件以 A 的开始时刻为共同起点，B 晚约 0.005 秒开始。每个色块代表已完成的一段计算：</p>
+<div class="toolbar"><button class="icon" id="play" title="播放实测记录" aria-label="播放实测记录">▶</button><button class="icon" id="reset" title="回到开始" aria-label="回到开始">↺</button><label for="time">经过时间<input id="time" type="range" min="0" max="1.404" step="0.001" value="0.706"></label><output id="clock" for="time">0.706 s</output><button id="half" style="padding:6px 12px">单进程完成时刻</button></div>
+<div class="lanes"><div class="lane" data-track="solo"><span>单独运行 A</span><div class="tiles"></div><span class="count"></span></div><div class="lane" data-track="a"><span>并发运行 A</span><div class="tiles"></div><span class="count"></span></div><div class="lane" data-track="b"><span>并发运行 B</span><div class="tiles"></div><span class="count"></span></div></div>
+<p class="milestone" id="milestone"></p>
+<figure class="chart"><svg id="chart" viewBox="0 0 900 300" role="img" aria-label="单独与并发条件下的完成进度与经过时间对照"></svg><figcaption>曲线在记录到一段计算完成时上升。水平部分是两条完成记录之间的间隔，不表示这段时间全在等待；整条曲线也不是 CPU 调度切换的时间线。</figcaption></figure>
+<div class="legend"><span class="green">单独运行 A</span><span class="blue">并发运行 A</span><span class="rust">并发运行 B</span></div>
+<details><summary>查看测量条件与完整进度记录</summary><div><p>Ubuntu 22.04.5 LTS，WSL2；内核 6.6.87.2-microsoft-standard-WSL2，CPU 0，GCC 使用 -O2。记录采集于 2026-10-08。各次运行的最终校验值均为 <code>5470079412014018561</code>。</p><p>后台负载、处理器频率和宿主机活动会影响完成耗时。重复实验应核对进度、结果和耗时变化，不要求复现相同小数或固定倍数。</p><pre id="reference" class="raw"></pre></div></details>
+</section>
+<section aria-labelledby="why-heading"><h2 id="why-heading">这些对照说明了什么</h2>
+<div class="facts"><article><h3>两个进程轮流使用 CPU</h3><p>并发记录中，A、B 都在另一方完成之前推进了计算。一个进程尚未完成全部计算时，另一个进程就可以通过调度获得 CPU。</p><p>进程切换时，操作系统保存恢复执行所需的状态。进程再次获得 CPU 后，可以继续原来的计算。这是两个进程最终都能完成计算的机制基础。</p></article><article><h3>共享 CPU 不会减少计算量</h3><p>每个进程仍执行 24 段相同计算，最终校验值一致。加入第二个进程后，各自的经过时间还包含等待 CPU 的时间，因此通常更晚完成。</p><p>CPU 虚拟化中的时间共享，就是通过调度让多个进程各自继续执行，共用有限的 CPU 执行时间。并发不意味着单个 CPU 能在同一时刻执行两个线程。</p></article></div>
+<details><summary>进一步比较：等 A 完成再启动 B</summary><div>
+<p>在同一个 Bash 终端中执行以下两条命令。第一条结束后，第二条才会启动 B：</p>
+<div class="command"><button class="copy" title="复制顺序运行命令" aria-label="复制顺序运行命令"><span></span></button><pre>taskset -c "$CPU" ./cpu-sharing-work A > sequential-a.jsonl
+taskset -c "$CPU" ./cpu-sharing-work B > sequential-b.jsonl</pre></div>
+<p>比较 sequential-b.jsonl 中 batch 为 0 的 timestamp 与 sequential-a.jsonl 中 batch 为 24 的 timestamp：B 的开始应在 A 完成之后。再与步骤 3 的并发记录对照，确认区别在于启动顺序，而不是每个进程的计算量。</p>
+<p>顺序运行和并发运行都完成两份计算。并发的特点是两者都能在另一方完成前开始推进，不是单个 CPU 的计算能力翻倍。</p>
+</div></details>
+</section>
+<section aria-labelledby="guide-heading"><h2 id="guide-heading">程序说明</h2>
+<p>程序执行固定的 24 段整数计算，计算结束后自动退出。运行格式为 <code>./cpu-sharing-work NAME [ITERATIONS_PER_BATCH]</code>，方括号表示可选参数，实际命令不输入方括号。</p>
+<dl class="parameters"><dt>NAME：记录名称</dt><dd>必填，只使用 ASCII 字母、数字、下划线或短横线。例如 A、B；它不改变计算内容。</dd><dt>ITERATIONS_PER_BATCH：每段迭代次数</dt><dd>可选，默认为 40,000,000，整数范围为 1 至 1,000,000,000。修改后，每个进程仍执行 24 段，但每段计算量改变。</dd></dl>
+<p>以下帮助命令在 Bash 中执行：</p>
+<div class="command"><button class="copy" title="复制帮助命令" aria-label="复制帮助命令"><span></span></button><pre>./cpu-sharing-work --help</pre></div>
+<p>例如 <code>taskset -c "$CPU" ./cpu-sharing-work A 80000000</code> 将每段迭代次数改为 8,000 万。调整计算量后，单独运行的 A 和并发运行的 A、B 都必须使用这个相同参数，重新生成全部记录；最终校验值也应以新计算量为准。</p>
+</section>
+<footer><a href="cpu-virtualization-experiments.html">返回 CPU 虚拟化实验目录</a> · 下一项：<a href="process-states.html">任务二：计算、等待与暂停</a><br>相关知识：<a href="limited-direct-execution.html">受限直接执行</a> · <a href="cpu-scheduling.html">CPU 调度基础</a> · <a href="process-api-homework.html">进程 API 实践</a></footer>
+</main>
+<script src="cpu-sharing.js"></script>
+</body>
+</html>

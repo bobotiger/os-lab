@@ -2,6 +2,7 @@ const WIKI_PAGES = Object.freeze({
   process: {title: '进程', english: 'Process', theme: 'CPU 虚拟化', href: 'index.html', description: '程序的一次执行，以及就绪、运行与阻塞的区别。', related: [{id: 'processApi', reason: '创建、等待与退出接口改变进程的状态和资源。'}, {id: 'directExecution', reason: '进程切换需要保存并恢复各自的执行现场。'}, {id: 'addressSpaces', reason: '各进程通过自己的地址空间解释虚拟地址。'}, {id: 'roundRobin', reason: '时间片耗尽使运行进程重新进入就绪队列。'}]},
   processApi: {title: '进程 API', english: 'Process API', theme: 'CPU 虚拟化', href: 'process-api.html', description: 'fork 创建进程，exec 替换程序，wait 收集退出状态；中间的准备阶段让 Shell 可以重定向输入输出。', related: [{id: 'process', reason: '进程身份与运行状态不同于它执行的程序映像。'}, {id: 'addressSpaces', reason: 'fork 后父子各有自己的地址空间，exec 替换程序映像。'}, {id: 'directExecution', reason: '系统调用通过受控入口进入内核处理。'}]},
   directExecution: {title: '受限直接执行', english: 'Limited Direct Execution', theme: 'CPU 虚拟化', href: 'limited-direct-execution.html', description: '程序直接运行，受控入口使 OS 接管；进入内核与切换进程是两个不同步骤。', related: [{id: 'process', reason: '转入内核态与改变当前运行进程是不同的变化。'}, {id: 'processApi', reason: '进程接口借助系统调用请求内核服务。'}, {id: 'roundRobin', reason: '计时器中断使 OS 能在时间片耗尽后重新调度。'}, {id: 'addressTranslation', reason: '硬件界限检查可以拒绝越界访问并触发异常。'}]},
+  schedulingBasics: {title: 'CPU 调度基础', english: 'CPU Scheduling', theme: 'CPU 虚拟化', href: 'cpu-scheduling.html', description: '比较先来先服务、最短任务优先、最短剩余时间优先与时间片轮转。', related: [{id: 'process', reason: '调度从就绪进程中选择当前运行者。'}, {id: 'directExecution', reason: '计时器中断为抢占提供受控入口。'}, {id: 'mlfq', reason: '多级反馈队列根据已观察到的CPU使用调整优先级。'}]},
   fcfs: {title: '先来先服务', english: 'FCFS', theme: 'CPU 虚拟化', href: 'fcfs.html', description: '按就绪顺序获得 CPU，当前进程不会因时间片而被抢占。', related: [{id: 'process', reason: '调度只从已具备运行条件的就绪进程中选择。'}, {id: 'sjf', reason: '同为非抢占调度，SJF 改为比较 CPU 段时长。'}, {id: 'roundRobin', reason: '时间片轮转通过抢占限制一次连续运行的时长。'}]},
   sjf: {title: '最短任务优先', english: 'SJF', theme: 'CPU 虚拟化', href: 'sjf.html', description: '从就绪进程中选择下一段 CPU 时长最短者，运行后不主动抢占。', related: [{id: 'fcfs', reason: '比较按入队顺序与按 CPU 段时长选择的等待结果。'}, {id: 'srtf', reason: 'SRTF 在剩余 CPU 时间更短时允许抢占。'}, {id: 'process', reason: '短任务尚未进入就绪状态时，不能参与选择。'}]},
   srtf: {title: '最短剩余时间优先', english: 'SRTF', theme: 'CPU 虚拟化', href: 'srtf.html', description: '抢占式 SJF：候选剩余时间严格更短时抢占，原运行者回到就绪并保留进度。', related: [{id: 'sjf', reason: 'SJF 不抢占，SRTF 会重新比较运行者与就绪者。'}, {id: 'mlfq', reason: 'MLFQ 根据使用历史调整优先级，不预知总时长。'}, {id: 'process', reason: '被抢占的进程回到就绪状态并保留执行进度。'}]},
@@ -9,6 +10,7 @@ const WIKI_PAGES = Object.freeze({
   mlfq: {title: '多级反馈队列', english: 'MLFQ', theme: 'CPU 虚拟化', href: 'mlfq.html', description: '用已观察到的 CPU 使用量调整层级：高层优先、同层轮转，累计配额耗尽后降级。', related: [{id: 'roundRobin', reason: '同层进程按时间片轮转，跨层按优先级选择。'}, {id: 'srtf', reason: 'SRTF 比较已知剩余时长，MLFQ 使用已观察到的用量。'}, {id: 'process', reason: 'I/O 阻塞与等待 CPU 的就绪状态需要分别处理。'}, {id: 'shares', reason: '目标 CPU 份额与反馈优先级是不同的分配依据。'}]},
   shares: {title: '比例份额调度', english: 'Proportional Share', theme: 'CPU 虚拟化', href: 'proportional-share.html', description: '同一组权重，对照彩票的随机分配与 Stride 的确定性份额追赶。', related: [{id: 'roundRobin', reason: '普通轮转按队列顺序分配时间片，不依据进程权重。'}, {id: 'mlfq', reason: '反馈调度调整优先级，比例份额调度确定目标份额。'}, {id: 'multiprocessor', reason: '多核还需决定任务放置，不能只比较单核份额。'}]},
   multiprocessor: {title: '多处理器调度', english: 'Multiprocessor Scheduling', theme: 'CPU 虚拟化', href: 'multiprocessor.html', description: '两个 CPU 如何分配任务：共享队列、每核队列、负载均衡与缓存亲和性的入门对照。', related: [{id: 'process', reason: '多个 CPU 可以同时执行不同的就绪进程。'}, {id: 'fcfs', reason: '本例每个 CPU 按 FCFS 执行已分配的任务。'}, {id: 'shares', reason: 'CPU 时间份额与任务在各核上的放置需要分别考虑。'}]},
+  cpuExperiments: {title: 'CPU 虚拟化实验', english: 'CPU Virtualization Experiments', theme: 'CPU 虚拟化', href: 'cpu-virtualization-experiments.html', description: '在 Ubuntu 中观察 CPU 共享、进程状态、fork 后的变量变化、程序替换与进程回收，以及系统调用的参数与结果。', related: [{id: 'process', reason: '进程状态区分等待 CPU、等待数据与正在执行。'}, {id: 'schedulingBasics', reason: '调度决定就绪进程获得 CPU 的顺序。'}, {id: 'processApi', reason: 'fork 创建子进程，exec 替换程序，waitpid 收集退出状态。'}]},
   addressSpaces: {title: '地址空间', english: 'Address Spaces', theme: '内存虚拟化', href: 'address-spaces.html', description: '程序的私有内存视角：相同虚拟地址、不同内容，以及代码、全局数据、堆与栈的用途。', related: [{id: 'process', reason: '虚拟地址需要结合所属进程才能解释。'}, {id: 'memoryApi', reason: '分配与释放改变堆对象的生命周期。'}, {id: 'addressTranslation', reason: '地址转换把进程的虚拟地址映射到物理位置。'}, {id: 'paging', reason: '分页允许各虚拟页使用不连续的物理页框。'}]},
   memoryApi: {title: '内存 API', english: 'Memory API', theme: '内存虚拟化', href: 'memory-api.html', description: 'malloc、free 的正确使用，大小与初始化、常见错误，以及 calloc／realloc 的关键区别。', related: [{id: 'addressSpaces', reason: '函数调用帧与动态堆对象具有不同的生命周期。'}, {id: 'freeSpace', reason: '分配器从空闲块中选择空间，释放后可以合并。'}, {id: 'addressTranslation', reason: '地址范围检查不能替代对象边界与生命周期检查。'}]},
   addressTranslation: {title: '地址转换', english: 'Address Translation', theme: '内存虚拟化', href: 'address-translation.html', description: '基址与界限：先检查虚拟范围，再生成物理地址；动态重定位与硬件、OS 的职责。', related: [{id: 'addressSpaces', reason: '程序使用虚拟地址，物理位置由映射确定。'}, {id: 'segmentation', reason: '分段为不同区域分别配置基址、界限与权限。'}, {id: 'paging', reason: '分页通过页表映射，不要求整段物理内存连续。'}, {id: 'memoryApi', reason: '整段界限检查不保证每个 C 对象访问都合法。'}]},
@@ -20,6 +22,10 @@ const WIKI_PAGES = Object.freeze({
   pageFault: {title: '缺页与按需分页', english: 'Page Fault', theme: '内存虚拟化', href: 'page-fault.html', description: '页面尚未驻留时，暂停访问、载入页面，再重试原来的指令。', related: [{id: 'paging', reason: '缺页处理完成后，页表映射用于重试原访问。'}, {id: 'process', reason: '等待页面 I/O 的进程先阻塞，完成后回到就绪。'}, {id: 'replacement', reason: '没有空闲页框时，需要先选择淘汰页面。'}, {id: 'tlb', reason: '转换缓存未命中可能只需查表，并不需要页面 I/O。'}]},
   replacement: {title: '页面置换策略', english: 'Page Replacement', theme: '内存虚拟化', href: 'replacement.html', description: '内存已满时如何选择淘汰页面：OPT、FIFO、LRU、Clock，及局部性、脏页写回与抖动。', related: [{id: 'pageFault', reason: '置换为尚未驻留的目标页提供可用页框。'}, {id: 'paging', reason: '淘汰与载入改变页框占用及对应的页表映射。'}, {id: 'tlb', reason: '物理页面置换与地址转换缓存替换需要区分。'}]},
 });
+const WIKI_SCHEDULING_POLICIES = Object.freeze(['fcfs', 'sjf', 'srtf', 'roundRobin']);
+function wikiHref(pageId) {
+  return WIKI_SCHEDULING_POLICIES.includes(pageId) ? `cpu-scheduling.html#${pageId}` : WIKI_PAGES[pageId].href;
+}
 
 function wikiHeader(pageId, sections) {
   const current = WIKI_PAGES[pageId];
@@ -28,7 +34,7 @@ function wikiHeader(pageId, sections) {
   document.title = `${current.title} ${current.english} · OSLab`;
   return `<dialog class="wiki-sidebar" id="wiki-menu" aria-label="知识目录" role="${compact ? 'dialog' : 'complementary'}"${compact ? '' : ' open'}>
     <div class="sidebar-heading"><a class="brand" href="${WIKI_PAGES.process.href}">OS<span>Lab</span><span class="brand-caption">操作系统知识页</span></a><button type="button" class="menu-close icon-button" aria-label="关闭目录" title="关闭目录"><span aria-hidden="true">×</span></button></div>
-    <nav class="knowledge-nav" aria-label="知识点导航">${themes.map(theme => `<details class="knowledge-topic" open><summary>${theme}</summary><div class="topic-pages">${Object.entries(WIKI_PAGES).filter(([, page]) => page.theme === theme).map(([id, page]) => `<a href="${page.href}" title="${page.title}" aria-label="${page.title}"${id === pageId ? ' aria-current="page"' : ''}>${page.navTitle ?? page.title}</a>`).join('')}</div></details>`).join('')}</nav>
+    <nav class="knowledge-nav" aria-label="知识点导航">${themes.map(theme => `<details class="knowledge-topic" open><summary>${theme}</summary><div class="topic-pages">${Object.entries(WIKI_PAGES).filter(([id, page]) => page.theme === theme && !WIKI_SCHEDULING_POLICIES.includes(id)).map(([id, page]) => `<a href="${wikiHref(id)}" title="${page.title}" aria-label="${page.title}"${id === (WIKI_SCHEDULING_POLICIES.includes(pageId) ? 'schedulingBasics' : pageId) ? ' aria-current="page"' : ''}>${page.navTitle ?? page.title}</a>`).join('')}</div></details>`).join('')}</nav>
   </dialog>
   <header class="site-header">
     <div class="header-location"><button type="button" class="menu-open icon-button" aria-label="打开知识目录" title="打开知识目录" aria-controls="wiki-menu" aria-expanded="false"><span aria-hidden="true">☰</span></button><a class="brand mobile-brand" href="${WIKI_PAGES.process.href}">OS<span>Lab</span></a><p class="article-location"><span>${current.theme}</span><span aria-hidden="true">/</span>${current.title}</p></div>
@@ -36,7 +42,9 @@ function wikiHeader(pageId, sections) {
   </header>`;
 }
 
+let wikiNavigationCleanup;
 function setupWikiNavigation() {
+  wikiNavigationCleanup?.();
   const panel = document.querySelector('#wiki-menu');
   const opener = document.querySelector('.menu-open');
   const closer = panel.querySelector('.menu-close');
@@ -70,7 +78,7 @@ function setupWikiNavigation() {
     const bounds = panel.getBoundingClientRect();
     if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeMenu();
   });
-  compact.addEventListener('change', () => {
+  const onCompactChange = () => {
     const previousFocus = document.activeElement;
     panel.close();
     panel.setAttribute('role', compact.matches ? 'dialog' : 'complementary');
@@ -82,7 +90,9 @@ function setupWikiNavigation() {
     }
     document.body.classList.remove('menu-is-open');
     opener.setAttribute('aria-expanded', 'false');
-  });
+  };
+  compact.addEventListener('change', onCompactChange);
+  wikiNavigationCleanup = () => compact.removeEventListener('change', onCompactChange);
 }
 
 document.addEventListener('DOMContentLoaded', setupWikiNavigation);
@@ -90,6 +100,6 @@ document.addEventListener('DOMContentLoaded', setupWikiNavigation);
 function wikiRelated(pageId) {
   return `<section class="knowledge-related" aria-labelledby="knowledge-related-title"><h2 id="knowledge-related-title">相关知识</h2>${WIKI_PAGES[pageId].related.slice(0, 4).map(({id, reason}) => {
     const page = WIKI_PAGES[id];
-    return `<a class="knowledge-link" href="${page.href}"><div><h3>${page.title}</h3><p>${reason}</p></div><span aria-hidden="true">↗</span></a>`;
+    return `<a class="knowledge-link" href="${wikiHref(id)}"><div><h3>${page.title}</h3><p>${reason}</p></div><span aria-hidden="true">↗</span></a>`;
   }).join('')}</section>`;
 }

@@ -14,6 +14,14 @@ const SCHEDULING_HOMEWORK_GROUPS = [
   ]},
 ];
 
+const schedulingHomeworkDefinition = OSLabSchedulingHomework.createDefinition();
+const schedulingHomeworkPreview = schedulingHomeworkDefinition.generate(0);
+const SCHEDULING_COMPACT_GROUPS = ['fifo-sjf', 'rr', 'comparison'].map((id, index) => ({id, task: schedulingHomeworkPreview[index]}));
+const renderSchedulingTask = task => {
+  const index = Number(task.id.slice(-2)) - 1;
+  return `<li data-homework-task="${index}"><details class="hw-task" name="scheduling-homework-tasks" ${index === 0 ? 'open' : ''}><summary class="hw-task-summary"><span class="api-hw-task-number" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span><h3>${task.title}</h3><span class="hw-task-count"></span></summary><div class="hw-task-content"><div class="hw-task-intro"><div class="hw-task-requirements"><h4>对照条件</h4><p>${OSLabHomeworkReport.escape(task.conditions)}</p><h4>回答要求</h4><p>${OSLabHomeworkReport.escape(task.question)}</p></div></div><div class="hw-experiment-slot"></div></div></details></li>`;
+};
+
 const schedulingHomeworkHeader = wikiHeader('fcfs', [
   {href: '#parameters', title: '运行与参数'},
   {href: '#metrics', title: '指标与输出'},
@@ -21,18 +29,20 @@ const schedulingHomeworkHeader = wikiHeader('fcfs', [
 ]);
 
 document.querySelector('#root').innerHTML = `
-  <div class="page hw-page api-hw-page scheduling-hw-page" id="top">
+  <div class="page hw-page api-hw-page scheduling-hw-page hw-experiment-page hw-compare-page" id="top">
     ${schedulingHomeworkHeader}
     <main>
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">CPU 虚拟化 / 调度 / 作业</p>
         <h1 id="page-title">CPU 调度基础作业 <span>Scheduling Homework</span></h1>
         <p class="lead">比较执行顺序与时间片如何改变响应、周转和等待时间。</p>
-        <p class="definition">这里的作业是一个待执行的 CPU 任务，需求时长是完成它所需的 CPU 执行时间。<code>scheduler.py</code> 按 FIFO（先来先服务）、SJF（最短任务优先）或 RR（时间片轮转）计算执行顺序与统计。作业编号按输入列表从 0 开始，不表示需求长短。</p>
+        <p class="definition">本实验把一段需要 CPU 执行的任务称为作业。输入列表给出每个作业需要运行多久，<code>scheduler.py</code> 根据 FIFO、SJF 或 RR 决定运行顺序。编号按列表位置从 0 开始，与时长无关。</p>
         <dl class="hw-meta"><div><dt>运行环境</dt><dd>Ubuntu 22.04 · Python 3</dd></div><div><dt>调度条件</dt><dd>单核 · 全部在时刻 0 到达 · 无 I/O</dd></div></dl>
-        <nav class="scheduling-hw-topics" aria-label="相关调度知识"><a class="inline-link" href="fcfs.html">先来先服务</a><a class="inline-link" href="sjf.html">最短任务优先</a><a class="inline-link" href="srtf.html">最短剩余时间优先</a><a class="inline-link" href="round-robin.html">时间片轮转</a></nav>
-        <nav class="api-hw-outline" aria-label="作业分组"><a href="#parameters"><span>01</span><strong>运行与参数</strong><small>作业列表与策略</small></a><a href="#metrics"><span>02</span><strong>指标与输出</strong><small>三类时间的区别</small></a><a href="#tasks"><span>03</span><strong>调度实验</strong><small>7 项独立任务</small></a></nav>
+        <nav class="scheduling-hw-topics" aria-label="相关调度知识"><a class="inline-link" href="cpu-scheduling.html#fcfs">先来先服务</a><a class="inline-link" href="cpu-scheduling.html#sjf">最短任务优先</a><a class="inline-link" href="cpu-scheduling.html#srtf">最短剩余时间优先</a><a class="inline-link" href="cpu-scheduling.html#roundRobin">时间片轮转</a></nav>
+        <nav class="api-hw-outline" aria-label="作业分组"><a href="#parameters"><span>01</span><strong>运行与参数</strong><small>作业列表与策略</small></a><a href="#metrics"><span>02</span><strong>指标与输出</strong><small>三类时间的区别</small></a><a href="#tasks"><span>03</span><strong>调度实验</strong><small>2 题必做 · 1 题选做</small></a></nav>
       </section>
+
+      <section class="hw-section" id="homework-session" aria-label="实验身份与记录"></section>
 
       <section class="hw-section" id="parameters" aria-labelledby="parameters-title">
         <div class="api-hw-section-heading"><p class="section-index">01 / PARAMETERS</p><h2 id="parameters-title">作业列表、调度策略与时间片</h2></div>
@@ -51,7 +61,7 @@ document.querySelector('#root').innerHTML = `
         </dl>
         <h3>其他参数与输入条件</h3>
         <dl class="hw-rules">
-          <div><dt><code>-c</code></dt><dd>显示执行轨迹、逐作业统计和平均值。先预测，再保持相同参数加 -c 核对。</dd></div>
+          <div><dt><code>-c</code></dt><dd>显示执行轨迹、逐作业统计和平均值，所用作业列表与调度参数保持不变。</dd></div>
           <div><dt><code>-s</code></dt><dd>随机种子，默认 0。未指定 -l 时，相同种子与生成参数可复现相同的作业列表。</dd></div>
           <div><dt><code>-j</code> 与 <code>-m</code></dt><dd>随机生成的作业数量与最大时长，默认 3 和 10。时长为 1 到 m 的整数；例如 <code>-s 1 -j 4 -m 20</code>。</dd></div>
           <div><dt>正时长与零切换开销</dt><dd>使用至少一个作业，每个时长为正数，随机参数 -j、-m 为正整数。CPU 切换开销取零，所有任务只有 CPU 工作。</dd></div>
@@ -65,7 +75,7 @@ document.querySelector('#root').innerHTML = `
           <div><dt>周转时间</dt><dd><strong>到达 → 全部工作完成</strong><p>完成时刻减去到达时刻。RR 中第一次时间片结束不等于作业完成；需要累计执行全部 CPU 需求。</p></dd></div>
           <div><dt>等待时间</dt><dd><strong>所有就绪排队时间之和</strong><p>包含首次运行前以及后续轮次中的等待。无 I/O 时，等待时间等于周转时间减去 CPU 需求；不一定等于响应时间。</p></dd></div>
         </dl>
-        <p>以下两次运行使用同一组作业，CPU 总需求为 12。输出中的“秒”按输入时长计算，是模拟时间单位，不是命令实际运行耗时。下列节选保留完整执行轨迹与最终统计。</p>
+        <p>下面两种策略都执行列表 <code>6,2,4</code>，CPU 工作量合计为 12。输出里的“秒”是模拟时间，不是命令的实际耗时；轨迹说明谁在什么时候运行，统计给出每个作业的三项时间。</p>
         <div class="api-hw-example"><div>
           <h3>SJF / 按时长选择</h3>
           <pre><code>python3 scheduler.py -l 6,2,4 -p SJF -c</code></pre>
@@ -103,17 +113,18 @@ document.querySelector('#root').innerHTML = `
       </section>
 
       <section class="hw-section" id="tasks" aria-labelledby="tasks-title">
-        <div class="api-hw-section-heading"><p class="section-index">03 / EXPERIMENTS</p><h2 id="tasks-title">调度实验：任务组成、时间片与策略比较</h2></div>
-        <p>每条命令先用于列出作业并预测结果，再保持参数不变加 <code>-c</code> 核对。各任务分别记录逐作业指标和平均值；对照运行时只改变题目指定的条件。</p>
-        ${SCHEDULING_HOMEWORK_GROUPS.map(group => `<section class="scheduling-hw-group" id="${group.id}" aria-labelledby="${group.id}-title"><h3 id="${group.id}-title">${group.title}</h3>${group.id === 'comparison' ? '<p>所有作业同时到达时，SJF 首先选择最短任务。它运行后剩余时间只会减少，又没有新任务到达；因此，在同长任务按相同顺序处理的条件下，SRTF 与 SJF 具有相同执行顺序。若有短任务在运行途中到达，是否抢占会改变结果，参见<a class="inline-link" href="srtf.html">最短剩余时间优先的到达场景</a>。</p>' : ''}<ol class="hw-questions api-hw-coding-tasks" start="${Number(group.tasks[0].number)}">${group.tasks.map(task => `<li><header class="api-hw-task-heading"><span class="api-hw-task-number" aria-hidden="true">${task.number}</span><div><p class="api-hw-task-api">${task.focus}</p><h3>${task.title}</h3></div></header><pre><code>${task.commands.map(args => `python3 scheduler.py ${args}`).join('\n')}</code></pre><dl class="api-hw-task-body"><div><dt>实验要求</dt><dd><ul>${task.steps.map(step => `<li>${step}</li>`).join('')}</ul></dd></div><div><dt>记录与解释</dt><dd>${task.observation}</dd></div></dl></li>`).join('')}</ol></section>`).join('')}
+        <div class="api-hw-section-heading"><p class="section-index">03 / EXPERIMENTS</p><h2 id="tasks-title">调度实验</h2></div>
+        <p>两题必做共运行四次：先比较 FIFO 与 SJF，再比较 RR 的两种时间片。第二题沿用第一题的 FIFO 输出，不再重复运行；每题粘贴输出并写一次比较解释。</p>
+        <details class="hw-fixed-example"><summary>等长作业示例</summary><p>三个作业同时到达且 CPU 需求都为 2。FIFO 按输入顺序运行；SJF 遇到相同时长也保持输入顺序，因此两种策略的执行顺序和周转时间相同。</p></details>
+        <section class="hw-common-conditions" data-hw-common-conditions aria-labelledby="hw-conditions-title" hidden><h3 id="hw-conditions-title">本次实验的共同条件</h3><dl></dl></section>
+        ${SCHEDULING_COMPACT_GROUPS.map(group => `<section class="scheduling-hw-group" id="${group.id}" aria-label="${group.task.title}"><ol class="hw-questions api-hw-coding-tasks">${renderSchedulingTask(group.task)}</ol>${group.id === 'comparison' ? '<details class="hw-fixed-example"><summary>同时到达时 SRTF 与 SJF 的关系</summary><p>所有作业同时到达时，SJF 首先选择最短任务。它运行后剩余时间只会减少，又没有新任务到达；在同长任务按相同顺序处理的条件下，SRTF 与 SJF 具有相同执行顺序。若有短任务在运行途中到达，是否抢占会改变结果，参见<a class="inline-link" href="cpu-scheduling.html#srtf">最短剩余时间优先的到达场景</a>。</p></details>' : ''}</section>`).join('')}
       </section>
     </main>
-    <footer><a href="fcfs.html">先来先服务</a><a href="sjf.html">最短任务优先</a><a href="srtf.html">最短剩余时间优先</a><a href="round-robin.html">时间片轮转</a><a href="#top">回到页首 ↑</a></footer>
+    <footer><a href="cpu-scheduling.html">CPU 调度基础</a><a href="#top">回到页首 ↑</a></footer>
   </div>`;
 
 document.querySelector('.article-location').innerHTML = '<span>CPU 虚拟化</span><span aria-hidden="true">/</span>CPU 调度基础作业';
 document.querySelector('.knowledge-nav [aria-current="page"]').removeAttribute('aria-current');
-for (const topic of ['fcfs', 'sjf', 'srtf', 'roundRobin']) {
-  document.querySelector(`.knowledge-nav a[href="${WIKI_PAGES[topic].href}"]`).classList.add('scheduling-homework-topic');
-}
+document.querySelector('.knowledge-nav a[href="cpu-scheduling.html"]').classList.add('scheduling-homework-topic');
 document.title = 'CPU 调度基础作业 Scheduling Homework · OSLab';
+OSLabHomeworkUI.mount({root: document.querySelector('#root'), definition: schedulingHomeworkDefinition, scope: schedulingHomeworkDefinition.scope, taskSelector: '[data-homework-task]'});
