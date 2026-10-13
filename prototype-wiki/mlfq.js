@@ -6,8 +6,8 @@ function renderMlfqPage(root) {
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">CPU 虚拟化 / 调度</p>
         <h1 id="page-title">多级反馈队列 <span>MLFQ</span></h1>
-        <p class="lead">根据累计 CPU 使用量调整优先级，不预先比较任务总时长。</p>
-        <p class="definition">MLFQ（Multi-Level Feedback Queue）将就绪进程分入不同优先级的队列，优先级越高，越先获得 CPU。新进程先进入最高层，累计使用 CPU 达到本层配额后再降低层级。调度器选择最高的非空队列，同层采用<a class="inline-link" href="round-robin.html">时间片轮转</a>，不需要像<a class="inline-link" href="srtf.html">SRTF</a>那样比较已知的剩余时长。</p>
+        <p class="lead">怎样依据已经使用的 CPU 时间，调整进程的优先级？</p>
+        <p class="definition">MLFQ 将就绪进程分入不同优先级的队列：高层优先，同层采用<a class="inline-link" href="round-robin.html">时间片轮转</a>。新进程先进入最高层，再根据累计 CPU 用量调整层级。</p>
         <p class="model-note">单核、零切换开销、三个固定队列；Q0 最高，Q2 最低。时间片长度为 1 / 2 / 4，本层配额为 2 / 4 / 8 个示意时间单位。I/O 固定延迟且可并行，无设备争用；不同操作系统的反馈规则和参数并不相同。</p>
         <p class="model-note"><a class="inline-link" href="mlfq-homework.html">多级反馈队列作业：程序说明与六题参考实践</a></p>
       </section>
@@ -36,8 +36,8 @@ function renderMlfqPage(root) {
         <div class="mlfq-timeline-heading"><h3>CPU 执行时间轴</h3><p><span class="level-key level-0">Q0</span><span class="level-key level-1">Q1</span><span class="level-key level-2">Q2</span><span>单位：示意时间</span></p></div>
         <div class="mlfq-chart-scroll" tabindex="0" role="region" aria-label="CPU 时间轴"><div class="mlfq-chart"><div class="rr-timeline" id="mlfq-timeline" role="img" aria-label="尚未执行"></div><div class="mlfq-ticks" id="mlfq-ticks"></div></div></div>
         <input id="mlfq-position" type="range" min="0" max="24" step="1" value="0" aria-label="演示时刻">
-        <label class="mlfq-checkpoint">关键事件<select id="mlfq-checkpoint"></select></label>
-        <div class="mlfq-event" aria-live="polite"><p class="detail-kicker" id="mlfq-event-time"></p><h3 id="mlfq-event-title"></h3><ul id="mlfq-event-details"></ul></div>
+        <label class="mlfq-checkpoint">关键时刻<select id="mlfq-checkpoint"></select></label>
+        <div class="mlfq-event" aria-live="polite"><p class="detail-kicker" id="mlfq-event-time"></p><h3 id="mlfq-event-title"></h3><p id="mlfq-event-reason"></p><details id="mlfq-other-events"><summary id="mlfq-other-events-title"></summary><ol id="mlfq-event-details"></ol></details></div>
         <div class="rr-summary"><span>下一次提升 <strong id="mlfq-next-boost"></strong></span><span>A 累计就绪等待 <strong id="mlfq-wait"></strong></span><span>已完成 <strong id="mlfq-completed"></strong></span></div>
         <div class="mlfq-ledger-scroll" tabindex="0" role="region" aria-label="进程状态表"><table class="mlfq-ledger"><caption>本层用量只累计 CPU 时间；I/O 等待不计入就绪等待。完成者不再参与调度。</caption><thead><tr><th scope="col">进程</th><th scope="col">状态</th><th scope="col">层级</th><th scope="col">本层用量</th><th scope="col">已用 CPU</th><th scope="col">就绪等待</th></tr></thead><tbody id="mlfq-ledger"></tbody></table></div>
         <div class="mlfq-comparison" id="mlfq-comparison" hidden><h3>整体优先级提升对 A 再次获得 CPU 的影响</h3><p>高层新任务从 t=4 陆续到达后，A 再次获得 CPU 的时刻：</p><dl><div><dt>不提升</dt><dd id="mlfq-without-boost"></dd></div><div><dt>每 12 单位提升</dt><dd id="mlfq-with-boost"></dd></div></dl><p>两次完整运行的 CPU 需求相同。新任务数量有限，关闭提升时 A 也最终完成；提前再次运行，不等于一定更早完成。</p></div>
@@ -55,6 +55,39 @@ function renderMlfqPage(root) {
       ${wikiRelated('mlfq')}
     </main><footer class="site-footer"><span>OSLab / CPU 虚拟化</span><a href="#top">回到页首 ↑</a></footer>
   </div>`;
+  const demo = root.querySelector('#demo');
+  const intro = root.querySelector('.intro');
+  const assumptions = intro.querySelector('.model-note');
+  const homework = intro.querySelector('.model-note:last-child');
+  homework.className = 'process-homework-link';
+  root.querySelector('#rules').after(homework);
+  const sceneNote = root.querySelector('#mlfq-scene-note');
+  const conditions = document.createElement('p');
+  conditions.className = 'mlfq-conditions';
+  conditions.textContent = '单核，切换开销为零。时间片限制单次连续运行；配额累计进程在本层使用的 CPU 时间。';
+  demo.querySelector('.rr-toolbar').before(sceneNote, conditions);
+  const stagePanel = demo.querySelector('.mlfq-stage');
+  stagePanel.before(root.querySelector('.mlfq-checkpoint'), root.querySelector('#mlfq-position'), root.querySelector('.mlfq-event'));
+  const ledger = document.createElement('details');
+  ledger.className = 'mlfq-reference';
+  ledger.innerHTML = '<summary>全部进程的状态、用量与等待时间</summary>';
+  const ledgerScroll = root.querySelector('.mlfq-ledger-scroll');
+  ledgerScroll.before(ledger);
+  ledger.append(ledgerScroll);
+  const assumptionReference = document.createElement('details');
+  assumptionReference.className = 'mlfq-reference';
+  assumptionReference.innerHTML = '<summary>队列参数与 I/O 条件</summary>';
+  assumptionReference.append(assumptions);
+  ledger.after(assumptionReference);
+  for (const tradeoff of root.querySelectorAll('#rules .rr-tradeoff')) {
+    const reference = document.createElement('details');
+    reference.className = 'mlfq-reference';
+    const summary = document.createElement('summary');
+    summary.textContent = tradeoff.querySelector('h3').textContent;
+    reference.append(summary, ...tradeoff.querySelectorAll('p'));
+    tradeoff.replaceWith(reference);
+  }
+
   let sceneId = 'feedback';
   let run = buildRun(sceneId);
   let time = 0;
@@ -65,10 +98,10 @@ function renderMlfqPage(root) {
   const boostControl = root.querySelector('#mlfq-boost');
   const checkpoint = root.querySelector('#mlfq-checkpoint');
   const statusNames = {new: '未到达', ready: '就绪', running: '运行', blocked: '阻塞', done: '完成'};
-  const token = process => `<div class="mlfq-token level-${process.level}" data-process="${process.id}"><strong>${process.id}</strong><span>本层 ${process.levelUsed} / ${levels[process.level].allotment}</span></div>`;
+  const token = (process, showUsage = true) => `<div class="mlfq-token level-${process.level}" data-process="${process.id}"><strong>${process.id}</strong>${showUsage ? `<span>本层 ${process.levelUsed} / ${levels[process.level].allotment}</span>` : ''}</div>`;
   const eventTitle = event => ({
     arrive: `${event.id} 到达 Q0`, wake: `${event.id} I/O 完成`, boost: '未完成进程整体提升到 Q0',
-    preempt: `${event.id} 被高层任务抢占`, dispatch: `Q${event.level} 派发 ${event.id}`,
+    preempt: `${event.id} 被高层任务抢占`, dispatch: `${event.id} 从 Q${event.level} 获得 CPU`,
     finish: `${event.id} 完成`, block: `${event.id} 等待 I/O`,
     demote: `${event.id} 从 Q${event.from} 降到 Q${event.level}`, renew: `${event.id} 在 Q2 重新轮转`,
     rotate: `${event.id} 时间片耗尽，留在 Q${event.level}`,
@@ -111,14 +144,14 @@ function renderMlfqPage(root) {
       root.querySelector(`#mlfq-queue-${index}`).innerHTML = queue.length ? queue.map(id => token(frame.processes.find(process => process.id === id))).join('') : '<p class="lane-empty">队列为空</p>';
       root.querySelector(`#mlfq-level-${index}`).classList.toggle('selected', active?.level === index);
     });
-    root.querySelector('#mlfq-running').innerHTML = active ? token(active) : `<p class="lane-empty">${time === run.duration ? '全部完成，CPU 空闲' : 'CPU 空闲，等待可运行进程'}</p>`;
+    root.querySelector('#mlfq-running').innerHTML = active ? token(active, false) : `<p class="lane-empty">${time === run.duration ? '全部完成，CPU 空闲' : 'CPU 空闲，等待可运行进程'}</p>`;
     root.querySelector('#mlfq-cpu-level').textContent = active ? `运行进程所属 Q${active.level}` : '空闲';
     for (const [id, used, max] of [['slice', active?.sliceUsed, active ? levels[active.level].quantum : 1], ['budget', active?.levelUsed, active ? levels[active.level].allotment : 1]]) {
       root.querySelector(`#mlfq-${id}`).max = max;
       root.querySelector(`#mlfq-${id}`).value = used ?? 0;
       root.querySelector(`#mlfq-${id}-text`).textContent = active ? `${used} / ${max}` : '—';
     }
-    root.querySelector('#mlfq-next-rule').textContent = active ? `用满时间片 → Q${active.level} 队尾；用满累计配额 → ${active.level < 2 ? `降到 Q${active.level + 1}` : '在 Q2 重新轮转'}。` : '没有可派发的运行者。';
+    root.querySelector('#mlfq-next-rule').textContent = active ? `配额用满 → ${active.level < 2 ? `降到 Q${active.level + 1}` : '在 Q2 重置计数并轮转'}；仅时间片用满 → Q${active.level} 队尾。` : '没有就绪进程可以运行。';
     const unavailable = frame.processes.filter(process => ['new', 'blocked'].includes(process.status));
     root.querySelector('#mlfq-unavailable').innerHTML = unavailable.length ? unavailable.map(process => `<p>${process.id} · ${process.status === 'new' ? `t=${process.arrival} 到达` : `I/O 至 t=${process.wakeAt}，返回 Q${process.level}`}</p>`).join('') : '<p>无未到达或阻塞进程</p>';
     const segments = run.timeline.filter(segment => segment.start < time).map(segment => ({...segment, end: Math.min(segment.end, time)}));
@@ -134,9 +167,13 @@ function renderMlfqPage(root) {
     checkpoint.value = [...checkpoint.options].findLast(option => Number(option.value) <= time).value;
     const priority = ['boost', 'preempt', 'demote', 'renew', 'block', 'wake', 'rotate', 'finish', 'dispatch', 'arrive'];
     const important = [...frame.events].sort((left, right) => priority.indexOf(left.type) - priority.indexOf(right.type))[0];
-    root.querySelector('#mlfq-event-time').textContent = `t = ${time} / 调度原因`;
+    root.querySelector('#mlfq-event-time').textContent = `t = ${time} / 当前主要变化`;
     root.querySelector('#mlfq-event-title').textContent = time === run.duration ? '所有进程完成，CPU 需求没有因降级增加' : important ? eventTitle(important) : active ? `${active.id} 在 Q${active.level} 继续运行` : '等待 I/O 完成或新进程到达';
-    root.querySelector('#mlfq-event-details').innerHTML = frame.events.length ? frame.events.map(event => `<li>${describeEvent(event)}</li>`).join('') : `<li>${active ? `高层没有就绪候选；${active.id} 本次时间片已用 ${active.sliceUsed} / ${levels[active.level].quantum}，本层配额已用 ${active.levelUsed} / ${levels[active.level].allotment}。` : '阻塞者不能被派发，CPU 不为阻塞者计入执行时间。'}</li>`;
+    root.querySelector('#mlfq-event-reason').textContent = important ? describeEvent(important) : active ? `高层没有就绪候选；${active.id} 本次时间片已用 ${active.sliceUsed} / ${levels[active.level].quantum}，本层配额已用 ${active.levelUsed} / ${levels[active.level].allotment}。` : '阻塞者不能被派发，CPU 不为阻塞者计入执行时间。';
+    const otherEvents = frame.events.filter(event => event !== important);
+    root.querySelector('#mlfq-other-events').hidden = otherEvents.length === 0;
+    root.querySelector('#mlfq-other-events-title').textContent = `本时刻的完整事件顺序（${frame.events.length} 项）`;
+    root.querySelector('#mlfq-event-details').innerHTML = frame.events.map(event => `<li${event === important ? ' aria-current="step"' : ''}><strong>${eventTitle(event)}</strong>：${describeEvent(event)}</li>`).join('');
     root.querySelector('#mlfq-next-boost').textContent = run.boostEnabled && time < run.duration ? `t=${(Math.floor(time / 12) + 1) * 12}` : run.boostEnabled ? '—' : '关闭';
     root.querySelector('#mlfq-wait').textContent = frame.processes.find(process => process.id === 'A').waiting;
     root.querySelector('#mlfq-completed').textContent = `${frame.processes.filter(process => process.status === 'done').length} / ${frame.processes.length}`;

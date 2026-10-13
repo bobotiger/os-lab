@@ -11,9 +11,8 @@ function renderMultiprocessorPage(root) {
         <div class="mp-workload" id="mp-workload"></div>
         <div class="mp-shared-queue" id="mp-shared-queue" hidden><h3>全局就绪队列 <span>队首 → 队尾</span></h3><div id="mp-shared-tasks"></div><p>队列操作须协调：本例按 CPU 编号顺序领取，不是任意同时取走同一任务。</p><div class="mp-distribution" aria-hidden="true">↓ 领取到 CPU 0 <span>领取到 CPU 1 ↓</span></div></div>
         <div class="mp-board" id="mp-board"></div>
-        <p class="lde-caption">条长表示该核已执行工作占本例总工作量的比例，不是 CPU 利用率；两个核的条形使用同一个总量作为满刻度。</p>
-        <dl class="mp-summary"><div><dt>完成任务</dt><dd id="mp-completed"></dd></div><div><dt>任务迁移</dt><dd id="mp-migrations"></dd></div><div><dt>CPU 0 / CPU 1 本例累计执行</dt><dd id="mp-busy"></dd></div><div><dt id="mp-reference-label">不迁移的完成时刻</dt><dd id="mp-reference"></dd></div></dl>
-        <div id="mp-timeline-section"><div class="mp-timeline-heading"><h3>同刻度的两行执行记录</h3><p>带任务编号的格子为已执行工作；空白为后续时段。</p></div><div class="mp-timeline-scroll" tabindex="0" role="region" aria-label="两个 CPU 的执行时间轴"><div id="mp-timeline"></div></div></div>
+        <dl class="mp-summary"><div><dt>完成任务</dt><dd id="mp-completed"></dd></div><div><dt>任务迁移次数</dt><dd id="mp-migrations"></dd></div><div><dt id="mp-reference-label">不迁移的完成时刻</dt><dd id="mp-reference"></dd></div></dl>
+        <div id="mp-timeline-section"><div class="mp-timeline-heading"><h3>两颗 CPU 的执行时间线</h3><p>任务编号：执行 · 点号：空闲 · 空白：尚未观察</p></div><div class="mp-timeline-scroll" tabindex="0" role="region" aria-label="两个 CPU 的执行时间轴"><div id="mp-timeline"></div></div></div>
         <input id="mp-position" type="range" min="0" max="10" step="1" value="0" aria-label="演示位置">
         <div class="lde-event" aria-live="polite" aria-atomic="true"><p class="detail-kicker" id="mp-event-label"></p><h3 id="mp-event-title"></h3><p id="mp-event-text"></p></div>
         <table class="mp-ledger"><caption>本例工作量与剩余量；任务不能同时占用两个 CPU。</caption><thead><tr><th scope="col">任务</th><th scope="col">本例 CPU 需求</th><th scope="col">剩余</th><th scope="col">当前归属</th></tr></thead><tbody id="mp-ledger-body"></tbody></table>
@@ -23,6 +22,34 @@ function renderMultiprocessorPage(root) {
       ${wikiRelated('multiprocessor')}
     </main><footer class="site-footer"><span>OSLab / CPU 虚拟化</span><a href="#top">回到页首 ↑</a></footer>
   </div>`;
+  const demo = root.querySelector('#demo');
+  const conditions = document.createElement('p');
+  conditions.id = 'mp-conditions';
+  conditions.className = 'mp-conditions';
+  const toolbar = demo.querySelector('.mp-toolbar');
+  toolbar.before(root.querySelector('#mp-scene-note'), root.querySelector('#mp-workload'), conditions);
+  root.querySelector('#mp-scene').closest('label').classList.add('mp-scene-control');
+  root.querySelector('#mp-shared-queue').before(root.querySelector('#mp-position'), demo.querySelector('.lde-event'));
+  const reference = document.createElement('details');
+  reference.className = 'mp-reference';
+  reference.innerHTML = '<summary>全部任务的工作量与当前归属</summary>';
+  const ledger = root.querySelector('.mp-ledger');
+  ledger.before(reference);
+  reference.append(ledger);
+  const assumptions = document.createElement('details');
+  assumptions.className = 'mp-reference';
+  assumptions.innerHTML = '<summary>工作量与性能比较的前提</summary>';
+  assumptions.append(root.querySelector('.intro .model-note'));
+  reference.after(assumptions);
+  for (const block of root.querySelectorAll('.mp-boundaries > div, #tradeoffs .rr-tradeoff')) {
+    const details = document.createElement('details');
+    details.className = 'mp-reference';
+    const summary = document.createElement('summary');
+    summary.textContent = block.querySelector('h3').textContent;
+    details.append(summary, ...block.querySelectorAll('p'));
+    block.replaceWith(details);
+  }
+
   let scene = 'queues';
   let balance = true;
   let target = 0;
@@ -38,7 +65,8 @@ function renderMultiprocessorPage(root) {
   const titles = {queues: '每核就绪队列的负载差异与任务迁移', shared: '共享队列：协调领取，不重复派发', affinity: '同一个任务，留在原核还是迁移？'};
   const prepare = () => {
     root.querySelector('#demo-title').textContent = titles[scene];
-    root.querySelector('#mp-scene-note').textContent = scenes[scene].text;
+    root.querySelector('#mp-scene-note').textContent = scenes[scene].text + (scene === 'shared' ? ' 初始队列顺序为 A → D → B → C。' : '');
+    root.querySelector('#mp-conditions').textContent = scene === 'affinity' ? '阶段表示派发与执行顺序；缓存预热代价未计入给定工作量，不能用阶段数比较性能。' : '两个同速 CPU，独立任务，无 I/O；各核采用非抢占 FCFS，切换与迁移开销取零。';
     root.querySelector('#mp-balance-control').hidden = scene !== 'queues';
     root.querySelector('#mp-target-control').hidden = scene !== 'affinity';
     root.querySelector('#mp-shared-queue').hidden = scene !== 'shared';
@@ -50,21 +78,25 @@ function renderMultiprocessorPage(root) {
   const paint = () => {
     const snapshot = run.snapshots[position];
     const complete = position === run.duration;
-    const totalWork = snapshot.tasks.reduce((total, task) => total + task.burst, 0);
     root.querySelector('#mp-time').textContent = scene === 'affinity' ? position + 1 : snapshot.time;
     root.querySelector('#mp-shared-tasks').innerHTML = queueView(snapshot.shared);
     root.querySelector('#mp-board').innerHTML = [0, 1].map(cpu => {
       const id = snapshot.cpus[cpu];
       const task = snapshot.tasks.find(task => task.id === id);
-      return `<section class="mp-cpu" aria-labelledby="mp-cpu-${cpu}-title"><div class="mp-cpu-heading"><h3 id="mp-cpu-${cpu}-title">CPU ${cpu}</h3><span>${id ? '执行中' : '空闲'}</span></div><div class="mp-running">${id ? `${chip(id)}<div><strong>任务 ${id}</strong><span>剩余 ${task.remaining} / ${task.burst}</span></div>` : '<span class="mp-idle-icon" aria-hidden="true">○</span><div><strong>空闲</strong><span>当前没有任务占用此核</span></div>'}</div><div class="mp-work-meter" role="meter" aria-label="CPU ${cpu} 已执行工作占本例总工作量" aria-valuemin="0" aria-valuemax="${totalWork}" aria-valuenow="${snapshot.busy[cpu]}" aria-valuetext="${snapshot.busy[cpu]} / ${totalWork} 单位，不是 CPU 利用率"><span style="width:${snapshot.busy[cpu] / totalWork * 100}%"></span></div><p class="mp-used">已执行 ${snapshot.busy[cpu]} / 总工作量 ${totalWork} 单位</p>${scene !== 'shared' ? `<div class="mp-local-queue"><h4>本核就绪队列 <span>队首 → 队尾</span></h4><div>${queueView(snapshot.queues[cpu])}</div></div>` : '<p class="mp-global-link">↑ 从全局队列领取下一任务</p>'}${scene === 'affinity' ? `<div class="mp-cache"><h4>运行关联 / 缓存示意</h4><p>${snapshot.cache[cpu].length ? `${chip('A')} 曾在此核执行，可能复用缓存数据` : 'A 在此核尚无运行关联，可能需要预热'}</p></div>` : ''}</section>`;
+      return `<section class="mp-cpu" aria-labelledby="mp-cpu-${cpu}-title">
+        <div class="mp-cpu-heading"><h3 id="mp-cpu-${cpu}-title">CPU ${cpu}</h3><span>${id ? '执行中' : '空闲'}</span></div>
+        <div class="mp-running">${id ? `${chip(id)}<div><strong>任务 ${id}</strong><span>剩余 ${task.remaining} / ${task.burst}</span></div>` : '<span class="mp-idle-icon" aria-hidden="true">○</span><div><strong>空闲</strong><span>当前没有任务占用此核</span></div>'}</div>
+        <p class="mp-used">本核累计执行 ${snapshot.busy[cpu]} 个 CPU 单位</p>
+        ${scene !== 'shared' ? `<div class="mp-local-queue"><h4>本核就绪队列 <span>队首 → 队尾</span></h4><div>${queueView(snapshot.queues[cpu])}</div></div>` : '<p class="mp-global-link">↑ 从全局队列领取下一任务</p>'}
+        ${scene === 'affinity' ? `<div class="mp-cache"><h4>运行关联 / 缓存示意</h4><p>${snapshot.cache[cpu].length ? `${chip('A')} 曾在此核执行，可能复用缓存数据` : 'A 在此核尚无运行关联，可能需要预热'}</p></div>` : ''}
+      </section>`;
     }).join('');
     root.querySelector('#mp-completed').textContent = `${snapshot.tasks.filter(task => !task.remaining).length} / ${snapshot.tasks.length}`;
     root.querySelector('#mp-migrations').textContent = snapshot.migrations;
-    root.querySelector('#mp-busy').textContent = `${snapshot.busy[0]} / ${snapshot.busy[1]}`;
     root.querySelector('#mp-reference-label').textContent = scene === 'queues' ? '不迁移 / 当前完成时刻' : scene === 'shared' ? '本例完成时刻' : '派发目标';
     root.querySelector('#mp-reference').textContent = scene === 'queues' ? complete ? `16 / ${run.duration}` : '尚未完成' : scene === 'shared' ? complete ? run.duration : '尚未完成' : `CPU ${target}`;
     root.querySelector('#mp-event-label').textContent = scene === 'affinity' ? `阶段 ${position + 1} / ${run.duration + 1}` : `单位边界 t = ${snapshot.time}`;
-    root.querySelector('#mp-event-title').textContent = scene === 'affinity' ? ['原核已有运行关联', target === 0 ? '继续在 CPU 0' : '迁移到 CPU 1', '在所选核继续执行', 'A 的两个 CPU 工作单位已完成'][position] : complete ? '所有任务完成' : snapshot.cpus.includes(null) && snapshot.tasks.some(task => task.remaining) ? '有 CPU 空闲，仍有任务未完成' : snapshot.migrations && scene === 'queues' ? '迁移排队任务，继续并行推进' : '两个 CPU 同时推进不同任务';
+    root.querySelector('#mp-event-title').textContent = scene === 'affinity' ? ['原核已有运行关联', target === 0 ? '继续在 CPU 0' : '迁移到 CPU 1', '在所选核继续执行', 'A 的两个 CPU 工作单位已完成'][position] : complete ? '所有任务完成' : snapshot.cpus.includes(null) && snapshot.tasks.some(task => task.remaining) ? '有 CPU 空闲，仍有任务未完成' : scene === 'queues' && snapshot.events.some(event => event.includes('队尾迁移')) ? '迁移排队任务，继续并行推进' : '两个 CPU 同时推进不同任务';
     root.querySelector('#mp-event-text').textContent = snapshot.events.join(' ');
     root.querySelector('#mp-ledger-body').innerHTML = snapshot.tasks.map(task => {
       const cpu = snapshot.cpus.indexOf(task.id);
@@ -83,7 +115,7 @@ function renderMultiprocessorPage(root) {
       const scroll = root.querySelector('.mp-timeline-scroll');
       const tickWidth = (root.querySelector('#mp-timeline').scrollWidth - 64) / horizon;
       const cursor = 64 + position * tickWidth;
-      if (cursor > scroll.scrollLeft + scroll.clientWidth - 28) scroll.scrollLeft = Math.max(0, cursor - scroll.clientWidth / 2);
+      if (cursor < scroll.scrollLeft + 64 || cursor > scroll.scrollLeft + scroll.clientWidth - 28) scroll.scrollLeft = Math.max(0, cursor - (scroll.clientWidth + 64) / 2);
       if (position === 0) scroll.scrollLeft = 0;
     }
     slider.value = position;

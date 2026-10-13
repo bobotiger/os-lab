@@ -23,7 +23,7 @@ const DATA = {
     {field: '打开文件信息', english: 'Files', value: '文件描述符及相关引用', desc: '文件描述符是进程访问已打开文件的编号。相关引用记录编号所对应的文件或 I/O 资源。'},
   ],
   story: [
-    {state: 'new', title: '创建进程', desc: '操作系统为这次程序执行创建进程，建立记录进程信息的 PCB，并准备必要资源。'},
+    {state: 'new', title: '创建进程', desc: '操作系统为这次执行建立进程控制块（PCB），用于记录进程信息，并准备必要资源。'},
     {state: 'ready', title: '进入就绪队列', edge: 0, desc: '资源已经准备完成。进程进入就绪队列，但还没有获得 CPU，因此尚未开始执行指令。'},
     {state: 'running', title: '获得 CPU', edge: 1, desc: '调度器为这个进程分配 CPU。进程转入运行状态，开始执行指令。'},
     {state: 'blocked', title: '等待读取', edge: 3, desc: '进程请求读取文件，但所需数据尚未返回。进程进入阻塞状态，等待读取完成；CPU 可以执行其他就绪进程。'},
@@ -76,54 +76,52 @@ function stateDiagramSvg(layout) {
 
 function renderProcessPage(root) {
   root.innerHTML = `
-    <div class="page" id="top">
-      ${wikiHeader('process', [{href: '#states', title: '状态转换'}, {href: '#pcb', title: '进程控制块'}, {href: '#related', title: '关联概念'}])}
+    <div class="page process-page" id="top">
+      ${wikiHeader('process', [{href: '#states', title: '状态变化'}, {href: '#pcb', title: '保存与恢复'}, {href: '#related', title: '进一步理解'}, {href: '#practice', title: '参考实践'}])}
       <main>
         <section class="intro" aria-labelledby="page-title">
           <p class="eyebrow">CPU 虚拟化 / 进程</p>
           <h1 id="page-title">进程 <span>Process</span></h1>
           <p class="lead">进程是程序的一次执行。</p>
-          <p class="definition">程序包含指令和相关数据。操作系统用进程管理程序的一次执行，包括所需资源和运行状态。同一份程序可以由多个进程执行；这些进程具有不同的标识，并分别记录执行位置和计算状态。</p>
-          <p class="model-note">示例采用单核 CPU，以进程为调度对象，区分五种基本状态。现代系统通常以线程为调度单位。</p>
-          <p class="process-homework-link"><a class="inline-link" href="process-homework.html">进程作业：process-run.py 使用说明与练习</a></p>
-          <p class="process-homework-link"><a class="inline-link" href="cpu-virtualization-experiments.html">CPU 虚拟化实验：CPU 共享、进程状态、进程创建、程序替换与回收、系统调用</a></p>
+          <p class="definition">程序包含指令和相关数据，同一份程序可以由多个进程执行。操作系统分别记录每个进程的标识、执行位置、计算状态和所需资源。</p>
         </section>
 
         <section class="state-section" id="states" aria-labelledby="states-title">
-          <div class="section-heading"><div><p class="section-index">01 / STATES</p><h2 id="states-title">进程状态与转换条件</h2></div><p>就绪等待 CPU；阻塞等待事件完成。</p></div>
-          <p class="section-description">输入/输出（I/O）包括文件读取等操作。进程状态表示进程是否具备运行条件，以及是否正在使用 CPU。创建、调度、抢占和 I/O 完成都可能改变进程状态。</p>
-          <div class="state-workbench">
-            <div class="diagram-surface">${stateDiagramSvg('desktop')}${stateDiagramSvg('mobile')}<p class="diagram-caption">五种基本状态的主要转换</p></div>
-            <aside class="state-detail" aria-label="状态与转换说明" aria-live="polite" aria-atomic="true"></aside>
-          </div>
+          <div class="section-heading"><div><p class="section-index">01 / 状态变化</p><h2 id="states-title">一个进程读文件时，状态怎样变化？</h2></div></div>
+          <p class="section-description">本例采用单核 CPU，以进程为调度对象。文件读取属于输入/输出（I/O），本次读取需要等待数据返回。</p>
           <div class="story">
-            <div class="story-heading"><h3>文件读取过程中的进程状态变化</h3><p>本次读取需要等待 I/O 完成。</p></div>
-            <ol class="story-steps">${DATA.story.map((step, index) => `<li><button type="button" data-step="${index}" aria-pressed="false"><span class="step-number">${String(index + 1).padStart(2, '0')}</span><span class="step-title">${step.title}</span><span class="step-state">${DATA.states.find(state => state.id === step.state).short}</span></button></li>`).join('')}</ol>
-            <div class="story-detail" aria-live="polite" aria-atomic="true"><p class="detail-kicker">文件读取 / 示例</p><p>本次文件读取需要等待数据返回，进程因此进入阻塞状态。读取完成后，进程先回到就绪队列，再通过调度获得 CPU，继续处理数据。</p></div>
+            <div class="story-heading"><h3>从创建到读取完成，再退出</h3><div class="process-story-controls" role="group" aria-label="文件读取步骤控制"><button type="button" id="process-story-prev">上一步</button><button type="button" id="process-story-next">下一步</button><button type="button" id="process-story-return" hidden>从头查看读取过程</button></div></div>
+            <div class="story-sequence-scroll" role="region" aria-label="文件读取步骤" tabindex="0"><ol class="story-steps">${DATA.story.map((step, index) => `<li><button type="button" data-step="${index}" aria-pressed="false"><span class="step-number">${String(index + 1).padStart(2, '0')}</span><span class="step-title">${step.title}</span><span class="step-state">${DATA.states.find(state => state.id === step.state).short}</span></button></li>`).join('')}</ol></div>
           </div>
+          <div class="state-workbench">
+            <aside class="state-detail" aria-label="当前步骤或状态说明" aria-live="polite" aria-atomic="true"></aside>
+            <div class="diagram-surface">${stateDiagramSvg('desktop')}${stateDiagramSvg('mobile')}<p class="diagram-caption">五种基本状态的主要转换</p></div>
+          </div>
+          <p class="process-state-summary">就绪：已具备运行条件，等待 CPU。阻塞：等待 I/O 等事件完成；条件满足后先回到就绪，再经调度继续运行。</p>
         </section>
 
         <section class="pcb-section" id="pcb" aria-labelledby="pcb-title">
-          <div class="section-heading"><div><p class="section-index">02 / CONTEXT</p><h2 id="pcb-title">上下文切换中的现场保存与恢复</h2></div><p>PCB · 进程控制块</p></div>
-          <p class="section-description">进程控制块（PCB）是操作系统记录进程信息的数据结构。执行现场包括程序计数器和寄存器值，用于记录执行位置与计算状态。上下文切换先保存当前执行对象的现场，再恢复另一个执行对象的现场，使它从保存的位置继续执行。</p>
-          <table class="pcb-table"><caption>PCB 中的典型信息，具体组织随操作系统实现而异</caption><thead><tr><th scope="col">字段</th><th scope="col">保存什么</th><th scope="col">为什么需要</th></tr></thead><tbody>${DATA.pcb.map(row => `<tr><th scope="row">${row.field}<span>${row.english}</span></th><td>${row.value}</td><td>${row.desc}</td></tr>`).join('')}</tbody></table>
+          <div class="section-heading"><div><p class="section-index">02 / 保存与恢复</p><h2 id="pcb-title">进程暂停后，靠什么继续执行？</h2></div></div>
+          <p class="section-description">进程控制块（PCB）是 OS 记录进程信息的数据结构。进程暂停时，保存的执行现场记录了执行位置和计算状态。</p>
+          <dl class="process-context"><div><dt>执行到哪里？</dt><dd>程序计数器（PC）<span>下一条待执行指令的地址</span></dd></div><div><dt>计算到什么状态？</dt><dd>寄存器现场<span>暂停时的 CPU 寄存器值</span></dd></div></dl>
+          <p class="section-description" id="context-switch">上下文切换先保存当前进程的现场，再恢复另一个进程的现场。之前的进程再次获得 CPU 时，才能从保存的位置继续执行。</p>
+          <details class="process-reference"><summary>查看 PCB 的完整字段说明</summary><div class="pcb-reference-scroll" role="region" aria-label="PCB 典型字段" tabindex="0"><table class="pcb-table"><caption>PCB 中的典型信息，具体组织随操作系统实现而异</caption><thead><tr><th scope="col">字段</th><th scope="col">保存什么</th><th scope="col">为什么需要</th></tr></thead><tbody>${DATA.pcb.map(row => `<tr><th scope="row">${row.field}<span>${row.english}</span></th><td>${row.value}</td><td>${row.desc}</td></tr>`).join('')}</tbody></table></div></details>
         </section>
 
         <section class="related-section" id="related" aria-labelledby="related-title">
-          <div class="section-heading"><div><p class="section-index">03 / CONNECTIONS</p><h2 id="related-title">进程与线程、调度及虚拟内存的关系</h2></div></div>
-          <dl class="concepts">
-            <div id="thread"><dt>线程 <span>Thread</span></dt><dd>线程是进程内的执行流。同一进程的线程通常共享地址空间，但各自保存程序计数器和寄存器值。</dd></div>
-            <div id="scheduling"><dt>调度 <span>Scheduling</span></dt><dd>调度从就绪的执行对象中选择一个，并为它分配 CPU。<a class="inline-link" href="${WIKI_PAGES.roundRobin.href}">时间片轮转</a>按就绪队列顺序分配 CPU；时间片耗尽时，未完成的进程回到队尾。</dd></div>
-            <div id="context-switch"><dt>上下文切换 <span>Context switch</span></dt><dd>上下文切换通过保存和恢复执行现场，改变当前使用 CPU 的执行对象。进程的程序计数器和寄存器值用于恢复执行，PCB 还记录状态、内存与文件等管理信息。</dd></div>
-            <div id="virtual-memory"><dt>虚拟内存 <span>Virtual memory</span></dt><dd>虚拟地址是进程使用的地址，虚拟地址空间是这些地址的集合。<a class="inline-link" href="${WIKI_PAGES.paging.href}">分页地址转换</a>根据映射关系得到物理地址。操作系统管理地址映射和访问权限，硬件在访问时执行相应检查。</dd></div>
-          </dl>
+          <div class="section-heading"><div><p class="section-index">03 / 延伸概念</p><h2 id="related-title">进一步理解</h2></div></div>
+          <details class="process-reference" id="thread"><summary>进程与线程有什么区别？</summary><p>线程是进程内的执行流。同一进程的线程通常共享地址空间，但各自保存程序计数器和寄存器值。现代系统通常以线程为调度单位，本页的单核示例以进程为调度对象。</p></details>
+          <details class="process-reference" id="scheduling"><summary>调度怎样决定谁获得 CPU？</summary><p>调度从就绪的执行对象中选择一个，并为它分配 CPU。<a class="inline-link" href="${WIKI_PAGES.roundRobin.href}">时间片轮转</a>按就绪队列顺序分配 CPU；时间片耗尽时，未完成的进程回到队尾。</p></details>
+          <details class="process-reference" id="virtual-memory"><summary>进程的地址空间与物理内存是什么关系？</summary><p>虚拟地址是进程使用的地址，虚拟地址空间是这些地址的集合。<a class="inline-link" href="${WIKI_PAGES.paging.href}">分页地址转换</a>根据映射关系得到物理地址。操作系统管理映射和访问权限，硬件在访问时执行相应检查。</p></details>
         </section>
+        <section class="related-section" id="practice" aria-labelledby="process-practice-title"><div class="section-heading"><div><p class="section-index">04 / 参考实践</p><h2 id="process-practice-title">用运行记录对照进程状态</h2></div></div><p class="process-homework-link"><a class="inline-link" href="process-homework.html">进程作业：计算与 I/O 等待</a></p><p class="process-homework-link"><a class="inline-link" href="cpu-virtualization-experiments.html">CPU 虚拟化实验：观察进程与 CPU 共享</a></p></section>
         ${wikiRelated('process')}
       </main>
       <footer><span>OSLab / CPU 虚拟化</span><a href="#top">回到页首 ↑</a></footer>
     </div>`;
 
   const detail = root.querySelector('.state-detail');
+  let currentStory = 0;
   const select = (stateId, edgeIndex, storyIndex) => {
     root.querySelectorAll('[data-state]').forEach(node => node.setAttribute('aria-pressed', String(node.dataset.state === stateId)));
     root.querySelectorAll('[data-edge]').forEach(edge => edge.setAttribute('aria-pressed', String(Number(edge.dataset.edge) === edgeIndex)));
@@ -131,17 +129,17 @@ function renderProcessPage(root) {
     const state = DATA.states.find(item => item.id === stateId);
     const transition = DATA.transitions[edgeIndex];
     const step = DATA.story[storyIndex];
-    if (!step) {
-      root.querySelector('.story-detail').innerHTML = '<p class="detail-kicker">文件读取 / 示例</p><p>本次文件读取需要等待数据返回，进程因此进入阻塞状态。读取完成后，进程先回到就绪队列，再通过调度获得 CPU，继续处理数据。</p>';
-    }
+    currentStory = step ? storyIndex : null;
+    root.querySelector('#process-story-prev').disabled = currentStory === null || currentStory === 0;
+    root.querySelector('#process-story-next').disabled = currentStory === null || currentStory === DATA.story.length - 1;
+    root.querySelector('#process-story-return').hidden = currentStory !== null;
     if (step) {
-      root.querySelector('.story-detail').innerHTML = `<p class="detail-kicker">${String(storyIndex + 1).padStart(2, '0')} / ${step.title} / ${state.short}</p><p>${step.desc}</p>`;
-      detail.innerHTML = `<p class="detail-kicker">进程状态 / ${state.english}</p><h3>${state.short}</h3><p>${state.desc}</p><div class="detail-reason"><span>状态说明</span><p>${state.reason}</p></div>`;
+      detail.innerHTML = `<p class="detail-kicker">文件读取 / 步骤 ${storyIndex + 1} / ${step.title}</p><h3>${state.short}</h3><p>${step.desc}</p>`;
     } else if (transition) {
       const from = DATA.states.find(item => item.id === transition.from);
-      detail.innerHTML = `<p class="detail-kicker">状态转换</p><h3>${from.short} → ${state.short}</h3><p class="detail-state">${transition.label}</p><p>${transition.desc}</p><div class="detail-reason"><span>转入${state.short}后</span><p>${state.reason}</p></div>`;
+      detail.innerHTML = `<p class="detail-kicker">状态转换 / ${transition.label}</p><h3>${from.short} → ${state.short}</h3><p>${transition.desc}</p><details class="process-reference"><summary>转入${state.short}后的相关说明</summary><p>${state.reason}</p></details>`;
     } else {
-      detail.innerHTML = `<p class="detail-kicker">进程状态 / ${state.english}</p><h3>${state.short}</h3><p>${state.desc}</p><div class="detail-reason"><span>关键区别</span><p>${state.reason}</p></div>`;
+      detail.innerHTML = `<p class="detail-kicker">进程状态 / ${state.english}</p><h3>${state.short}</h3><p>${state.desc}</p><details class="process-reference"><summary>相关转换与限制</summary><p>${state.reason}</p></details>`;
     }
   };
 
@@ -152,6 +150,7 @@ function renderProcessPage(root) {
         const edgeIndex = Number(control.dataset.edge);
         select(DATA.transitions[edgeIndex].to, edgeIndex);
       }
+      if (matchMedia('(max-width: 1240px)').matches) detail.scrollIntoView({block: 'nearest'});
     };
     control.addEventListener('click', activate);
     control.addEventListener('keydown', event => {
@@ -168,7 +167,17 @@ function renderProcessPage(root) {
       select(step.state, step.edge, storyIndex);
     });
   });
-  select('ready');
+  const selectStory = index => {
+    const step = DATA.story[index];
+    select(step.state, step.edge, index);
+    const scroll = root.querySelector('.story-sequence-scroll');
+    const button = root.querySelector(`[data-step="${index}"]`);
+    if (button.offsetLeft < scroll.scrollLeft || button.offsetLeft + button.offsetWidth > scroll.scrollLeft + scroll.clientWidth) scroll.scrollLeft = button.offsetLeft;
+  };
+  root.querySelector('#process-story-prev').addEventListener('click', () => selectStory(currentStory - 1));
+  root.querySelector('#process-story-next').addEventListener('click', () => selectStory(currentStory + 1));
+  root.querySelector('#process-story-return').addEventListener('click', () => selectStory(0));
+  selectStory(0);
 }
 
 renderProcessPage(document.getElementById('root'));

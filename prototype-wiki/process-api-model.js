@@ -20,7 +20,7 @@ function buildProcessApiScenario(scenario = 'shell') {
     state.parent.forkReturn = '43';
     state.parent.location = 'fork 返回后的父分支';
   };
-  add('解析命令', '起点：PID 42 正在执行 Shell', 'PID 区分进程身份，程序映像决定它执行的代码。创建另一个进程与替换当前程序是不同操作。', 'parent', '准备命令', 'parse', null);
+  add('解析命令', '起点：PID 42 正在执行 Shell', 'PID 42 当前的程序映像是 Shell。尚未创建子进程或装载 sort。', 'parent', '准备命令', 'parse', null);
   if (scenario === 'exec') {
     add('调用 exec', '装载 sort，但不创建 PID 43', '成功的 exec 用新程序替换原程序映像，PID 仍为 42。标准输入输出保持连接到终端；旧 Shell 代码不会在成功的 exec 后继续。', 'parent', 'execvp 成功', 'exec', () => {
       state.parent.program = 'sort';
@@ -37,9 +37,9 @@ function buildProcessApiScenario(scenario = 'shell') {
       state.parent.location = '已退出';
     });
   } else {
-    add('fork 返回', '新增 PID 43，父子仍执行 Shell', 'fork 成功后，父进程得到子 PID 43，子进程得到 0，两边从调用之后继续。父子谁先执行并无保证；子进程继承的是文件描述符引用，不是把文件本身复制一份。', 'both', 'fork 成功', 'fork', createChild);
+    add('fork 返回', '新增 PID 43，父子仍执行 Shell', 'fork 成功后，父进程得到子 PID 43，子进程得到 0，两边从调用之后继续。父子谁先执行并无保证。', 'both', 'fork 成功', 'fork', createChild);
     if (scenario === 'fork') {
-      add('子分支', '子进程继续原程序，不会自动变成 sort', 'PID 43 根据返回值 0 进入子分支。代码与数据从 fork 时的状态开始，之后对普通私有内存的修改相互独立；Linux 通常通过写时复制实现，而非立即完整复制所有物理页。', 'child', '执行子分支', 'branch', () => { state.child.location = '原程序的子分支'; });
+      add('子分支', '子进程继续原程序，不会自动变成 sort', 'PID 43 根据返回值 0 进入子分支。代码与数据从 fork 时的状态开始，之后对普通私有内存的修改相互独立。', 'child', '执行子分支', 'branch', () => { state.child.location = '原程序的子分支'; });
       add('父分支', '父进程也继续原程序', 'PID 42 根据返回值 43 进入父分支。父子程序映像仍是 Shell，尚未调用 exec 或退出；进入分支不等于程序执行完成。', 'parent', '执行父分支', 'branch', () => { state.parent.location = '原程序的父分支'; });
     } else {
       add('重定向输入', '只修改子进程的标准输入', '子进程打开 input.txt，将对应描述符 dup2 到 0，再关闭临时描述符。之后读取标准输入就读取文件；父 Shell 的描述符 0 仍指向终端。', 'child', 'open + dup2(fd, 0) + close', 'input', () => {

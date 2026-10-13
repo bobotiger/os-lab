@@ -1,49 +1,62 @@
 function renderDirectExecutionPage(root) {
-  const {scenarios, buildScenario} = OSLabDirectExecution;
+  const {buildScenario} = OSLabDirectExecution;
   root.innerHTML = `<div class="page rr-page lde-page" id="top">
-    ${wikiHeader('directExecution', [{href: '#demo', title: '控制权流转'}, {href: '#entry', title: '受控入口'}, {href: '#rules', title: '关键区别'}])}
+    ${wikiHeader('directExecution', [{href: '#demo', title: '执行过程'}, {href: '#rules', title: '区分两种切换'}, {href: '#entry', title: '入口规则'}])}
     <main>
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">CPU 虚拟化 / 机制</p>
         <h1 id="page-title">受限直接执行 <span>Limited Direct Execution</span></h1>
-        <p class="lead">用户态指令直接执行，进入内核的条件由硬件与 OS 限定。</p>
-        <p class="definition">用户态是程序权限受限制的执行模式，内核态允许操作系统执行必要的特权操作。程序的普通指令直接在 CPU 上执行，硬件检查权限。程序请求系统服务、指令触发异常或计时器产生中断时，CPU 通过预设入口转入内核；操作系统处理事件后，再决定返回原进程还是切换进程。</p>
-        <p class="model-note">单核，A 正在运行，B 已就绪且预存了合法的用户及内核现场。阶段表示控制转移的顺序，不表示指令数或耗时；具体入口指令、寄存器、栈布局与中断处理依赖体系结构。</p>
+        <p class="lead">程序直接使用 CPU，操作系统怎样限制权限、重新获得控制权？</p>
+        <p class="definition">普通指令在用户态直接执行，权限受硬件限制；通过受控入口进入内核态后，操作系统才能执行必要的特权操作。</p>
       </section>
       <section class="lde-demo" id="demo" aria-labelledby="demo-title">
-        <div class="section-heading"><div><p class="section-index">01 / CONTROL TRANSFER</p><h2 id="demo-title">内核入口、现场保存与进程切换</h2></div><p>阶段 <strong id="lde-stage-index">1</strong> / <span id="lde-stage-total">7</span></p></div>
+        <div class="section-heading"><div><p class="section-index">01 / 执行过程</p><h2 id="demo-title">三种进入内核的原因</h2></div></div>
+        <div class="lde-scenarios" role="group" aria-label="机制场景">
+          <button type="button" data-scenario="syscall" aria-pressed="true"><strong>1 · 系统调用</strong><span>A 主动请求服务</span></button>
+          <button type="button" data-scenario="timer" aria-pressed="false"><strong>2 · 计时器中断</strong><span>A 持续计算，不主动让出 CPU</span></button>
+          <button type="button" data-scenario="protection" aria-pressed="false"><strong>3 · 保护异常</strong><span>A 尝试越权操作</span></button>
+        </div>
+        <p class="lde-scene-note" id="lde-scene-note"></p>
+        <p class="lde-conditions">单核；起初 A 运行、B 就绪。阶段表示事件顺序，不表示耗时。</p>
         <div class="rr-toolbar lde-toolbar">
           <div class="rr-transport" role="group" aria-label="演示控制">
             <button type="button" class="icon-button primary" id="lde-play" title="播放" aria-label="播放" aria-pressed="false"><span aria-hidden="true">▶</span></button>
             <button type="button" class="icon-button" id="lde-step" title="下一阶段" aria-label="下一阶段"><span aria-hidden="true">↦</span></button>
             <button type="button" class="icon-button" id="lde-reset" title="重新开始" aria-label="重新开始"><span aria-hidden="true">↺</span></button>
           </div>
-          <label>机制场景<select id="lde-scenario">${Object.entries(scenarios).map(([id, scene]) => `<option value="${id}">${scene.title}</option>`).join('')}</select></label>
           <label id="lde-decision-control">中断后选择<select id="lde-decision"><option value="switch">切换到 B</option><option value="continue">继续 A</option></select></label>
           <label>播放速度<select id="lde-speed"><option value="1600">慢速</option><option value="1000" selected>正常</option><option value="500">快速</option></select></label>
+          <p class="lde-progress">阶段 <strong id="lde-stage-index">1</strong> / <span id="lde-stage-total">5</span></p>
         </div>
-        <p class="lde-scene-note" id="lde-scene-note"></p>
-        <dl class="lde-cpu-status"><div><dt>CPU 正在执行</dt><dd id="lde-executing"></dd></div><div><dt>硬件模式</dt><dd id="lde-mode"></dd></div><div><dt>当前进程上下文</dt><dd id="lde-context"></dd></div><div><dt>计时器</dt><dd id="lde-timer"></dd></div></dl>
+        <div class="lde-event" aria-live="polite" aria-atomic="true"><p class="detail-kicker" id="lde-actor"></p><h3 id="lde-event-title"></h3><p id="lde-event-text"></p></div>
         <div class="lde-diagram-scroll" tabindex="0" role="region" aria-label="用户态与内核态执行泳道"><div class="lde-diagram" id="lde-diagram"></div></div>
         <input id="lde-position" type="range" min="0" max="6" step="1" value="0" aria-label="演示阶段">
-        <div class="lde-event" aria-live="polite" aria-atomic="true"><p class="detail-kicker" id="lde-actor"></p><h3 id="lde-event-title"></h3><p id="lde-event-text"></p></div>
-        <div class="lde-context-detail">
-          <section aria-labelledby="lde-process-title"><h3 id="lde-process-title">进程状态</h3><dl class="lde-process-states"><div><dt>A</dt><dd id="lde-state-a"></dd></div><div><dt>B</dt><dd id="lde-state-b"></dd></div><div><dt>进程间切换</dt><dd id="lde-switches"></dd></div></dl><p class="lde-caption">CPU 进入内核态后，仍可以保留 A 的进程上下文。执行模式改变，不代表已经换成另一个进程。</p></section>
-          <section aria-labelledby="lde-save-title"><h3 id="lde-save-title">现场保存与恢复</h3><table class="lde-save-table"><thead><tr><th scope="col">进程</th><th scope="col">进入内核的用户现场</th><th scope="col">OS 切换的内核上下文</th></tr></thead><tbody><tr><th scope="row">A</th><td id="lde-user-a"></td><td id="lde-kernel-a"></td></tr><tr><th scope="row">B</th><td id="lde-user-b"></td><td id="lde-kernel-b"></td></tr></tbody></table><p class="lde-caption">入口通常涉及返回位置、原权限模式等必要状态；OS 与入口软件还可能保存其他寄存器。完整切换涉及寄存器和栈等上下文，具体分工依架构而定。</p></section>
+        <dl class="lde-cpu-status"><div><dt>CPU 正在执行</dt><dd id="lde-executing"></dd></div><div><dt>CPU 权限模式</dt><dd id="lde-mode"></dd></div><div><dt>所属进程</dt><dd id="lde-context"></dd></div><div id="lde-timer-status"><dt>计时器</dt><dd id="lde-timer"></dd></div></dl>
+        <dl class="lde-process-states"><div><dt>进程 A</dt><dd id="lde-state-a"></dd></div><div><dt>进程 B</dt><dd id="lde-state-b"></dd></div><div><dt>进程切换次数</dt><dd id="lde-switches"></dd></div></dl>
+        <details class="lde-reference" id="lde-saved-context"><summary>本阶段保存和恢复了哪些现场？</summary>
+          <p>现场是继续执行所需的状态，包括执行位置、寄存器和栈等。进入内核时保留用户现场；切换进程时，OS 还要保存和恢复内核执行上下文。</p>
+          <p>B 已有合法的用户现场和内核上下文，因此可以被恢复执行。</p>
+          <table class="lde-save-table"><thead><tr><th scope="col">进程</th><th scope="col">进入内核的用户现场</th><th scope="col">OS 切换的内核上下文</th></tr></thead><tbody><tr><th scope="row">A</th><td id="lde-user-a"></td><td id="lde-kernel-a"></td></tr><tr><th scope="row">B</th><td id="lde-user-b"></td><td id="lde-kernel-b"></td></tr></tbody></table><p class="lde-caption">入口保存返回位置、原权限模式等必要状态；其他寄存器可能由入口软件保存。具体指令、栈布局及硬件与软件的分工依体系结构而定。</p>
+        </details>
+      </section>
+      <section class="rr-rules" id="rules" aria-labelledby="rules-title"><div class="section-heading"><div><p class="section-index">02 / 区分两种切换</p><h2 id="rules-title">进入内核时，未必换了进程</h2></div></div>
+        <div class="lde-comparison">
+          <div><h3>权限模式改变</h3><p class="lde-change"><span>A · 用户态</span><span aria-hidden="true">→</span><span>A · 内核态</span></p><p>CPU 已进入内核，仍在 A 的进程上下文中。</p></div>
+          <div><h3>当前进程改变</h3><p class="lde-change"><span>A · 内核态</span><span aria-hidden="true">→</span><span>B · 内核态</span></p><p>OS 保存 A、恢复 B，然后才能返回 B 的用户程序。</p></div>
         </div>
+        <p class="lde-next-topic">计时器使 OS 能重新获得控制权；接下来选谁运行，由<a class="inline-link" href="cpu-scheduling.html">调度策略</a>决定。</p>
       </section>
-      <section class="lde-entry-section" id="entry" aria-labelledby="entry-title"><div class="section-heading"><div><p class="section-index">02 / CONTROLLED ENTRY</p><h2 id="entry-title">入口由内核配置，不能任意跳入</h2></div></div>
-        <div class="lde-entry-layout"><table class="lde-entry-table"><caption>三类内核入口及触发来源；入口组织与向量编号随体系结构变化。</caption><thead><tr><th scope="col">事件</th><th scope="col">触发来源</th><th scope="col">受控目标</th></tr></thead><tbody><tr data-entry="syscall"><th scope="row">系统调用</th><td>程序的专用请求指令</td><td>系统调用入口</td></tr><tr data-entry="timer"><th scope="row">计时器中断</th><td>计时器硬件</td><td>计时器处理入口</td></tr><tr data-entry="protection"><th scope="row">保护异常</th><td>当前指令的权限检查</td><td>异常处理入口</td></tr></tbody></table><div class="lde-entry-note"><h3>启动时建立保护边界</h3><p>内核以足够权限配置陷阱／中断入口和计时器，然后才允许用户程序运行。具体可进入哪些入口、怎样提高权限，由硬件和内核配置共同限定。</p><p id="lde-entry-current">此刻尚未进入内核。</p></div></div>
-      </section>
-      <section class="rr-rules" id="rules" aria-labelledby="rules-title"><div class="section-heading"><div><p class="section-index">03 / MECHANISM VS POLICY</p><h2 id="rules-title">用户态与内核态切换，不等于进程切换</h2></div></div>
-        <dl class="concepts rr-concepts"><div><dt>普通调用与受控内核入口</dt><dd>普通函数调用只改变程序内的执行位置，不自动获得内核权限。系统调用通过专用入口请求操作系统服务；CPU 按入口配置改变权限并进入内核，而不是任意跳转到内核地址。</dd></div><div><dt>中断入口与上下文切换</dt><dd>计时器中断使 CPU 先执行内核处理代码。调度器随后决定继续 A，还是保存 A 的现场并恢复 B 的现场；硬件不会仅因中断发生就自动选择另一个进程。</dd></div><div><dt>执行模式与进程状态</dt><dd>用户态和内核态表示 CPU 的权限模式；运行、就绪和阻塞表示进程的运行条件。本例的查询型系统调用不需要等待事件，处理后可以返回 A。需要等待 I/O 的系统调用则可能使进程阻塞。</dd></div></dl>
-        <div class="rr-tradeoff"><h3>计时器中断机制与调度策略的分工</h3><p>计时器可在进程持续计算时触发中断，使 CPU 转入内核执行中断处理代码，不依赖进程主动让出 CPU。是否切换到 B 由调度策略决定，不是每次中断都必须切换。<a class="inline-link" href="round-robin.html">轮转</a>和<a class="inline-link" href="mlfq.html">MLFQ</a>规定进程选择及调度时机，受限直接执行提供权限受限的执行、内核入口和现场恢复机制。</p></div>
-        <div class="rr-tradeoff"><h3>直接，不等于不受限制</h3><p>普通用户指令直接执行，权限检查和内存保护仍然存在。违规特权操作、合法系统调用和异步中断是不同入口原因。保护异常使内核接管违规操作，后续是否终止进程取决于系统与异常类型；进入内核本身不等于进程已经退出。</p></div>
+      <section class="lde-entry-section" id="entry" aria-labelledby="entry-title"><div class="section-heading"><div><p class="section-index">03 / 进一步查看</p><h2 id="entry-title">入口规则与机制边界</h2></div></div>
+        <details class="lde-reference"><summary>系统调用、中断和异常，分别由什么触发？</summary>
+          <table class="lde-entry-table"><caption>入口组织与向量编号随体系结构变化。</caption><thead><tr><th scope="col">事件</th><th scope="col">触发来源</th><th scope="col">受控目标</th></tr></thead><tbody><tr><th scope="row">系统调用</th><td>程序的专用请求指令</td><td>系统调用入口</td></tr><tr><th scope="row">计时器中断</th><td>计时器硬件，异步触发</td><td>计时器处理入口</td></tr><tr><th scope="row">保护异常</th><td>当前指令的权限检查，同步触发</td><td>异常处理入口</td></tr></tbody></table>
+        </details>
+        <details class="lde-reference"><summary>为什么不能用普通函数调用获得内核权限？</summary><p>普通函数调用只改变程序内的执行位置，不自动提高权限。内核先以足够权限配置陷阱／中断入口和计时器，再允许用户程序运行。CPU 按硬件规则和入口配置进入内核，用户程序不能任意指定内核入口地址。</p><p>普通指令直接执行时，权限检查和内存保护仍然有效。</p></details>
+        <details class="lde-reference"><summary>进入内核，是否意味着进程阻塞或退出？</summary><p>用户态、内核态表示 CPU 权限；运行、就绪、阻塞表示进程的运行条件。查询型系统调用可以不阻塞，等待 I/O 的调用则可能使进程阻塞。</p><p>保护异常发生后，违规操作未完成。内核是否终止进程、报告错误或采取其他处理，取决于系统与异常类型；进入内核本身不等于进程已退出。</p></details>
       </section>
       ${wikiRelated('directExecution')}
     </main><footer class="site-footer"><span>OSLab / CPU 虚拟化</span><a href="#top">回到页首 ↑</a></footer>
   </div>`;
-  let scenario = 'timer';
+  let scenario = 'syscall';
   let decision = 'switch';
   let frames = buildScenario(scenario, decision);
   let stage = 0;
@@ -54,14 +67,16 @@ function renderDirectExecutionPage(root) {
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
   const cancelHighlights = () => root.querySelector('#lde-diagram').getAnimations({subtree: true}).forEach(animation => animation.cancel());
   const prepare = () => {
-    root.querySelector('#demo-title').textContent = {
-      timer: '计时器中断后，由 OS 决定是否切换进程',
-      syscall: '请求 OS 服务，处理后返回 A',
-      protection: '越权操作被拒绝，进入内核异常处理',
+    root.querySelector('#lde-scene-note').textContent = {
+      syscall: 'A 发起一次查询请求；处理无需等待 I/O，也不引起进程切换。',
+      timer: '计时器在 A 持续计算时触发中断。OS 可以继续 A，也可以切换到已就绪的 B。',
+      protection: 'A 尝试执行仅内核态允许的操作；异常处理开始后，后续处置尚未发生。',
     }[scenario];
-    root.querySelector('#lde-scene-note').textContent = scenarios[scenario].description;
     root.querySelector('#lde-stage-total').textContent = frames.length;
     root.querySelector('#lde-decision-control').hidden = scenario !== 'timer';
+    root.querySelector('#lde-timer-status').hidden = scenario !== 'timer';
+    root.querySelector('.lde-cpu-status').classList.toggle('lde-with-timer', scenario === 'timer');
+    root.querySelectorAll('[data-scenario]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.scenario === scenario)));
     position.max = frames.length - 1;
     const width = 84 + frames.length * 116;
     const points = frames.map((frame, index) => `${84 + (index + .5) * 116},${frame.owner === 'user' ? 50 : 150}`).join(' ');
@@ -86,7 +101,7 @@ function renderDirectExecutionPage(root) {
     root.querySelector('#lde-mode').textContent = snapshot.mode;
     root.querySelector('#lde-context').textContent = snapshot.context;
     root.querySelector('#lde-timer').textContent = snapshot.timer;
-    root.querySelector('#lde-actor').textContent = `阶段 ${stage + 1} / 本步负责：${snapshot.actor}`;
+    root.querySelector('#lde-actor').textContent = `阶段 ${stage + 1} · ${snapshot.actor}`;
     root.querySelector('#lde-event-title').textContent = snapshot.title;
     root.querySelector('#lde-event-text').textContent = snapshot.text;
     for (const id of ['A', 'B']) {
@@ -98,10 +113,9 @@ function renderDirectExecutionPage(root) {
     root.querySelectorAll('[data-stage]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.stage) === stage)));
     const scroll = root.querySelector('.lde-diagram-scroll');
     const current = syncPaths();
-    if (current < scroll.scrollLeft || current > scroll.scrollLeft + scroll.clientWidth) scroll.scrollLeft = Math.max(0, current - scroll.clientWidth / 2);
+    const halfButton = root.querySelector(`[data-stage="${stage}"]`).offsetWidth / 2;
+    if (current - halfButton < scroll.scrollLeft + 84 || current + halfButton > scroll.scrollLeft + scroll.clientWidth) scroll.scrollLeft = Math.max(0, current - (scroll.clientWidth + 84) / 2);
     if (stage === 0) scroll.scrollLeft = 0;
-    root.querySelectorAll('[data-entry]').forEach(row => row.classList.toggle('active', row.dataset.entry === snapshot.entry));
-    root.querySelector('#lde-entry-current').textContent = snapshot.entry ? `当前路径：${{timer: '计时器中断', syscall: '系统调用', protection: '保护异常'}[snapshot.entry]}。入口配置不是用户程序提供的跳转地址。` : '此刻尚未进入内核，或已返回用户程序。';
     position.value = stage;
     position.setAttribute('aria-valuetext', `阶段 ${stage + 1}，${snapshot.label}，${snapshot.mode}，进程上下文 ${snapshot.context}`);
     playButton.disabled = snapshot.complete;
@@ -134,7 +148,11 @@ function renderDirectExecutionPage(root) {
   playButton.addEventListener('click', () => timer === null ? play() : pause());
   stepButton.addEventListener('click', () => { pause(); advance(); });
   root.querySelector('#lde-reset').addEventListener('click', () => { pause(); stage = 0; paint(); });
-  root.querySelector('#lde-scenario').addEventListener('change', event => { scenario = event.target.value; rebuild(); });
+  root.querySelectorAll('[data-scenario]').forEach(button => button.addEventListener('click', () => {
+    if (scenario === button.dataset.scenario) return;
+    scenario = button.dataset.scenario;
+    rebuild();
+  }));
   root.querySelector('#lde-decision').addEventListener('change', event => { decision = event.target.value; rebuild(); });
   root.querySelector('#lde-diagram').addEventListener('click', event => {
     const button = event.target.closest('[data-stage]');

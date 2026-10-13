@@ -15,6 +15,20 @@
 .cpu-experiments-page dl{margin:18px 0}.cpu-experiments-page dl>div{display:grid;grid-template-columns:100px minmax(0,1fr);gap:16px;margin:12px 0}
 .cpu-experiments-page dt{font-weight:500}.cpu-experiments-page dd{margin:0}
 .cpu-experiments-page a{color:var(--accent);text-underline-offset:4px}.cpu-experiments-page footer{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:8px 16px;padding-top:24px;font-size:14px}.cpu-experiments-page footer a,.cpu-experiments-page footer>span{white-space:nowrap}
+.cpu-experiments-page section:not(#environment){display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:8px 36px}
+.experiment-overview{grid-column:1;grid-row:1/3;min-width:0}
+.cpu-experiments-page .experiment-overview .experiment-topic{margin:0 0 6px}
+.cpu-experiments-page .experiment-overview h2{margin:0 0 10px;font-size:21px}
+.cpu-experiments-page .experiment-overview>p:last-child{margin:0;font-size:15px}
+.cpu-experiments-page .experiment-evidence{grid-column:2;grid-row:1;margin:0;font-size:14px;color:var(--muted)}
+.experiment-evidence>span{display:block;font-size:12px;color:var(--accent);margin-bottom:6px}
+.cpu-experiments-page .experiment-enter{grid-column:2;grid-row:2;align-self:start;justify-self:start;display:inline-flex;align-items:center;min-height:44px;padding:6px 14px;border:1px solid var(--line);border-radius:4px;font-size:14px}
+.cpu-experiments-page .experiment-enter:hover{background:var(--accent-soft);border-color:var(--accent)}
+.experiment-details{grid-column:1/-1;grid-row:3;margin-top:8px}
+.experiment-details summary{min-height:44px;padding:8px 0;cursor:pointer;color:var(--muted);font-size:13px}
+.experiment-details summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.cpu-experiments-page .experiment-details dl{margin:4px 0;font-size:14px}
+@media(max-width:700px){.cpu-experiments-page section:not(#environment){display:block}.experiment-overview{margin-bottom:14px}.cpu-experiments-page .experiment-enter{margin-top:12px}.cpu-experiments-page .experiment-index{gap:8px 16px;font-size:14px}}
 @media(max-width:700px){.cpu-experiments-page>main{padding:24px 18px 40px}.cpu-experiments-page h1{font-size:26px}.cpu-experiments-page h2{font-size:21px}.cpu-experiments-page dl>div{grid-template-columns:1fr;gap:4px}}
 </style>
 </head>
@@ -25,44 +39,58 @@
 <header>
 <p class="experiment-topic">Ubuntu 实践</p>
 <h1>CPU 虚拟化实验</h1>
-<p>操作系统在不同进程之间分配 CPU 时间，切换时保存和恢复各自的执行状态，使多个程序能够分别继续执行。CPU 虚拟化要解决的不只是先运行谁，还包括进程何时具备运行条件，以及不同进程的执行和数据如何保持独立。</p>
-<p>下面五个任务分别观察 CPU 共享、进程状态、创建子进程后的变量变化、程序替换与退出记录的回收，以及系统调用的参数与结果。先比较实际记录，再解释这些结果与操作系统机制的关系。</p>
+<p>先观察 CPU 共享与进程状态，再比较父子进程、程序替换和退出回收，最后追踪系统调用的请求与结果。五项实验都以实际运行记录为依据解释机制。</p>
 <nav class="experiment-index" aria-label="任务目录"><a href="#sharing">任务一：CPU 共享</a><a href="#states">任务二：进程状态</a><a href="#fork">任务三：fork 与变量</a><a href="#exec">任务四：程序替换与进程回收</a><a href="#syscalls">任务五：系统调用与内核控制</a><a href="#environment">实验环境需求</a></nav>
 </header>
 <section id="sharing" aria-labelledby="sharing-heading">
+<div class="experiment-overview">
 <p class="experiment-topic">任务一 · CPU 共享</p>
 <h2 id="sharing-heading"><a href="cpu-sharing.html">一个 CPU，两个计算进程</a></h2>
 <p>一个进程单独计算，与两个进程在同一个逻辑 CPU 上计算，完成耗时和计算进度会有什么不同？</p>
-<dl><div><dt>比较条件</dt><dd>先单独运行 A。第二次重新启动 A，不等它结束就启动 B。每个进程的计算量相同，所有运行都绑定到同一个逻辑 CPU。</dd></div><div><dt>观察证据</dt><dd>比较最终完成段数、校验值与耗时，再按共同时间排列 A、B 的进度记录，判断两者是否在对方完成前推进了计算。</dd></div><div><dt>机制原因</dt><dd>同一个逻辑 CPU 同时只能执行一个线程。两个单线程进程需要轮流获得 CPU，完成计算的经过时间还包括等待 CPU 的时间。</dd></div></dl>
-<a href="cpu-sharing.html">进入任务一</a>
+</div>
+<p class="experiment-evidence"><span>观察证据</span>比较最终完成段数、校验值与耗时，再按共同时间排列 A、B 的进度记录，判断两者是否在对方完成前推进了计算。</p>
+<a class="experiment-enter" href="cpu-sharing.html">进入任务一 →</a>
+<details class="experiment-details"><summary>比较条件与机制解释</summary><dl><div><dt>比较条件</dt><dd>先单独运行 A。第二次重新启动 A，不等它结束就启动 B。每个进程的计算量相同，所有运行都绑定到同一个逻辑 CPU。</dd></div><div><dt>机制原因</dt><dd>同一个逻辑 CPU 同时只能执行一个线程。两个单线程进程需要轮流获得 CPU，完成计算的经过时间还包括等待 CPU 的时间。</dd></div></dl></details>
 </section>
 <section id="states" aria-labelledby="states-heading">
+<div class="experiment-overview">
 <p class="experiment-topic">任务二 · 进程状态</p>
 <h2 id="states-heading"><a href="process-states.html">计算、等待与暂停：观察进程状态</a></h2>
 <p>等待 CPU、等待管道数据、被信号暂停的进程，状态和 CPU 时间有什么区别？它们分别需要什么条件才能继续执行？</p>
-<dl><div><dt>比较条件</dt><dd>A 持续计算，B 等待管道中的数据。向 B 发送数据后，再暂停和恢复 A，每次只改变一个条件。</dd></div><div><dt>观察证据</dt><dd>对照每轮观察的状态记录与 CPU 时间增量，判断哪个进程执行了计算，哪个进程仍在等待或暂停。</dd></div><div><dt>机制原因</dt><dd>等待数据的进程需要数据到达，被信号暂停的进程需要恢复信号。具备运行条件后，进程仍需获得 CPU 才能执行。</dd></div></dl>
-<a href="process-states.html">进入任务二</a>
+</div>
+<p class="experiment-evidence"><span>观察证据</span>对照每轮观察的状态记录与 CPU 时间增量，判断哪个进程执行了计算，哪个进程仍在等待或暂停。</p>
+<a class="experiment-enter" href="process-states.html">进入任务二 →</a>
+<details class="experiment-details"><summary>比较条件与机制解释</summary><dl><div><dt>比较条件</dt><dd>A 持续计算，B 等待管道中的数据。向 B 发送数据后，再暂停和恢复 A，每次只改变一个条件。</dd></div><div><dt>机制原因</dt><dd>等待数据的进程需要数据到达，被信号暂停的进程需要恢复信号。具备运行条件后，进程仍需获得 CPU 才能执行。</dd></div></dl></details>
 </section>
 <section id="fork" aria-labelledby="fork-heading">
+<div class="experiment-overview">
 <p class="experiment-topic">任务三 · fork 创建子进程</p>
 <h2 id="fork-heading"><a href="fork-private.html">fork 创建子进程后的变量变化</a></h2>
 <p>子进程开始时取得父进程的变量初值。子进程修改变量后，父进程中的同名变量会不会跟着改变？</p>
-<dl><div><dt>比较条件</dt><dd>两次都从 value 为 100 开始。第一次不修改，第二次只让子进程把自己的 value 改为 200；父进程都等子进程完成后再输出。</dd></div><div><dt>观察证据</dt><dd>比较两次运行中 child 和 parent 输出的变量值，确认子进程已经修改，再判断父进程的值是否改变。</dd></div><div><dt>机制原因</dt><dd>创建时初值相同，不等于共同修改一份变量。父子进程的普通私有变量可以独立修改；等待子进程完成不会把它的变量值传给父进程。</dd></div></dl>
-<a href="fork-private.html">进入任务三</a>
+</div>
+<p class="experiment-evidence"><span>观察证据</span>比较两次运行中 child 和 parent 输出的变量值，确认子进程已经修改，再判断父进程的值是否改变。</p>
+<a class="experiment-enter" href="fork-private.html">进入任务三 →</a>
+<details class="experiment-details"><summary>比较条件与机制解释</summary><dl><div><dt>比较条件</dt><dd>两次都从 value 为 100 开始。第一次不修改，第二次只让子进程把自己的 value 改为 200；父进程都等子进程完成后再输出。</dd></div><div><dt>机制原因</dt><dd>创建时初值相同，不等于共同修改一份变量。父子进程的普通私有变量可以独立修改；等待子进程完成不会把它的变量值传给父进程。</dd></div></dl></details>
 </section>
 <section id="exec" aria-labelledby="exec-heading">
+<div class="experiment-overview">
 <p class="experiment-topic">任务四 · exec 与 waitpid</p>
 <h2 id="exec-heading"><a href="exec-reap.html">程序替换与进程回收</a></h2>
 <p>装入另一个程序会不会创建新进程？子进程已经退出，父进程还需要等待和回收什么？</p>
-<dl><div><dt>比较条件</dt><dd>第一次使用编译好的目标程序，第二次使用不存在的路径。两次都观察子进程退出后、父进程回收前的状态。</dd></div><div><dt>观察证据</dt><dd>比较替换前后的 PID、程序输出与变量值；再核对 Z 状态、waitpid 返回的 PID 与退出码，以及回收后的记录。</dd></div><div><dt>机制原因</dt><dd>exec 替换当前进程的程序，不再次创建进程。退出结束程序执行，waitpid 收集退出状态并回收保留的退出记录。</dd></div></dl>
-<a href="exec-reap.html">进入任务四</a>
+</div>
+<p class="experiment-evidence"><span>观察证据</span>比较替换前后的 PID、程序输出与变量值；再核对 Z 状态、waitpid 返回的 PID 与退出码，以及回收后的记录。</p>
+<a class="experiment-enter" href="exec-reap.html">进入任务四 →</a>
+<details class="experiment-details"><summary>比较条件与机制解释</summary><dl><div><dt>比较条件</dt><dd>第一次使用编译好的目标程序，第二次使用不存在的路径。两次都观察子进程退出后、父进程回收前的状态。</dd></div><div><dt>机制原因</dt><dd>exec 替换当前进程的程序，不再次创建进程。退出结束程序执行，waitpid 收集退出状态并回收保留的退出记录。</dd></div></dl></details>
 </section>
 <section id="syscalls" aria-labelledby="syscalls-heading">
+<div class="experiment-overview">
 <p class="experiment-topic">任务五 · strace 与系统调用</p>
 <h2 id="syscalls-heading"><a href="syscalls.html">系统调用与内核控制</a></h2>
 <p>请求读取 8 字节，为什么只返回 3 字节？读到文件末尾和读取失败怎样区分？程序进入内核处理请求，是否就切换到了另一个进程？</p>
-<dl><div><dt>比较条件</dt><dd>先跟踪 3 字节样本的读取、输出和关闭后的错误，再跟踪任务四程序的创建与替换成功、失败路径。</dd></div><div><dt>观察证据</dt><dd>按文件描述符找到读写对象，比较请求字节数、实际返回值与 EBADF；按 PID 找到创建关系及 execve 的成功、ENOENT 记录。</dd></div><div><dt>机制原因</dt><dd>用户程序通过系统调用请求内核服务，内核检查参数并给出结果。进入内核改变执行权限，不等于调度器选择了另一个进程。</dd></div></dl>
-<a href="syscalls.html">进入任务五</a>
+</div>
+<p class="experiment-evidence"><span>观察证据</span>按文件描述符找到读写对象，比较请求字节数、实际返回值与 EBADF；按 PID 找到创建关系及 execve 的成功、ENOENT 记录。</p>
+<a class="experiment-enter" href="syscalls.html">进入任务五 →</a>
+<details class="experiment-details"><summary>比较条件与机制解释</summary><dl><div><dt>比较条件</dt><dd>先跟踪 3 字节样本的读取、输出和关闭后的错误，再跟踪任务四程序的创建与替换成功、失败路径。</dd></div><div><dt>机制原因</dt><dd>用户程序通过系统调用请求内核服务，内核检查参数并给出结果。进入内核改变执行权限，不等于调度器选择了另一个进程。</dd></div></dl></details>
 </section>
 <section id="environment" aria-labelledby="environment-heading">
 <h2 id="environment-heading">实验环境需求</h2>
@@ -74,7 +102,7 @@
 </div>
 <script src="knowledge-pages.js"></script>
 <script>
-document.querySelector('#navigation').innerHTML = wikiHeader('cpuExperiments', [{href:'#sharing',title:'CPU 共享'},{href:'#states',title:'进程状态'},{href:'#fork',title:'fork 与变量'},{href:'#exec',title:'程序替换与回收'},{href:'#syscalls',title:'系统调用与内核控制'},{href:'#environment',title:'实验环境需求'}]);
+document.querySelector('#navigation').innerHTML = wikiHeader('cpuExperiments', [{href:'#sharing',title:'实验任务'},{href:'#environment',title:'实验环境需求'}]);
 document.title = 'CPU 虚拟化实验 · OSLab';
 </script>
 </body>

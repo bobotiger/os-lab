@@ -22,9 +22,9 @@ function buildAddressAccess(address = 6, base = 24) {
   add('检查界限', valid ? '地址在虚拟范围内，允许继续转换' : '地址不在虚拟范围内，禁止本次访问', valid ? `0 ≤ ${address} < 16。bounds=16 表示空间长度，最后一个有效地址是 15。` : `${address} 不满足 0 ≤ VA < 16。即使基址加这个数字还在机器范围内，也不属于 A 获准使用的虚拟范围。`, () => { state.checked = valid; });
   if (valid) {
     add('加上基址', '硬件生成物理地址', `${base} + ${address} = ${base + address}。base 是这段地址空间的物理起点；程序使用的虚拟地址仍为 ${address}。`, () => { state.physicalAddress = base + address; });
-    add('访问物理位置', '访问转换后的物理位置', '硬件使用已检查并转换的地址进行访问。整段界限检查不能代替 C 对象的生命周期与边界规则：落在整段范围内，不代表任意对象访问都合法。', () => { state.accessed = true; state.value = state.physical[state.physicalAddress].content; });
+    add('访问物理位置', '访问转换后的物理位置', `硬件使用物理地址 ${base + address} 访问目标位置。程序使用的虚拟地址仍为 ${address}。`, () => { state.accessed = true; state.value = state.physical[state.physicalAddress].content; });
   } else {
-    add('保护异常', '硬件触发异常，由 OS 接管', '没有执行加法转换或本次内存访问。控制进入内核处理保护异常，后续处置由 OS 决定，不必然终止进程。越过整段界限也不属于载入页面即可解决的缺页。', () => { state.fault = true; state.mode = 'kernel'; });
+    add('保护异常', '硬件触发异常，由 OS 接管', '本次转换和内存访问均未发生。控制进入内核，后续处置由 OS 决定，不必然终止进程。', () => { state.fault = true; state.mode = 'kernel'; });
   }
   return frames.map((frame, index) => ({...frame, complete: index === frames.length - 1}));
 }
@@ -42,7 +42,7 @@ function buildAddressRelocation() {
     for (let offset = 0; offset < 16; offset += 1) state.physical[40 + offset] = {...structuredClone(state.physical[24 + offset]), address: 40 + offset, owner: 'copy'};
     state.copied = true;
   });
-  add('更新基址', '复制完成，OS 将 base 改为 40', 'OS 特权地更新寄存器，新区域归属 A，再释放原区域供后续复用。bounds 仍为 16；释放区域改变归属，不保证底层字节清零。', () => {
+  add('更新基址', '复制完成，OS 将 base 改为 40', '新区域归属 A，原区域释放供后续复用。A 仍暂停，bounds 保持 16。', () => {
     state.base = 40;
     for (let offset = 0; offset < 16; offset += 1) {
       state.physical[40 + offset].owner = 'A';
@@ -50,7 +50,7 @@ function buildAddressRelocation() {
       state.physical[24 + offset].offset = null;
     }
   });
-  add('恢复访问', '同一虚拟地址，现在对应物理地址 46', 'A 恢复后仍使用虚拟地址 6，硬件检查通过并转换为 40+6=46。数据仍为 buffer = 10，保存的虚拟引用仍为 6。修改 base 本身不会复制内存内容。', () => { state.paused = false; state.mode = 'user'; state.checked = true; state.physicalAddress = 46; state.accessed = true; state.value = state.physical[46].content; });
+  add('恢复访问', '同一虚拟地址，现在对应物理地址 46', 'A 恢复后仍使用虚拟地址 6，转换为 40+6=46。数据仍为 buffer = 10，main 保存的虚拟引用仍为 6。', () => { state.paused = false; state.mode = 'user'; state.checked = true; state.physicalAddress = 46; state.accessed = true; state.value = state.physical[46].content; });
   return frames.map((frame, index) => ({...frame, complete: index === frames.length - 1}));
 }
 

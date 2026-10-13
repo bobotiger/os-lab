@@ -7,7 +7,7 @@ function renderSharePage(root) {
         <p class="eyebrow">CPU 虚拟化 / 调度</p>
         <h1 id="page-title">比例份额调度 <span>Proportional Share</span></h1>
         <p class="lead">权重确定目标 CPU 份额，不保证每轮的分配顺序。</p>
-        <p class="definition">权重是用于比较 CPU 分配比例的数值。进程的目标份额等于自身权重除以当前可运行进程的总权重。<strong>彩票调度</strong>把权重表示为票数，每轮随机选一张票；<strong>步长调度（Stride）</strong>则比较各进程的累计虚拟进度 pass，选择数值最小者。同一组权重可以得到不同的短期分配顺序。</p>
+        <p class="definition">目标份额 = 自身权重 ÷ 当前可运行进程的总权重。彩票调度和步长调度（Stride）使用同样的权重，以不同规则选择每轮的运行者。</p>
         <p class="model-note">单核，三个进程始终就绪并持续竞争 CPU，无 I/O，切换开销为零，每次分配 1 个示意 CPU 单位。一条序列内权重固定；彩票使用给定种子的伪随机抽签序列。Stride 初始 pass 均为 0，并列按 A、B、C 顺序选择。</p>
       </section>
       <section class="share-demo" id="demo" aria-labelledby="demo-title">
@@ -27,15 +27,14 @@ function renderSharePage(root) {
         <div class="share-mechanisms">
           <section class="share-mechanism" aria-labelledby="lottery-title">
             <p class="section-index">LOTTERY / 随机选择</p><h3 id="lottery-title">彩票调度</h3>
-            <p class="share-method-note">每轮抽一张票，票的拥有者获得 1 个 CPU 单位。</p>
+            <p class="share-method-note">权重对应票数。每轮抽一张票，拥有者获得 1 个 CPU 单位；票数占总数的比例就是中奖概率。</p>
             <div class="share-ticket-pool" id="share-ticket-pool" role="img" aria-label="票池"></div>
             <div class="share-winner"><p>最近一轮中奖票号 <strong id="share-ticket">—</strong></p><p>分配给 <strong id="lottery-winner">—</strong></p></div>
             <p class="share-decision" id="lottery-reason" aria-live="polite"></p>
           </section>
           <section class="share-mechanism" aria-labelledby="stride-title">
             <p class="section-index">STRIDE / 确定性选择</p><h3 id="stride-title">步长调度</h3>
-            <p class="share-method-note">步长 stride = ${strideScale} ÷ 权重。${strideScale} 是本例统一选取的计算常数，只确定虚拟进度的尺度，不是时间片长度。</p>
-            <p class="share-method-note">pass 是累计虚拟进度，不是实际时间或剩余工作量。每轮选 pass 最小者；运行 1 个 CPU 单位后，pass 增加自己的步长。权重越大，步长越小，因而能更频繁地被选中。</p>
+            <p class="share-method-note">步长 = ${strideScale} ÷ 权重。pass 是用于排序的累计虚拟进度；每轮选最小者，运行后增加它自己的步长。</p>
             <table class="share-pass"><thead><tr><th scope="col">进程</th><th scope="col">步长</th><th scope="col">pass 前</th><th scope="col">pass 后</th></tr></thead><tbody id="share-passes"></tbody></table>
             <p class="share-decision" id="stride-reason" aria-live="polite"></p>
           </section>
@@ -61,6 +60,37 @@ function renderSharePage(root) {
       ${wikiRelated('shares')}
     </main><footer class="site-footer"><span>OSLab / CPU 虚拟化</span><a href="#top">回到页首 ↑</a></footer>
   </div>`;
+  const demo = root.querySelector('#demo');
+  const targets = document.createElement('dl');
+  targets.className = 'share-targets';
+  targets.id = 'share-targets';
+  targets.setAttribute('aria-label', '权重对应的目标 CPU 份额');
+  const workload = root.querySelector('#share-workload');
+  demo.querySelector('.rr-toolbar').before(targets, workload);
+  const settings = document.createElement('details');
+  settings.className = 'share-reference share-settings';
+  settings.innerHTML = '<summary>观察轮数与抽签序列</summary><div class="share-settings-controls"></div><p>种子确定可重复的抽签序列，只影响彩票调度。改变种子可比较不同抽签结果。</p>';
+  settings.querySelector('div').append(root.querySelector('#share-duration').closest('label'), root.querySelector('#share-seed').closest('label'));
+  demo.querySelector('.rr-toolbar').after(settings);
+  demo.querySelector('.share-mechanisms').before(root.querySelector('#share-position'));
+  for (const mechanism of root.querySelectorAll('.share-mechanism')) {
+    mechanism.querySelector('.share-method-note').after(mechanism.querySelector('.share-decision'));
+  }
+  demo.querySelector('.share-timeline-heading').before(root.querySelector('#share-observation'));
+  const assumptions = document.createElement('details');
+  assumptions.className = 'share-reference';
+  assumptions.innerHTML = '<summary>计算前提与份额指标</summary><p>实际份额 = 已获得的 CPU 单位 ÷ 已分配轮数。偏差取实际占比与目标占比之差的绝对值；最大偏差是三个进程中最大的偏差。</p><p>pass 用于选择顺序，不是实际时间或剩余工作量。120 只确定虚拟进度的尺度，不是时间片长度。</p>';
+  assumptions.append(root.querySelector('.intro .model-note'));
+  demo.append(assumptions);
+  for (const tradeoff of root.querySelectorAll('#rules .rr-tradeoff')) {
+    const reference = document.createElement('details');
+    reference.className = 'share-reference';
+    const summary = document.createElement('summary');
+    summary.textContent = tradeoff.querySelector('h3').textContent;
+    reference.append(summary, ...tradeoff.querySelectorAll('p'));
+    tradeoff.replaceWith(reference);
+  }
+
   let run = buildRun();
   let time = 0;
   let timer = null;
@@ -71,7 +101,8 @@ function renderSharePage(root) {
   const prepareRun = () => {
     position.max = run.duration;
     root.querySelector('#share-total').textContent = run.duration;
-    root.querySelector('#share-workload').textContent = `A、B、C 始终就绪；权重 ${run.processes.map(process => process.weight).join(' : ')}，总票数 ${run.total}。每轮同时观察两种独立调度，种子 ${run.seed} 仅影响彩票。`;
+    root.querySelector('#share-targets').innerHTML = run.processes.map(process => `<div class="share-${process.id.toLowerCase()}"><dt>${process.id} · 权重 ${process.weight}</dt><dd>${process.weight} / ${run.total} <span aria-hidden="true">→</span> ${percent(process.weight / run.total * 100)}</dd></div>`).join('');
+    root.querySelector('#share-workload').textContent = '单核、无 I/O、零切换开销。A、B、C 持续就绪；两种算法各自分配 CPU，每轮均为 1 个单位。';
     root.querySelector('#share-ticket-pool').innerHTML = run.processes.map(process => `<div class="share-ticket-range share-${process.id.toLowerCase()}" style="width:${process.weight / run.total * 100}%"><strong>${process.id}</strong><span>${process.start === process.end - 1 ? process.start : `${process.start}–${process.end - 1}`}</span></div>`).join('') + '<span class="share-ticket-marker" id="share-ticket-marker" hidden aria-hidden="true">▼</span>';
     const width = Math.max(600, run.duration * 18 + 50);
     root.querySelector('#share-sequence').style.minWidth = `${width}px`;
@@ -115,7 +146,7 @@ function renderSharePage(root) {
     position.value = time;
     position.setAttribute('aria-valuetext', time ? `已分配 ${time} 轮，彩票最近选 ${lottery.decision.id}，Stride 最近选 ${stride.decision.id}` : '尚未分配');
     const deviation = frame => Math.max(...run.processes.map((process, index) => Math.abs(frame.counts[index] / time - process.weight / run.total) * 100));
-    root.querySelector('#share-observation').textContent = time ? `${time === run.duration ? '观察结束，三个进程仍可继续运行。' : `已观察 ${time} 轮。`}最大份额偏差：彩票 ${deviation(lottery).toFixed(1)} 个百分点，Stride ${deviation(stride).toFixed(1)} 个百分点。偏差是实际占比与目标占比之差的绝对值；这里取三个进程中的最大值，后续轮次仍可能改变它。` : '尚未分配 CPU。权重已确定目标占比，但实际占比要根据已分配的 CPU 单位计算。';
+    root.querySelector('#share-observation').textContent = time ? `${time === run.duration ? '观察结束，三个进程仍可继续运行。' : `已分配 ${time} 轮。`}最大份额偏差：彩票 ${deviation(lottery).toFixed(1)} 个百分点，Stride ${deviation(stride).toFixed(1)} 个百分点。` : '尚未分配 CPU，实际份额尚无统计结果。';
     playButton.disabled = time === run.duration;
     stepButton.disabled = time === run.duration;
   };

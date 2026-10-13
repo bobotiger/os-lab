@@ -87,7 +87,7 @@ function renderSchedulingPage(root, pageId, combined = false) {
   const hasArrivalScenarios = isShortestJob || isShortestRemaining;
   const strategyKind = isRoundRobin ? 'RR' : isShortestJob ? 'SJF' : isShortestRemaining ? 'SRTF' : 'FCFS';
   const homeworkSection = isRoundRobin ? 'rr' : isShortestRemaining ? 'comparison' : 'fifo-sjf';
-  root.innerHTML = `<div class="page rr-page" id="top">
+  root.innerHTML = `<div class="page rr-page${combined ? ' scheduling-basics-page' : ''}" id="top">
     ${wikiHeader(combined ? 'schedulingBasics' : pageId, [{href: '#demo', title: '调度演示'}, {href: '#rules', title: '调度规则'}, {href: '#knowledge-related-title', title: '相关知识'}])}
     <main>
       <section class="intro" aria-labelledby="page-title">
@@ -154,6 +154,35 @@ function renderSchedulingPage(root, pageId, combined = false) {
       ${wikiRelated(combined ? 'schedulingBasics' : pageId)}
     </main><footer><span>OSLab / CPU 虚拟化</span><a href="#top">回到页首 ↑</a></footer>
   </div>`;
+
+  if (combined) {
+    const intro = root.querySelector('.intro');
+    const tabs = intro.querySelector('.scheduling-policy-tabs');
+    intro.querySelector('.scheduling-policy-title').remove();
+    const strategy = intro.querySelector('.lead');
+    strategy.className = 'scheduling-strategy-summary';
+    strategy.textContent = `${isRoundRobin ? '时间片是单次连续使用 CPU 的时长上限。' : isShortestJob || isShortestRemaining ? 'CPU 段是进程一次连续的 CPU 工作。' : '就绪队列收纳已能运行、正在等待 CPU 的进程。'}${strategy.textContent}`;
+    const definition = intro.querySelector('.definition');
+    const modelNote = intro.querySelector('.model-note');
+    const homework = intro.querySelector('.process-homework-link');
+    const introduction = document.createElement('p');
+    introduction.className = 'lead';
+    introduction.textContent = '同样的 CPU 工作，调度规则会改变谁先运行、谁等待，以及何时切换。';
+    intro.insertBefore(introduction, tabs);
+    const conditions = document.createElement('p');
+    conditions.className = 'scheduling-conditions';
+    conditions.textContent = `单核 · 无 I/O · 切换开销为零 · A 需 5 个时间单位 · B 需 3 个${hasArrivalScenarios ? '；到达时刻见下方场景' : ' · 同时到达，A 先入队'}`;
+    const demo = root.querySelector('#demo');
+    demo.querySelector('.section-heading').after(strategy, conditions);
+    demo.querySelector('.rr-flow').before(demo.querySelector('.rr-event'));
+    demo.querySelector('.rr-event').before(demo.querySelector('#rr-position'));
+    const reference = document.createElement('details');
+    reference.className = 'scheduling-reference';
+    reference.innerHTML = '<summary>概念、并列规则与完整前提</summary>';
+    reference.append(definition, modelNote);
+    demo.querySelector('.rr-summary').after(reference);
+    root.querySelector('#rules').after(homework);
+  }
 
   let quantum = 2;
   let run = makeSchedulingRun(quantum, strategyKind, RR_PROCESSES.map(process => ({...process, arrival: isShortestRemaining && process.id === 'B' ? 1 : 0})));
