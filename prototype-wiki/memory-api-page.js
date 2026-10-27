@@ -1,183 +1,174 @@
+/* Memory API: follow the code, then inspect the object it changes. */
 function renderMemoryApiPage(root) {
-  const {scenes, errors, buildScenario, buildError} = OSLabMemoryApi;
-  root.innerHTML = `<div class="page rr-page lde-page ma-page" id="top">
-    ${wikiHeader('memoryApi', [{href: '#demo', title: '申请与释放'}, {href: '#mistakes', title: '常见错误'}, {href: '#contracts', title: '接口约定'}, {href: '#allocator', title: '库与 OS'}])}
-    <main><section class="intro" aria-labelledby="page-title"><p class="eyebrow">内存虚拟化 / 使用接口</p><h1 id="page-title">内存 API <span>Memory API</span></h1><p class="definition">指针保存地址，不是对象本身。分配对象是一次动态分配得到的存储区域；从分配成功到释放，是它的生命周期，处于这一期间的对象称为活对象。</p></section>
-      <section class="rr-rules" id="demo" aria-labelledby="ma-demo-title"><div class="section-heading"><h2 id="ma-demo-title">分配对象的生命周期</h2><p class="ma-progress">阶段 <strong id="ma-stage">1</strong> / <span id="ma-total">5</span></p></div>
-        <div class="rr-toolbar lde-toolbar"><div class="rr-transport" role="group" aria-label="演示控制"><button type="button" class="icon-button primary" id="ma-play" aria-label="播放" title="播放" aria-pressed="false"><span aria-hidden="true">▶</span></button><button type="button" class="icon-button" id="ma-prev" aria-label="上一阶段" title="上一阶段"><span aria-hidden="true">←</span></button><button type="button" class="icon-button" id="ma-next" aria-label="下一阶段" title="下一阶段"><span aria-hidden="true">↦</span></button><button type="button" class="icon-button" id="ma-reset" aria-label="重新开始" title="重新开始"><span aria-hidden="true">↺</span></button></div><label>场景<select id="ma-scene" aria-label="接口与结果">${Object.entries(scenes).map(([id, title]) => `<option value="${id}">${title}</option>`).join('')}</select></label><label>速度<select id="ma-speed" aria-label="播放速度"><option value="1600">慢速</option><option value="1000" selected>正常</option><option value="500">快速</option></select></label></div>
-        <ol class="ma-steps" id="ma-steps" aria-label="执行阶段"></ol>
-        <div class="ma-current-stage" aria-live="polite" aria-atomic="true"><h3 id="ma-event-title"></h3><p id="ma-reason"></p></div>
-        <div class="ma-workbench"><div class="ma-diagram" id="ma-diagram" role="group" aria-label="指针与堆对象状态"></div><aside class="ma-action"><h3>当前 C 片段</h3><pre id="ma-code" aria-label="当前 C 片段"></pre><dl class="ma-result" id="ma-result"><dt>已计算的 total</dt><dd id="ma-read"></dd></dl></aside></div>
-        <input id="ma-position" type="range" min="0" max="4" step="1" value="0" aria-label="演示阶段"><p class="ma-caption">每格是一个 int（4 字节），? 表示尚未初始化。本例指针为 8 字节，请求大小非零，地址为假定的虚拟地址；旧地址记录不是有效引用。</p>
-        <details class="ma-lifecycle-summary"><summary id="ma-lifecycle-title">各阶段的引用与对象生命周期</summary><dl class="ma-observations"><div><dt>最近请求大小</dt><dd id="ma-request"></dd></div><div><dt>当前活对象</dt><dd id="ma-live"></dd></div></dl><div class="ma-lifecycle-scroll" role="region" aria-label="当前场景各阶段的状态对照" tabindex="0"><table><caption id="ma-lifecycle-caption"></caption><thead><tr><th scope="col">阶段</th><th scope="col">指针引用</th><th scope="col">活对象</th><th scope="col">已计算的 total</th></tr></thead><tbody id="ma-lifecycle-comparison"></tbody></table></div></details>
-      </section>
-      <section class="rr-rules ma-section" id="mistakes" aria-labelledby="ma-mistakes-title"><p class="section-index">02 / WHAT WENT WRONG?</p><h2 id="ma-mistakes-title">内存使用错误的对象状态与违反条件</h2><p class="ma-section-lead">涉及分配的错误示例假设申请成功。未定义行为表示 C 语言规则不规定这次操作必须产生什么结果。对象越界或释放后访问可能崩溃，也可能没有立即可见的异常；操作系统的地址保护不能自动识别每个 C 对象的边界。</p><label class="ma-error-selector">错误类型<select id="ma-error">${Object.entries(errors).map(([id, error]) => `<option value="${id}">${error.title}</option>`).join('')}</select></label>
-        <div class="ma-error-summary" aria-live="polite" aria-atomic="true"><p class="ma-error-kind" id="ma-error-kind"></p><h3 id="ma-error-title"></h3><p class="ma-error-target" id="ma-error-target"></p></div><div class="ma-error-workbench"><div id="ma-error-diagram" class="ma-diagram" role="group" aria-label="错误操作涉及的指针与对象"></div><div class="ma-error-analysis"><h3>错误动作 · C 片段</h3><pre id="ma-error-code"></pre><dl class="ma-error-explanation" id="ma-error-reason"></dl></div></div><p class="ma-caption">错误示例里的 int 为 4 字节，char 为 1 字节。越界位置不属于已分配对象的范围；对象状态不能确定错误操作是否立即崩溃。</p>
-      </section>
-      <section class="rr-rules ma-section" id="contracts" aria-labelledby="ma-contracts-title"><p class="section-index">03 / THE API CONTRACT</p><h2 id="ma-contracts-title">内存分配接口参考</h2><details class="ma-reference"><summary>四个分配接口的用途、参数与结果</summary><p class="ma-section-lead">这些函数声明在 &lt;stdlib.h&gt; 中。size_t 是用于表示大小的无符号整数类型，NULL 表示空指针。以下分配与调整操作的申请大小均为正数。</p><div class="ma-contracts">
-          <article><h3>malloc</h3><code>void *malloc(size_t nbytes);</code><dl>
-            <div><dt>用途</dt><dd>分配指定大小的内存区域。</dd></div>
-            <div><dt>参数</dt><dd><code>nbytes</code>：申请的字节数，不是元素数量。</dd></div>
-            <div><dt>返回值</dt><dd>成功返回分配区域的起始指针；失败返回 NULL。</dd></div>
-            <div><dt>对象与引用</dt><dd>分配成功后，对象的生命周期开始，但内容未初始化。通过返回的指针访问对象，读取前应先写入有效值。</dd></div>
-          </dl></article>
-          <article><h3>calloc</h3><code>void *calloc(size_t count, size_t size);</code><dl>
-            <div><dt>用途</dt><dd>为指定数量的元素分配连续空间，并将分配区域的所有字节置零。</dd></div>
-            <div><dt>参数</dt><dd><p><code>count</code>：元素数量。</p><p><code>size</code>：每个元素的字节数。总申请大小为 count × size 字节。</p></dd></div>
-            <div><dt>返回值</dt><dd>成功返回分配区域的起始指针；失败返回 NULL。</dd></div>
-            <div><dt>对象与引用</dt><dd>分配成功后，对象的生命周期开始，字节内容已清零。本例中的 int 元素为 0；访问对象前仍需确认返回值不是 NULL。</dd></div>
-          </dl></article>
-          <article><h3>realloc</h3><code>void *realloc(void *p, size_t nbytes);</code><dl>
-            <div><dt>用途</dt><dd>调整已有分配区域的大小，必要时将内容移至新位置。</dd></div>
-            <div><dt>参数</dt><dd><p><code>p</code>：尚未释放的分配区域的起始指针。p 为 NULL 时，等价于 malloc(nbytes)。</p><p><code>nbytes</code>：调整后的总字节数，不是增加的字节数。</p></dd></div>
-            <div><dt>返回值</dt><dd>成功返回调整后区域的起始指针，地址可能改变；失败返回 NULL。</dd></div>
-            <div><dt>对象与引用</dt><dd><p>成功时：保留原内容，保留长度为新旧大小的较小值；新增部分未初始化。旧对象的生命周期结束，旧引用失效，即使地址相同也应使用返回的新指针。</p><p>失败时：原对象的大小、内容和有效引用保持不变。</p></dd></div>
-          </dl></article>
-          <article><h3>free</h3><code>void free(void *p);</code><dl>
-            <div><dt>用途</dt><dd>释放此前动态分配的内存区域。</dd></div>
-            <div><dt>参数</dt><dd><p><code>p</code>：malloc、calloc 或 realloc 返回且尚未释放的分配起始指针；p 为 NULL 时不执行任何操作。</p><p>传入局部变量的地址、对象内部地址或已释放的指针，行为未定义。</p></dd></div>
-            <div><dt>返回值</dt><dd>无返回值，不能通过返回值判断释放结果。</dd></div>
-            <div><dt>对象与引用</dt><dd>释放结束对象的生命周期，指向它的旧引用失效，不得继续用于访问。free 不会自动将调用者的指针变量设为 NULL。</dd></div>
-          </dl></article>
-        </div></details>
-        <details class="ma-reference"><summary>对象大小、指针大小与字符串空间</summary><div class="ma-sizing"><div><code>3 * sizeof *p</code><span>三个 int：本例为 3 × 4 = 12 字节。</span></div><div><code>sizeof p</code><span>指针变量自身：本例为 8 字节，不能据此确定所指对象大小。</span></div><div><code>strlen(s) + 1</code><span>字符串内容加结尾空字符："cat" 需要 3 + 1 = 4 字节。</span></div><p>sizeof 是运算符，用于求类型或对象的大小；strlen 是函数，用于计算有效字符串在结尾空字符之前的字节数。二者求值的对象与含义不同，不能互换。</p></div></details>
-        <details class="ma-reference"><summary>realloc 失败时保留原引用</summary><div class="rr-tradeoff"><pre class="ma-safe-realloc">int *tmp = realloc(p, 3 * sizeof *p);
-if (tmp != NULL) {
-    p = tmp;
-} else {
-    /* 原来的 p 仍然有效，处理失败 */
-}</pre><p>如果直接写 p = realloc(p, ...)，失败时 p 变为 NULL，可能丢失原对象的最后一个引用。零大小 realloc 的规则与 C 版本有关，不能套用上述非零大小请求的处理方式。</p></div></details>
-        <details class="ma-reference"><summary>分配大小、对齐与特殊条件</summary><dl class="ma-error-explanation">
-          <div><dt>大小计算</dt><dd>向 malloc 或 realloc 传入元素数量与元素大小的乘积前，应检查乘积能否由 size_t 表示。无符号乘法溢出会使计算出的申请大小与实际所需空间不符。calloc 分别接收数量与元素大小，在乘积溢出时返回 NULL。</dd></div>
-          <div><dt>地址对齐</dt><dd>对齐要求规定对象起始地址应满足的倍数关系，例如 8 字节对齐要求地址为 8 的整数倍。三个分配函数的成功结果满足基本对齐要求，即不超过标准类型 max_align_t 的对齐要求；要求更高对齐的类型需要相应的对齐分配接口。</dd></div>
-          <div><dt>字节清零</dt><dd>calloc 保证所有字节为零，但这不等于对任意类型完成赋值初始化。全零字节不保证表示浮点数的零值或空指针，不能把 int 示例的结果推广到所有类型。</dd></div>
-          <div><dt>零大小请求</dt><dd>malloc(0) 或总大小为零的 calloc 可能返回 NULL，也可能返回可传给 free 的非空指针，但不能通过该指针访问对象。C23 规定 realloc(p, 0) 为未定义行为；更早的标准和库实现采用不同规则，不能将返回 NULL 一概解释为“调整失败、原对象仍保留”。需要释放对象时使用 free。</dd></div>
-          <div><dt>释放与底层回收</dt><dd>free 不承诺清零已释放空间，也不保证对应物理页立即归还操作系统。分配器可以保留空间用于后续分配；这些底层处理不延长原对象的生命周期。</dd></div>
-        </dl></details>
-      </section>
-      <section class="rr-rules ma-section" id="allocator" aria-labelledby="ma-allocator-title"><p class="section-index">04 / LIBRARY FIRST, OS WHEN NEEDED</p><h2 id="ma-allocator-title">程序、库分配器与操作系统的职责</h2><p class="ma-section-lead">malloc 是库接口。分配器可以复用已经获得的空间，不需要每次分配都向 OS 申请新的物理页。</p><div class="ma-layers"><div><h3>程序</h3><code>malloc / calloc / realloc / free</code><p>请求空间、管理引用、结束对象生命周期。</p></div><span aria-hidden="true">→</span><div><h3>库分配器</h3><p>管理已经获得的空间，选择可用块，并在释放后回收和复用。</p></div><span aria-hidden="true">→</span><div><h3>OS</h3><p>必要时提供或调整虚拟内存映射；真实底层机制依平台和分配器而异。</p></div></div><dl class="ma-os-apis"><div><dt>brk / sbrk</dt><dd>传统 Unix 中调整进程数据段末端的接口；sbrk 的库封装和具体系统调用机制依平台而异，并非所有分配器都依赖它。</dd></div><div><dt>mmap</dt><dd>建立虚拟内存映射，可用于匿名内存或文件映射。分配器可能用它获得空间，但建立映射不等于所有物理页立即驻留。</dd></div></dl><p class="ma-caption">具有自动存储期的局部对象在离开所属作用域时结束生命周期，无需 malloc/free 配对。返回其地址不能延长它的生命周期。</p></section>
-      ${wikiRelated('memoryApi')}
-    </main><footer><span>OSLab / 内存虚拟化</span><a href="#top">回到页首 ↑</a></footer></div>`;
-
-  let scene = 'malloc';
-  let frames = buildScenario(scene);
-  let stage = 0;
-  let timer = null;
-  const playButton = root.querySelector('#ma-play');
-  const previousButton = root.querySelector('#ma-prev');
-  const nextButton = root.querySelector('#ma-next');
-  const position = root.querySelector('#ma-position');
-  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  const referenceText = (frame, pointer) => {
-    const objectIndex = frame.objects.findIndex(object => object.id === pointer.object);
-    return pointer.status === 'valid' ? `→ 对象 ${objectIndex + 1}` : pointer.status === 'dangling' ? `旧对象 ${objectIndex + 1} · 引用已失效` : pointer.status === 'null' ? 'NULL' : '未初始化';
+  const M = globalThis.OSLabMemoryApi;
+  const $ = selector => root.querySelector(selector);
+  const $$ = selector => [...root.querySelectorAll(selector)];
+  const escape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const groups = {
+    allocation: {name:'申请与使用', api:'malloc · calloc', title:'分配了空间，还要初始化内容', lead:'指针保存对象的起始地址。申请成功后，能访问多大范围、能否读取内容，仍取决于对象的大小与初始化状态。', scenes:{malloc:'malloc',calloc:'calloc',failure:'分配失败'}, errors:['unallocated','size','string','uninitialized','bounds']},
+    resize: {name:'按需调整', api:'realloc', title:'调整大小后，以返回结果为准', lead:'原来两个 int 占 8 字节，现在需要三个。realloc 的参数是新的总大小 12 字节；是否移动、是否成功，都要根据返回结果处理。', scenes:{move:'成功 · 移动位置',inplace:'成功 · 地址未变',resizeFailure:'失败 · 保留原对象'}, errors:[]},
+    release: {name:'结束使用', api:'free', title:'释放的是对象，失效的是所有旧引用', lead:'复制指针不会复制对象。对象不再使用时释放一次；把某个指针设为 NULL，是另外一次赋值。', scenes:{alias:'两个引用，同一个对象'}, errors:['leak','useAfterFree','doubleFree','invalidFree']},
   };
-  const diagram = (frame, previous = null) => `<div class="ma-pointers"><h3>指针变量与引用</h3>${Object.entries(frame.pointers).map(([name, pointer]) => {
-    const changed = previous && JSON.stringify(previous.pointers[name]) !== JSON.stringify(pointer);
-    return `<div class="ma-pointer ma-pointer-${pointer.status}${changed ? ' ma-changed' : ''}" data-pointer="${name}" data-status="${pointer.status}"><strong>${name}</strong><span>${pointer.status === 'uninitialized' ? '未初始化' : pointer.status === 'null' ? 'NULL' : `${pointer.status === 'dangling' ? '旧地址记录：' : ''}${pointer.address}`}</span>${pointer.object ? `<p class="ma-pointer-target">${referenceText(frame, pointer)}</p>` : ''}</div>`;
-  }).join('')}</div><div class="ma-object-list"><h3>对象大小与内容</h3>${frame.objects.length ? frame.objects.map((object, objectIndex) => {
-    const changed = previous && JSON.stringify(previous.objects.find(value => value.id === object.id)) !== JSON.stringify(object);
-    const references = Object.entries(frame.pointers).filter(([, pointer]) => pointer.status === 'valid' && pointer.object === object.id).map(([name]) => name);
-    const elementBytes = object.bytes / object.values.length;
-    return `<section class="ma-object ${object.live ? 'ma-object-live' : 'ma-object-ended'}${changed ? ' ma-changed' : ''}${object.live && !references.length ? ' ma-object-unreferenced' : ''}" data-object="${object.id}" data-live="${object.live}"><div class="ma-object-heading"><strong>对象 ${objectIndex + 1}</strong><code>${object.address}</code><span>${object.bytes} 字节 / ${object.live ? '活对象' : '生命周期已结束'}</span></div>${object.live ? `<div class="ma-elements">${object.values.map((value, index) => `<div class="ma-element ${value === null ? 'ma-uninitialized' : ''}"><span>${object.element === 'char' ? 'char' : 'int'} [${index}]</span><strong>${value === null ? '?' : value}</strong><small>偏移 ${index * elementBytes}–${(index + 1) * elementBytes - 1} 字节</small></div>`).join('')}</div>` : ''}${object.live && !references.length ? '<p class="ma-links">对象仍存在，但程序已丢失访问与释放它的引用。</p>' : ''}</section>`;
-  }).join('') : '<p class="ma-empty">无分配对象；不能解引用 NULL 或未初始化的指针。</p>'}</div>`;
-  const cancelHighlights = () => root.querySelector('#ma-diagram').getAnimations({subtree: true}).forEach(animation => animation.cancel());
-  const prepare = () => {
-    root.querySelector('#ma-total').textContent = frames.length;
-    position.max = frames.length - 1;
-    root.querySelector('#ma-lifecycle-caption').textContent = scenes[scene];
-    root.querySelector('#ma-lifecycle-comparison').innerHTML = frames.map((frame, index) => `<tr data-lifecycle-stage="${index}"><th scope="row">${index + 1} · ${frame.label}</th><td>${Object.entries(frame.pointers).map(([name,pointer]) => `<div>${name} ${referenceText(frame,pointer)}</div>`).join('')}</td><td>${frame.objects.map((object, objectIndex) => object.live ? `对象 ${objectIndex + 1} · ${object.bytes} 字节` : '').filter(Boolean).join('；') || '无活对象'}</td><td>${frame.read === null ? '尚未计算' : frame.read}</td></tr>`).join('');
-    root.querySelector('#ma-steps').innerHTML = frames.map((frame, index) => `<li><button type="button" data-stage="${index}" aria-label="阶段 ${index + 1}，${frame.label}" aria-pressed="false">${frame.label}</button></li>`).join('');
+  const captions = {
+    malloc:['声明指针，没有堆对象','申请成功，内容尚未初始化','写入后，两个元素有了确定值','读取两个元素，得到 30'],
+    calloc:['声明指针，没有堆对象','申请成功，所有字节已清零','写入后，两个元素变为 10、20','读取两个元素，得到 30'],
+    failure:['声明指针，没有堆对象','申请失败，没有获得对象','检查 NULL 后结束这条路径'],
+    move:['调整前：8 字节，两个元素','调整成功：内容保留，位置改变','将 p 更新为返回的新指针'],
+    inplace:['调整前：8 字节，两个元素','地址未变，也要使用返回的新指针','将 p 更新为返回的新指针'],
+    resizeFailure:['调整前：8 字节，两个元素','返回 NULL，原来的 8 字节仍有效','保留 p，继续管理原对象'],
+    alias:['一个指针指向一个对象','两个指针指向同一个对象','对象已释放，p 和 q 的旧引用都失效','只有 p 变为 NULL，q 仍是失效引用'],
   };
-  const paint = () => {
-    const frame = frames[stage];
-    cancelHighlights();
-    root.querySelector('#ma-stage').textContent = stage + 1;
-    root.querySelector('#ma-event-title').textContent = frame.label;
-    root.querySelector('#ma-code').textContent = frame.code;
-    root.querySelector('#ma-reason').textContent = frame.text;
-    root.querySelector('#ma-request').textContent = `${frame.requestedBytes} 字节`;
-    root.querySelector('#ma-live').textContent = `${frame.objects.filter(object => object.live).length} 个 / ${frame.objects.filter(object => object.live).reduce((total, object) => total + object.bytes, 0)} 字节`;
-    root.querySelector('#ma-read').textContent = frame.read === null ? '尚未计算' : `${frame.read}（已计算，不重新读取对象）`;
-    root.querySelector('#ma-result').hidden = frame.read === null;
-    root.querySelector('#ma-diagram').innerHTML = diagram(frame, stage > 0 ? frames[stage - 1] : null);
-    root.querySelectorAll('[data-stage]').forEach(button => {
-      const selected = Number(button.dataset.stage) === stage;
-      button.setAttribute('aria-pressed', String(selected));
-      button.tabIndex = selected ? 0 : -1;
-    });
-    root.querySelectorAll('[data-lifecycle-stage]').forEach(row => {
-      if (Number(row.dataset.lifecycleStage) === stage) row.setAttribute('aria-current', 'step');
-      else row.removeAttribute('aria-current');
-    });
-    position.value = stage;
-    position.setAttribute('aria-valuetext', `阶段 ${stage + 1}，${frame.label}`);
-    previousButton.disabled = stage === 0;
-    updatePlayState();
-    nextButton.disabled = frame.complete;
-    if (!reducedMotion.matches) root.querySelector('#ma-diagram').animate([{opacity: .65}, {opacity: 1}], {duration: 180});
+  const reasons = {
+    malloc:['局部变量 p 保存地址。本例将它初始化为 NULL，还没有为 int 元素申请空间。','malloc 不初始化内容。图中的 ? 表示没有可依赖的值，读取前应先写入。','写入改变内容，没有改变分配大小，也没有产生第二个对象。','合法索引是 0 和 1。total 是本次读取的计算结果，不是另一个堆对象。'],
+    calloc:['局部变量 p 保存地址；声明指针与申请它所指的对象是两件事。','calloc 将分配的字节全部置零；本例的两个 int 都是 0。','初始化后的值可以被新写入覆盖，对象仍为 8 字节。','在对象范围内读取已初始化元素，得到 total = 30。'],
+    failure:['p 为 NULL，尚未指向对象。','失败返回 NULL，不能通过 p 读写。返回非空与否，应在首次访问前检查。','条件成立，执行 return；没有继续初始化或读取。'],
+    move:['p 指向值为 10、20 的两个 int。tmp 用来接收调整结果。','前 8 字节保留，新增 4 字节未初始化。原对象已结束，tmp 指向新的 12 字节对象。','tmp 非 NULL，才把它赋给 p。其他旧引用不会随 p 一起更新。'],
+    inplace:['目标是把总大小改为 12 字节，不是再增加 12 字节。','即使地址数字相同，成功后旧引用仍失效；tmp 是这次调用返回的有效指针。','通过返回的新指针使用调整后的对象。新增的第三个 int 仍需初始化。'],
+    resizeFailure:['临时指针 tmp 与 p 分开，失败结果不会覆盖原引用。','非零大小请求失败时，原对象的大小、内容和有效引用均不变。','tmp 为 NULL，跳过 p = tmp。原对象没有扩大，但仍可继续使用或释放。'],
+    alias:['p 指向已经初始化的 8 字节对象。','q = p 只复制引用；两条连线指向同一次分配。','free(p) 结束对象的生命周期，但不自动清空任何指针变量。','p = NULL 没有再次释放对象，也没有改变 q；q 不能再用于访问原对象。'],
   };
-  const updatePlayState = () => {
-    const playing = timer !== null;
-    const label = playing ? '暂停' : frames[stage].complete ? '重新播放' : '播放';
-    playButton.setAttribute('aria-pressed', String(playing));
-    playButton.setAttribute('aria-label', label);
-    playButton.title = label;
-    playButton.firstElementChild.textContent = playing ? 'Ⅱ' : frames[stage].complete ? '↻' : '▶';
+  const contracts = {
+    malloc:['void *malloc(size_t size);',[['大小','size 是总字节数。n 个元素使用 n * sizeof *p；计算乘积前需检查溢出。'],['结果','成功返回起始指针，内容未初始化；失败返回 NULL。'],['零大小','malloc(0) 的结果与实现有关，不能据此访问对象。'],['对齐','成功结果满足基本类型的对齐要求；更高对齐要求需使用相应接口。']]],
+    calloc:['void *calloc(size_t n, size_t size);',[['大小','n 是元素数量，size 是每个元素的字节数；乘积溢出时分配失败。'],['结果','成功后所有字节为零；失败返回 NULL。'],['零的含义','全零字节适用于本例 int 的零值，但不保证表示任意类型的零值或空指针。'],['零大小','总大小为零时的结果与实现有关，不能据此访问对象。']]],
+    realloc:['void *realloc(void *p, size_t size);',[['参数','p 为尚未释放的分配起始指针，size 为新的总字节数。p 为 NULL 时等价于 malloc(size)。'],['保留范围','保留新旧大小较小范围内的内容；扩大后新增的部分未初始化。'],['成功与失败','成功后使用返回的新指针；非零大小请求失败时返回 NULL，原对象不变。'],['零大小','C23 中 realloc(p, 0) 为未定义行为。需要释放时使用 free，避免依赖不同版本的零大小规则。']]],
+    free:['void free(void *p);',[['参数','分配器记录块大小，free 只接收尚未释放的分配起始指针；不接受对象内部地址或栈变量地址。'],['结果','没有返回值；free(NULL) 不执行任何操作。'],['多个引用','对象释放后，所有旧引用均失效。给 p 赋 NULL 不会清空 q。'],['空间复用','释放后的空间可供分配器复用；不保证字节清零，也不保证物理页立即归还 OS。']]],
   };
-  const pause = () => { clearInterval(timer); timer = null; updatePlayState(); };
-  const advance = () => { stage = Math.min(stage + 1, frames.length - 1); if (frames[stage].complete) pause(); paint(); };
-  const play = () => { if (frames[stage].complete) { stage = 0; paint(); } timer = setInterval(advance, Number(root.querySelector('#ma-speed').value)); updatePlayState(); };
-  playButton.addEventListener('click', () => timer === null ? play() : pause());
-  previousButton.addEventListener('click', () => { pause(); stage = Math.max(0, stage - 1); paint(); });
-  nextButton.addEventListener('click', () => { pause(); advance(); });
-  root.querySelector('#ma-reset').addEventListener('click', () => { pause(); stage = 0; paint(); });
-  root.querySelector('#ma-scene').addEventListener('change', event => { pause(); scene = event.target.value; frames = buildScenario(scene); stage = 0; prepare(); paint(); });
-  root.querySelector('#ma-speed').addEventListener('change', () => { if (timer !== null) { pause(); play(); } });
-  root.querySelector('#ma-steps').addEventListener('click', event => { const button = event.target.closest('[data-stage]'); if (button) { pause(); stage = Number(button.dataset.stage); paint(); } });
-  root.querySelector('#ma-steps').addEventListener('keydown', event => {
-    const button = event.target.closest('[data-stage]');
-    if (!button || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-    event.preventDefault();
-    pause();
-    const current = Number(button.dataset.stage);
-    stage = event.key === 'Home' ? 0 : event.key === 'End' ? frames.length - 1 : Math.max(0, Math.min(frames.length - 1, current + (event.key === 'ArrowRight' ? 1 : -1)));
-    paint();
-    root.querySelector(`[data-stage="${stage}"]`).focus({preventScroll:true});
+  const corrections = {
+    unallocated:['先分配，再通过指针写入','int *p = malloc(sizeof *p);\nif (p != NULL) *p = 10;','声明指针只建立了保存地址的变量，没有建立它所指的 int 对象。'],
+    size:['按元素所需的大小申请','int *p = malloc(3 * sizeof *p);\nif (p != NULL) p[2] = 30;','本例 sizeof p 为 8，sizeof *p 为 4。三个 int 需要 12 字节；指针的大小不等于对象的大小。'],
+    string:['给结尾的空字符留一字节','char *s = malloc(strlen("cat") + 1);\nif (s != NULL) strcpy(s, "cat");','cat 有 3 个字符，复制时还会写入结尾的 \\0。需要 4 字节，少一个也会越界。'],
+    uninitialized:['先写入确定的值，再读取','p[0] = 10;\nint value = p[0];','malloc 只分配空间。读取未初始化的 int，没有可依赖的确定结果。'],
+    bounds:['访问索引应在对象范围内','/* 已分配两个 int */\np[1] = 30;','两个元素的索引只有 0、1。p[2] 已在对象之外，相邻地址可访问也不能使这次写入合法。'],
+    leak:['不再使用时，先释放再清空','free(p);\np = NULL;','没有其他引用时，清空 p 会丢失访问与释放这个对象的途径；对象却仍占据分配空间。'],
+    useAfterFree:['把使用安排在释放之前','int value = p[0];\nfree(p);','原对象的生命周期已经结束，即使原地址处的字节没有清零，也不能继续读取。'],
+    doubleFree:['同一次分配只释放一次','free(p);\np = NULL;','重复释放旧对象是未定义行为。把 p 清空后调用 free(NULL) 没有作用，但其他旧引用仍需管理。'],
+    invalidFree:['把分配起始指针传给 free','free(p);','p + 1 位于对象内部，不能作为释放参数；free 也不接受栈变量的地址。'],
+  };
+  root.innerHTML = `<div class="page mi-page" id="top">${wikiHeader('memoryApi', [])}
+    <a class="mi-skip" href="#mi-main">跳到主要内容</a>
+    <main id="mi-main" tabindex="-1"><header class="mi-intro"><h1>内存 API <span>Memory API</span></h1><p>栈上的局部变量随函数调用自动管理；动态对象由程序申请，在不再使用时释放。<strong>指针变量和它指向的对象，是两份不同的存储。</strong></p></header>
+    <nav class="mi-workflow" aria-label="选择内存操作">${Object.entries(groups).map(([id,g])=>`<button type="button" data-group="${id}" aria-pressed="false"><span>${g.name}</span><code>${g.api}</code></button>`).join('')}</nav>
+    <section id="demo" class="mi-lesson" aria-labelledby="mi-title">
+      <div class="mi-lead"><h2 id="mi-title"></h2><p id="mi-lead"></p></div>
+      <div class="mi-scenarios" role="group" aria-label="选择运行条件" id="mi-scenarios"></div>
+      <div class="mi-bench" id="mi-bench">
+        <div class="mi-program"><div class="mi-column-label">执行到这一步</div><ol id="mi-steps" aria-label="代码执行阶段"></ol><p id="mi-setup"></p></div>
+        <div class="mi-state"><div class="mi-current"><span id="mi-progress"></span><h3 id="mi-event"></h3></div><pre id="mi-current-code" aria-label="当前执行的代码"></pre><div id="mi-diagram" class="mi-diagram" role="group" aria-label="指针与动态对象"></div><dl id="mi-facts" class="mi-facts"></dl><p id="mi-reason"></p></div>
+        <div class="mi-controls"><button type="button" id="mi-prev" aria-label="上一步">← 上一步</button><button type="button" id="mi-play" aria-label="自动播放" aria-pressed="false">▶ 播放</button><button type="button" id="mi-next" aria-label="下一步">下一步 →</button><button type="button" id="mi-reset" aria-label="重置">↺ 重置</button><label>速度 <select id="mi-speed"><option value="1800">慢速</option><option value="1200" selected>正常</option><option value="600">快速</option></select></label></div>
+      </div>
+      <p class="mi-caption">本例 int 为 4 字节，指针为 8 字节；地址是示意虚拟地址，申请大小非零。<span>? 未初始化</span><span>虚线 × 旧引用已失效</span></p>
+      <div id="mi-next-thought" class="mi-takeaway"></div>
+      <details id="mi-failure" class="mi-detail" hidden><summary>失败时，直接覆盖 p 会丢失原对象的引用</summary><p>同样返回 NULL，区别在于把结果保存到哪里。以下两种写法从同一个有效 p 出发，且没有其他引用。</p><div class="mi-compare"><section><h3>临时指针接收</h3><code>tmp = realloc(p, 12);</code><div class="mi-mini"><span>返回结果：tmp = NULL</span><div class="mi-receive-row"><code>p<br>0x1000</code><span aria-label="有效引用">→</span><div><b>8 字节 · 未释放</b><span>10　20</span></div></div><strong>原对象仍可访问和释放</strong></div></section><section><h3>直接覆盖 p</h3><code>p = realloc(p, 12);</code><div class="mi-mini mi-warning"><span>返回结果覆盖 p</span><div class="mi-receive-row"><code>p<br>NULL</code><span aria-label="引用丢失">×</span><div><b>8 字节 · 未释放</b><span>10　20</span></div></div><strong>最后一个引用丢失，造成泄漏</strong></div></section></div></details>
+      <details id="mistakes" class="mi-detail"><summary id="mi-mistakes-label"></summary><div class="mi-error-intro"><strong>能编译、能运行，不等于内存使用正确</strong><p>对象边界和生命周期由程序管理。OS 的地址保护不能识别每个 C 对象的合法访问范围。</p></div><nav id="mi-errors" aria-label="选择相关错误"></nav><div class="mi-error-body"><div><div class="mi-error-heading"><h3 id="mi-error-title"></h3><span id="mi-error-kind"></span></div><pre id="mi-error-code"></pre><div id="mi-error-diagram" class="mi-diagram" role="group" aria-label="错误涉及的对象与位置"></div></div><div class="mi-correction"><h3 id="mi-fix-title"></h3><p id="mi-error-reason"></p><pre id="mi-fix"></pre><p id="mi-error-boundary" class="mi-caption"></p></div></div><p class="mi-error-foot">未定义行为没有规定的执行结果，可能崩溃，也可能没有立即可见的异常。调试时可借助 Valgrind 等工具查找非法访问和泄漏。</p></details>
+      <details id="contracts" class="mi-detail"><summary id="mi-reference-title"></summary><code id="mi-signature"></code><dl id="mi-rules"></dl><p class="mi-caption">这些是 C 库接口，声明在 &lt;stdlib.h&gt; 中。size_t 表示大小，NULL 表示空指针。<a href="https://man7.org/linux/man-pages/man3/malloc.3.html">接口手册 →</a></p></details>
+    </section><nav class="mi-related" aria-label="对象的分配与访问"><p>申请成功后，得到连续的虚拟地址范围；读写对象时，仍需把虚拟地址转换为物理地址。</p><a href="address-translation.html">地址转换：读写时找到物理位置 →</a><a href="free-space.html">空闲空间管理：为对象寻找空闲块 →</a><a href="paging.html#object">分页：一个对象跨越两页 →</a></nav></main><footer class="site-footer"><span>OSLab / 内存虚拟化</span><a href="#top">回到页首 ↑</a></footer><div id="mi-status" class="mi-sr" role="status"></div></div>`;
+  $('.site-header nav')?.remove();
+  let group = 'allocation', scene = 'malloc', stage = 1, frames = [], timer = null, selectedError = 'bounds';
+  const before = () => ({pointers:{p:{status:'null',address:null,object:null}},objects:[],read:null,requestedBytes:0,label:'声明指针',code:'int *p = NULL;'});
+  const rawFrameList = id => ['malloc','calloc'].includes(id) ? [before(),...M.buildScenario(id).slice(0,3)] : id === 'failure' ? [before(),...M.buildScenario(id)] : id === 'alias' ? M.buildScenario(id) : M.buildScenario(id).slice(0,3);
+  const frameList = id => rawFrameList(id).map((frame,index) => {
+    if (['malloc','calloc','failure'].includes(id) && index === 1) {
+      frame.code = frame.code.replace('int *p = NULL;\n','').replace('int *p = ', 'p = ');
+    }
+    return frame;
   });
-  position.addEventListener('input', event => { pause(); stage = Number(event.target.value); paint(); });
-  const errorAnalysis = {
-    unallocated: [['指针状态','p 尚未初始化，没有指向有效对象。'],['错误动作','通过 *p 写入 10。'],['违反条件','声明指针变量不等于分配其所指对象，必须先获得有效引用。']],
-    size: [['申请大小','sizeof p 为指针自身大小，本例为 8 字节，只够两个 4 字节的 int。'],['错误动作','写入 p[2]，需要偏移 8–11 的四个字节，已超出该对象。'],['正确大小','三个 int 需要 3 * sizeof *p，本例为 12 字节；不能用指针大小代替对象大小。']],
-    string: [['申请大小','strlen("cat") 为 3，只申请了三个 char 的空间。'],['错误动作','strcpy 还要写入结尾空字符，合计四个字节；最后一个字节位于对象之外。'],['正确大小','使用 strlen("cat") + 1，申请 4 字节。']],
-    uninitialized: [['对象状态','分配成功，对象有两个 int，但内容尚未初始化。'],['错误动作','直接读取 p[0]。'],['缺少的条件','malloc 不初始化内容，读取结果没有可依赖的确定值；需先写入有效值。']],
-    bounds: [['合法范围','对象含两个 int，合法索引为 0、1，字节偏移为 0–7。'],['错误动作','写入 p[2]，对应偏移 8–11，已在对象范围之外。'],['违反条件','访问位置必须属于对象；相邻地址看起来空闲，也不代表程序拥有那部分空间。']],
-    leak: [['对象状态','对象仍存在，大小为 8 字节。'],['引用变化','在没有其他引用的条件下，将最后一个指针 p 设为 NULL。'],['资源后果','赋 NULL 没有释放对象，却使程序丢失后续访问和释放它的路径。这是内存泄漏，不是该赋值本身的未定义行为。']],
-    useAfterFree: [['对象状态','free(p) 已结束对象生命周期。'],['错误动作','继续通过 p[0] 读取原对象。'],['违反条件','原引用已经失效。底层字节未清零或旧地址数字相同，都不能使对象恢复有效。']],
-    doubleFree: [['对象状态','第一次 free(p) 已释放这次分配。'],['错误动作','再次用原指针释放同一分配。'],['违反条件','free 的对象必须尚未释放。free(NULL) 是无操作，不等于再次释放旧对象。']],
-    invalidFree: [['对象位置','p 指向分配起点；本例 p + 1 位于起点之后 4 字节。'],['错误动作','把对象内部地址 p + 1 传给 free。'],['参数条件','free 需要匹配尚未释放的分配起始指针，不能使用对象内部地址或栈变量地址。']],
+  const visibleObjects = frame => frame.objects.filter(o => o.live || Object.values(frame.pointers).some(p => p.object === o.id));
+  const diagram = (frame, scale = 8) => `<div class="mi-pointers"><h4>局部指针变量</h4>${Object.entries(frame.pointers).map(([name,p])=>`<div class="mi-pointer" data-pointer="${name}" data-status="${p.status}" data-target="${p.object || ''}"><strong>${name}</strong><code>${p.status === 'uninitialized' ? '未初始化' : p.status === 'null' ? 'NULL' : escape(p.address)}</code><small>${p.status === 'valid' ? '有效引用' : p.status === 'dangling' ? '原地址 · 引用已失效' : '不指向对象'}</small></div>`).join('')}</div><div class="mi-objects"><h4>动态对象 · 堆</h4>${frame.objects.length ? visibleObjects(frame).map((o)=>`<div class="mi-object-slot"><section class="mi-object" data-object="${o.id}" data-live="${o.live}" style="--share:${o.bytes / scale}"><header><strong>${o.id === 'resized' ? '调整后的对象' : frame.objects.length > 1 ? '原对象' : '堆对象'}</strong><code>${o.address}</code><span>${o.bytes} 字节 · ${o.live ? '尚未释放' : '生命周期已结束'}</span></header>${o.live ? `<div class="mi-cells">${o.values.map((v,j)=>`<div class="mi-cell${v === null ? ' mi-unknown' : ''}"><small>${o.element === 'char' ? 'char' : 'int'} [${j}]</small><strong>${v === null ? '?' : escape(v)}</strong><span>${o.bytes / o.values.length} 字节</span></div>`).join('')}</div>` : '<div class="mi-ended">原对象已结束，不可访问</div>'}${o.live && !Object.values(frame.pointers).some(p=>p.status === 'valid' && p.object === o.id) ? '<p class="mi-lost">最后一个引用已丢失</p>' : ''}</section></div>`).join('') : '<div class="mi-empty"><strong>尚无动态对象</strong><span>指针变量存在，不代表它所指的空间已分配。</span></div>'}</div>`;
+  const draw = container => {
+    container.querySelector('svg')?.remove();
+    const box = container.getBoundingClientRect();
+    if (!box.width || !box.height) return;
+    const vertical = matchMedia('(max-width:600px)').matches;
+    const paths = [...container.querySelectorAll('[data-pointer]')].flatMap(p => {
+      const target = container.querySelector(`[data-object="${p.dataset.target}"]`);
+      if (!target || !['valid','dangling'].includes(p.dataset.status)) return [];
+      const a = p.getBoundingClientRect(), b = target.getBoundingClientRect();
+      const x1 = (vertical ? a.left + a.width/2 : a.right) - box.left, y1 = (vertical ? a.bottom : a.top + a.height/2) - box.top;
+      const x2 = (vertical ? Math.max(b.left+8,Math.min(a.left+a.width/2,b.right-8)) : b.left) - box.left, y2 = (vertical ? b.top : Math.max(b.top+10,Math.min(a.top+a.height/2,b.bottom-10))) - box.top;
+      const stale = p.dataset.status === 'dangling';
+      return `<g data-route="${p.dataset.pointer}" data-target="${p.dataset.target}" data-valid="${!stale}" stroke="${stale ? '#a33f35':'#327566'}" stroke-width="1.7" fill="none"><path d="M ${x1} ${y1} L ${x2} ${y2}" ${stale ? 'stroke-dasharray="4 4"' : `marker-end="url(#${container.id}-arrow)"`}/>${stale ? `<path d="M ${x2-4} ${y2-4} l 8 8 M ${x2-4} ${y2+4} l 8 -8"/>`:''}</g>`;
+    });
+    container.insertAdjacentHTML('beforeend',`<svg class="mi-routes" viewBox="0 0 ${box.width} ${box.height}" width="${box.width}" height="${box.height}" aria-hidden="true"><defs><marker id="${container.id}-arrow" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#327566"/></marker></defs>${paths.join('')}</svg>`);
   };
-  const paintError = () => {
-    const id = root.querySelector('#ma-error').value;
-    const error = buildError(id);
-    root.querySelector('#ma-error-kind').textContent = error.kind;
-    root.querySelector('#ma-error-title').textContent = error.title;
-    const lines = error.code.split('\n');
-    root.querySelector('#ma-error-code').replaceChildren(...lines.map((line, index) => {
-      const element = document.createElement('span');
-      element.textContent = line;
-      if (index === lines.length - 1) element.className = 'ma-problem-line';
-      return element;
-    }));
-    root.querySelector('#ma-error-reason').innerHTML = errorAnalysis[id].map(([title,text]) => `<div><dt>${title}</dt><dd>${text}</dd></div>`).join('');
-    root.querySelector('#ma-error-diagram').innerHTML = diagram(error);
-    root.querySelector('#ma-error-target').textContent = ({size: '违规访问：int [2]，超出 8 字节对象', string: '违规写入：结尾空字符需要第 4 个字节', bounds: '违规访问：int [2]，超出两个元素的范围', invalidFree: '错误释放位置：对象内部 p + 1，而非分配起点', leak: '对象仍然存在，但已经没有引用', unallocated: '违规解引用：p 未初始化', uninitialized: '无确定读取值：p[0] 尚未初始化', useAfterFree: '违规读取：对象已释放', doubleFree: '违规释放：同一分配已结束'})[id];
-  };
-  root.querySelector('#ma-error').addEventListener('change', () => { pause(); paintError(); });
-  reducedMotion.addEventListener('change', event => { if (event.matches) cancelHighlights(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
-  window.addEventListener('pagehide', pause);
-  prepare(); paint(); paintError();
+  function playState() {
+    const running = timer !== null, ended = stage === frames.length - 1;
+    $('#mi-play').textContent = running ? 'Ⅱ 暂停' : ended ? '↻ 重播' : '▶ 播放';
+    $('#mi-play').setAttribute('aria-label',running ? '暂停' : ended ? '重新播放' : '自动播放');
+    $('#mi-play').setAttribute('aria-pressed',String(running));
+  }
+  function pause() { clearInterval(timer); timer = null; if(frames.length) playState(); }
+  function announce() { $('#mi-status').textContent = `${stage+1} / ${frames.length}，${captions[scene][stage]}`; }
+  function paint() {
+    const frame = frames[stage];
+    $('#mi-bench').dataset.scene = scene; $('#mi-bench').dataset.stage = stage;
+    $('#mi-progress').textContent = `${stage+1} / ${frames.length}`;
+    $('#mi-current-code').textContent = frame.code; $('#mi-event').textContent = captions[scene][stage]; $('#mi-reason').textContent = reasons[scene][stage];
+    $('#mi-diagram').innerHTML = diagram(frame,group === 'resize' ? 12 : 8);
+    const live = frame.objects.filter(o=>o.live), p = frame.pointers.p;
+    const total = live.reduce((n,o)=>n+o.bytes,0);
+    const content = !live.length ? '无可用对象' : live.some(o=>o.values.includes(null)) ? live.some(o=>o.values.some(v=>v!==null)) ? '新增部分未初始化' : '未初始化' : '已初始化';
+    const facts = [['当前分配',`${total} 字节`],['对象内容',content],[frame.read !== null ? '读取结果 total' : 'p 的引用',frame.read !== null ? String(frame.read) : ({valid:'有效',dangling:'已失效',null:'NULL',uninitialized:'未初始化'})[p.status]]];
+    $('#mi-facts').innerHTML = facts.map(([name,value])=>`<div><dt>${name}</dt><dd>${value}</dd></div>`).join('');
+    $$('#mi-steps button').forEach(b=>{const current = Number(b.dataset.stage) === stage; b.setAttribute('aria-pressed',String(current)); if(current)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current'); b.tabIndex=current?0:-1;});
+    $('#mi-prev').disabled = stage === 0; $('#mi-next').disabled = stage === frames.length-1;
+    playState(); draw($('#mi-diagram'));
+  }
+  function seek(index,focus=false) { pause(); stage=index; paint(); announce(); if(focus)$(`#mi-steps [data-stage="${stage}"]`).focus({preventScroll:true}); }
+  function advance() { if(stage<frames.length-1)stage++; if(stage===frames.length-1)pause(); paint(); if(timer===null)announce(); }
+  function play() { if(stage===frames.length-1){stage=0;paint();} timer=setInterval(advance,Number($('#mi-speed').value));playState(); $('#mi-status').textContent='正在播放，可随时暂停。'; }
+  function prepare() {
+    const g = groups[group];
+    $('#mi-title').textContent=scene==='calloc'?'calloc 在分配时把字节清零':scene==='failure'?'申请可能失败，使用前检查返回值':g.title; $('#mi-lead').textContent=g.lead;
+    $$('[data-group]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.group===group)));
+    $('#mi-scenarios').hidden = group === 'release'; $('#mi-steps').style.setProperty('--steps',frames.length);
+    $('#mi-scenarios').innerHTML=Object.entries(g.scenes).map(([id,name])=>`<button type="button" data-scene="${id}" aria-pressed="${id===scene}">${name}</button>`).join('');
+    const labels=group==='allocation'?['声明指针','申请并检查',scene==='failure'?'处理失败':'写入内容','读取内容']:group==='resize'?['原来的对象','请求调整','检查返回值']:['原来的对象','复制引用','释放对象','清空 p'];
+    $('#mi-steps').innerHTML=frames.map((f,i)=>`<li><button type="button" data-stage="${i}" aria-pressed="false"><span>${labels[i]}</span><code>${escape(f.code)}</code></button></li>`).join('');
+    $('#mi-setup').textContent=group==='allocation'?'局部指针按栈中变量示意；函数返回时，动态对象不会随局部变量自动释放。':'起始条件：p 已指向两个初始化为 10、20 的 int。';
+    $('#mi-next-thought').innerHTML=group==='allocation'?'<strong>大小属于对象，地址保存在指针中。</strong><span>两个 int 需要 2 × 4 = 8 字节。sizeof p 得到指针变量的大小，不能用来查询已分配对象的大小。</span>':group==='resize'?'<strong>先保留 p，再判断 tmp。</strong><span>调整成功后更新引用；失败时保留原对象。需要搬移时会复制保留范围内的内容，代价随复制量增加。</span>':'<strong>释放对象，结束的是程序对它的使用。</strong><span>free 后，空间可由分配器复用；页面换出则保留对象的内容与生命周期，后续访问仍可调回。两者不是同一件事。</span>';
+    $('#mi-failure').hidden=group!=='resize';
+    $('#mistakes').hidden=group==='resize';
+    $('#mi-mistakes-label').textContent=group==='release'?'对照：泄漏、释放后使用与错误释放':'对照：空间大小、初始化与越界';
+    if(g.errors.length) {if(!g.errors.includes(selectedError)) selectedError=g.errors[0]; $('#mi-errors').innerHTML=g.errors.map(id=>`<button type="button" data-error="${id}" aria-pressed="${id===selectedError}">${M.errors[id].title}</button>`).join(''); paintError();}
+    const api=group==='allocation'?(scene==='calloc'?'calloc':'malloc'):group==='resize'?'realloc':'free';
+    const [sig,rules]=contracts[api]; $('#mi-reference-title').textContent=`${api} 的参数与特殊条件`; $('#mi-signature').textContent=sig; $('#mi-rules').innerHTML=rules.map(([term,text])=>`<div><dt>${term}</dt><dd>${text}</dd></div>`).join('');
+  }
+  function selectScene(id) {pause();scene=id;frames=frameList(scene);stage=group==='allocation'?1:group==='release'?1:0;prepare();paint();announce();}
+  function selectGroup(id) {pause();group=id;$('#mistakes').open=false;$('#contracts').open=false;$('#mi-failure').open=false; selectScene(Object.keys(groups[id].scenes)[0]);}
+  function paintError() {
+    const id=selectedError, error=M.buildError(id), [title,code,reason]=corrections[id];
+    $$('[data-error]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.error===id)));
+    $('#mi-error-title').textContent=error.title; $('#mi-error-kind').textContent=error.kind;
+    $('#mi-error-code').innerHTML=error.code.split('\n').map((line,i,all)=>`<span${i===all.length-1?' class="mi-problem"':''}>${escape(line)}</span>`).join('');
+    $('#mi-fix-title').textContent=title; $('#mi-fix').textContent=code; $('#mi-error-reason').textContent=reason;
+    $('#mi-error-boundary').textContent=id==='leak'?'这是资源管理错误，不是 p = NULL 这次赋值本身的未定义行为。进程退出后 OS 会回收其资源；长期运行的进程不能依靠退出及时回收泄漏。':id==='useAfterFree'?'此前对象已初始化且分配成功。正确的先后次序取决于所有引用的最后一次使用。':'分配示例假定成功；修改操作之前，还要满足对象未释放等前提。';
+    const d=$('#mi-error-diagram'); d.innerHTML=diagram(error,error.objects[0]?.bytes||8);
+    if(['size','bounds','string'].includes(id)) {
+      const o=d.querySelector('.mi-object-slot'), wrap=document.createElement('div'); wrap.className=id==='string'?'mi-boundary mi-string-boundary':'mi-boundary'; o.before(wrap);wrap.append(o);
+      wrap.insertAdjacentHTML('beforeend',`<div class="mi-outside"><span>对象之外</span><strong>${id==='string'?'\\0':'int [2]'}</strong><span>× 写入越界</span></div>`);
+    }
+    if(['invalidFree','uninitialized'].includes(id)) {const cell=d.querySelectorAll('.mi-cell')[id==='invalidFree'?1:0];cell.classList.add('mi-invalid');cell.insertAdjacentHTML('beforeend',`<b>${id==='invalidFree'?'× free(p + 1)':'× 读取'}</b>`);}
+    if(['useAfterFree','doubleFree'].includes(id))d.querySelector('.mi-ended').textContent=id==='doubleFree'?'× 再次 free(p)':'× 读取 p[0]';
+    $('.mi-error-foot').textContent = id==='leak' ? '泄漏不会必然立即引发异常；持续遗漏释放会增加进程的内存占用。调试时可借助 Valgrind 等工具检查。' : '未定义行为没有规定的执行结果，可能崩溃，也可能没有立即可见的异常。调试时可借助 Valgrind 等工具查找非法访问。';
+    if($('#mistakes').open) $('#mi-status').textContent = `${error.title}：${error.kind}。${reason}`;
+    draw(d);
+  }
+  $('.mi-workflow').addEventListener('click',e=>{const b=e.target.closest('[data-group]');if(b)selectGroup(b.dataset.group);});
+  $('#mi-scenarios').addEventListener('click',e=>{const b=e.target.closest('[data-scene]');if(b){const id=b.dataset.scene;selectScene(id);$(`[data-scene="${id}"]`).focus({preventScroll:true});}});
+  $('#mi-steps').addEventListener('click',e=>{const b=e.target.closest('button[data-stage]');if(b)seek(Number(b.dataset.stage));});
+  $('#mi-steps').addEventListener('keydown',e=>{if(!e.target.closest('[data-stage]')||!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();seek(e.key==='Home'?0:e.key==='End'?frames.length-1:Math.max(0,Math.min(frames.length-1,stage+(['ArrowDown','ArrowRight'].includes(e.key)?1:-1))),true);});
+  $('#mi-prev').addEventListener('click',()=>seek(Math.max(0,stage-1)));
+  $('#mi-next').addEventListener('click',()=>seek(Math.min(frames.length-1,stage+1)));
+  $('#mi-reset').addEventListener('click',()=>seek(0));
+  $('#mi-play').addEventListener('click',()=>{if(timer===null)play();else {pause();announce();}});
+  $('#mi-speed').addEventListener('change',()=>{if(timer!==null){pause();play();}});
+  $('#mi-errors').addEventListener('click',e=>{const b=e.target.closest('[data-error]');if(b){pause();selectedError=b.dataset.error;paintError();}});
+  $$('#mistakes summary, #mi-failure summary, #contracts summary').forEach(summary=>summary.addEventListener('click',()=>{if(!summary.parentElement.open)pause();}));
+  $('#mistakes').addEventListener('toggle',()=>{if($('#mistakes').open){pause();draw($('#mi-error-diagram'));}});
+  $('#mi-failure').addEventListener('toggle',()=>{if($('#mi-failure').open)pause();});
+  const resize=new ResizeObserver(entries=>entries.forEach(e=>draw(e.target))); resize.observe($('#mi-diagram'));resize.observe($('#mi-error-diagram'));
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();}); window.addEventListener('pagehide',pause);
+  function anchor() {const hash=location.hash.slice(1); if(['realloc','resize'].includes(hash))selectGroup('resize');else if(['free','release'].includes(hash))selectGroup('release');else if(['mistakes','contracts','demo','malloc','calloc'].includes(hash)){selectGroup('allocation');if(hash==='calloc')selectScene('calloc');if(['mistakes','contracts'].includes(hash))$(`#${hash}`).open=true;}}
+  window.addEventListener('hashchange',anchor); frames=frameList(scene); prepare();paint();anchor();
 }
-
 renderMemoryApiPage(document.getElementById('root'));

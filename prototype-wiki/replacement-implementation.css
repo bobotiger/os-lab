@@ -1,0 +1,68 @@
+/* Snapshot-driven Clock demonstrations. Scoped to the implementation topic. */
+.pr-page .replacement-implementation .subtopics{margin-bottom:17px}
+.pr-page .impl-conditions{display:flex;align-items:center;flex-wrap:wrap;gap:7px 11px;font-size:12px;line-height:1.8;color:var(--muted);margin:0 0 22px}
+.pr-page .impl-conditions b{font-weight:500;color:var(--ink)}
+.pr-page .impl-conditions strong{font-weight:550;color:var(--blue);border-left:1px solid var(--line);padding-left:15px;margin-left:3px}
+.pr-page .impl-clock-stage{display:grid;grid-template-columns:minmax(280px,400px) minmax(0,1fr);grid-template-areas:'figure current' 'figure controls' 'figure metrics' 'figure bits';column-gap:40px;align-items:center;padding:20px 24px;background:#f5f8f7;border:1px solid #e0e8e4;border-radius:6px}
+.pr-page .impl-current{grid-area:current;align-self:end}
+.pr-page .impl-current h3{font-size:23px;line-height:1.6;min-height:74px;letter-spacing:-.02em;margin:7px 0}
+.pr-page .impl-current p{font-size:12px;line-height:1.8;color:var(--muted);margin:0}
+.pr-page #clock-pending{font-size:12px;color:var(--ink);margin:0 0 8px}
+.pr-page .impl-clock-figure{grid-area:figure;margin:0;max-width:370px;width:100%;justify-self:center}
+.pr-page .impl-clock-figure svg{display:block;width:100%;height:auto;overflow:visible}
+.pr-page .impl-clock-figure figcaption{font-size:11px;line-height:1.8;color:var(--muted);text-align:center;margin-top:7px}
+.pr-page .replacement-implementation .clock-frame rect{fill:#f9fcfa;stroke:#b3cdbf;stroke-width:1.2}
+.pr-page .replacement-implementation .clock-frame.selected rect{stroke:var(--amber);stroke-width:2.5;fill:#fff8e9}
+.pr-page .replacement-implementation .clock-frame text{text-anchor:middle;fill:var(--ink)}
+.pr-page .replacement-implementation .clock-frame-id{fill:var(--green);font-size:14px}
+.pr-page .replacement-implementation .clock-page-id{fill:var(--blue);font:550 22px ui-monospace,Consolas,monospace}
+.pr-page .replacement-implementation .clock-bits{font:15px ui-monospace,Consolas,monospace}
+.pr-page .replacement-implementation .clock-center-label{font-size:11px;text-anchor:middle;fill:var(--muted)}
+.pr-page .impl-transport{grid-area:controls;display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:11px 0}
+.pr-page .impl-transport button{font-size:12px;min-height:44px}
+.pr-page :is(#clk-play,#dirty-play){width:88px;min-width:88px}
+.pr-page .impl-metrics{grid-area:metrics;display:flex;flex-wrap:wrap;gap:10px 24px;align-items:baseline;margin:10px 0 15px}
+.pr-page .impl-metrics span{font-size:12px;color:var(--muted);white-space:nowrap}
+.pr-page .impl-metrics b{font:500 24px/1.4 ui-monospace,Consolas,monospace;color:var(--ink);font-variant-numeric:tabular-nums;margin-right:3px}
+.pr-page .impl-bits{grid-area:bits;display:flex;flex-wrap:wrap;gap:8px 18px;font-size:11px;line-height:1.8;color:var(--muted);align-self:start}
+.pr-page .impl-bits b{font-weight:550;color:var(--amber);margin-right:5px}
+.pr-page .impl-explanation{margin-top:15px}
+.pr-page .impl-dirty-heading h3{font-size:23px;line-height:1.6;margin:0 0 8px}
+.pr-page .impl-dirty-heading p{font-size:13px;line-height:1.9;color:var(--muted);margin:0;max-width:850px}
+.pr-page .impl-dirty-controls{margin:17px 0 20px}
+.pr-page .impl-dirty-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 30px}
+.pr-page .impl-dirty-grid>section{display:grid;grid-template-rows:subgrid;grid-row:span 6;border-top:2px solid var(--amber);padding-top:14px}
+.pr-page .impl-dirty-grid>section+section{border-top-color:var(--green)}
+.pr-page .impl-dirty-grid header h4{font-size:17px;line-height:1.8;margin:0 0 4px}
+.pr-page .impl-dirty-grid header p{font-size:11px;line-height:1.8;color:var(--muted);margin:0 0 8px}
+.pr-page .impl-dirty-action{font-size:15px;line-height:1.8;font-weight:550;margin:5px 0 13px;min-height:54px}
+.pr-page .impl-dirty-frames{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;align-items:stretch}
+.pr-page .impl-dirty-frame{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 4px;background:#f3f8f5;border:1px solid #bed2c5;border-radius:4px;min-height:111px}
+.pr-page .impl-dirty-frame small{font-size:11px;color:var(--green)}
+.pr-page .impl-dirty-frame b{font:550 21px/1.4 ui-monospace,Consolas,monospace;color:var(--blue)}
+.pr-page .impl-dirty-frame>span{font:11px/1.8 ui-monospace,Consolas,monospace;white-space:nowrap;color:var(--ink)}
+.pr-page .impl-dirty-frame em{font-size:10px;line-height:1.8;font-style:normal;color:var(--muted)}
+.pr-page .impl-dirty-frame.is-selected{border:2px solid var(--amber);padding:9px 3px;background:#fff8e9}
+.pr-page .impl-dirty-grid .impl-metrics{grid-area:auto;gap:8px 20px;margin:15px 0}
+.pr-page .impl-dirty-grid .io-track{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;min-height:61px;margin:0;align-items:stretch}
+.pr-page .impl-dirty-grid .io-track>span{width:auto;flex:none;font-size:12px;line-height:1.7;padding:9px 5px;display:flex;flex-direction:column;justify-content:center;text-align:center;background:#e9f3ed;color:#275f49;border:1px solid #b2cebc;border-radius:3px}
+.pr-page .impl-dirty-grid .io-track .write{background:#faf0df;border-color:#dcc7a3;color:#875923}
+.pr-page .impl-dirty-grid .io-track .is-pending{background:repeating-linear-gradient(135deg,#faf0df 0,#faf0df 5px,#f0e1c8 5px,#f0e1c8 8px);border-style:dashed}
+.pr-page .impl-dirty-grid .io-track small{display:block;font-size:10px;line-height:1.7}
+.pr-page .impl-dirty-grid .io-track .io-placeholder{grid-column:span 2;background:#f6f8f9;border-color:var(--line);border-style:dashed;color:var(--muted)}
+.pr-page .impl-dirty-grid .io-count{font-size:12px;line-height:1.9;color:var(--muted);margin:9px 0 0}
+.pr-page .impl-io-scale{font-size:11px;line-height:1.8;color:var(--muted);margin:15px 0}
+.pr-page .impl-dirty-reasons{display:grid;grid-template-columns:1fr 1fr;gap:25px}
+.pr-page .impl-announcement{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+@media(max-width:1000px){.pr-page .impl-clock-stage{grid-template-columns:minmax(230px,320px) minmax(0,1fr);column-gap:24px;padding:20px}.pr-page .impl-current h3{font-size:21px}.pr-page .impl-metrics{gap:8px 16px}.pr-page .impl-dirty-grid{column-gap:22px}}
+@media(max-width:760px){.pr-page .impl-clock-stage{grid-template-columns:1fr;grid-template-areas:'current' 'figure' 'controls' 'metrics' 'bits';padding:17px;gap:0}.pr-page .impl-current h3{min-height:67px;font-size:21px;line-height:1.55}.pr-page .impl-clock-figure{max-width:290px}.pr-page .impl-transport{justify-content:flex-start;margin:13px 0 8px}.pr-page .impl-metrics{margin:10px 0 13px;gap:8px 22px}.pr-page .impl-current{align-self:auto}.pr-page .impl-bits{font-size:11px;gap:5px 12px}.pr-page .impl-conditions{margin-bottom:17px}.pr-page .impl-dirty-grid{column-gap:15px}.pr-page .impl-dirty-grid header h4{font-size:15px}.pr-page .impl-dirty-action{font-size:13px;min-height:71px}.pr-page .impl-dirty-frames{gap:4px}.pr-page .impl-dirty-frame{padding:9px 2px;gap:4px;min-height:108px}.pr-page .impl-dirty-frame.is-selected{padding:8px 1px}.pr-page .impl-dirty-frame b{font-size:17px}.pr-page .impl-dirty-frame>span{font-size:10px;white-space:normal;line-height:1.7;text-align:center}.pr-page .impl-dirty-frame em{font-size:10px;min-height:34px;text-align:center}.pr-page .impl-dirty-grid .impl-metrics{gap:6px 13px}.pr-page .impl-dirty-grid .impl-metrics span{font-size:11px}.pr-page .impl-dirty-grid .impl-metrics b{font-size:21px}.pr-page .impl-dirty-grid .io-track>span{font-size:11px;padding:9px 3px}.pr-page .impl-dirty-grid .io-count{font-size:11px}.pr-page .impl-dirty-controls{margin:16px 0}.pr-page .impl-dirty-heading h3{font-size:21px}.pr-page .impl-dirty-reasons{grid-template-columns:1fr;gap:0}}
+@media(max-width:390px){.pr-page .impl-clock-stage{padding:14px 11px}.pr-page .impl-current h3{font-size:19px;min-height:61px}.pr-page .impl-transport{gap:5px}.pr-page .impl-transport button{font-size:11px;padding:9px}.pr-page :is(#clk-play,#dirty-play){width:82px;min-width:82px}.pr-page .impl-conditions{gap:6px 8px;font-size:11px}.pr-page .impl-conditions strong{padding-left:0;border:0;margin-left:0;flex-basis:100%}.pr-page .impl-dirty-grid{column-gap:12px}.pr-page .impl-dirty-frame b{font-size:16px}.pr-page .impl-dirty-frame small{font-size:10px}.pr-page .impl-dirty-grid .impl-metrics{gap:4px 8px}.pr-page .impl-dirty-grid .impl-metrics b{font-size:19px}.pr-page .impl-dirty-grid .io-track{gap:3px}.pr-page .impl-dirty-grid .io-track>span{font-size:10px}.pr-page .impl-dirty-grid .io-track small{font-size:10px}.pr-page .impl-dirty-grid header h4{font-size:14px}}
+
+/* The action and its reason remain alongside the scan, not in a second reading area. */
+.pr-page .impl-responsibility{display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:center;max-width:850px;margin:0 0 24px;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.pr-page .impl-responsibility>div{display:flex;flex-direction:column;gap:4px}.pr-page .impl-responsibility b{font-size:13px;font-weight:600;color:var(--green)}.pr-page .impl-responsibility span{font-size:12px;line-height:1.8;color:var(--muted)}
+.pr-page .impl-clock-stage{grid-template-areas:'figure current' 'figure controls' 'figure metrics' 'figure bits';background:#f7f9f8}
+.pr-page .impl-current h3{min-height:74px}.pr-page .impl-current #clock-reason{font-size:13px;line-height:1.85;color:var(--muted);min-height:76px;max-width:580px;margin:5px 0 7px}
+.pr-page .impl-current #clock-pending{font-size:11px;color:var(--green);margin:0}
+.pr-page .impl-bits{font-size:12px}.pr-page .impl-bits b{color:var(--amber)}.pr-page .impl-conditions{font-size:13px}
+@media(max-width:760px){.pr-page .impl-clock-stage{grid-template-areas:'current' 'figure' 'controls' 'metrics' 'bits'}.pr-page .impl-current #clock-reason{min-height:73px;font-size:12px}.pr-page .impl-responsibility{gap:10px}.pr-page .impl-responsibility b{font-size:12px}.pr-page .impl-responsibility span{font-size:11px}}

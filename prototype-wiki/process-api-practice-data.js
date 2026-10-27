@@ -161,7 +161,7 @@ const API_CODE_PRACTICE = [
     ],
     output: 'child: printf=37, fflush=-1, ferror=1, errno=9 (Bad file descriptor)\nparent: stdout still works',
     note: 'child 诊断来自 stderr，parent 行来自 stdout。检查 EBADF 和非零流错误标志，不依赖具体 errno 或 ferror 数字。',
-    conclusion: [['子进程文字的去向', 'printf 的文字先进入 stdout 缓冲，但不能经已关闭的描述符 1 写到标准输出目标。stderr 上的诊断是另一条输出通道。'], ['实际写入失败的证据', '本例 fflush 返回 -1，流错误标志非零，errno 为 EBADF。printf 返回字符数只表明接受了字符，不等于实际输出已完成。'], ['父进程与其他缓冲方式', '父进程的描述符 1 仍有效。若改变缓冲方式，失败也可能在 printf 时出现，而不必等到 fflush。']],
+    conclusion: [['子进程文字的去向', 'printf 的文字先进入 stdout 缓冲，但不能经已关闭的描述符 1 写到标准输出目标。stderr 上的诊断是另一条输出通道。'], ['fflush 返回的写入错误', '本例 fflush 返回 -1，流错误标志非零，errno 为 EBADF。printf 返回字符数只表明接受了字符，不等于实际输出已完成。'], ['父进程与其他缓冲方式', '父进程的描述符 1 仍有效。若改变缓冲方式，失败也可能在 printf 时出现，而不必等到 fflush。']],
   },
   {
     file: 'q8-pipe-children', title: '用管道连接两个子进程', api: 'pipe() · dup2() · waitpid()',

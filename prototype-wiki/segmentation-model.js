@@ -51,3 +51,50 @@ function buildSegmentAccess(address = 20, operation = 'read') {
 }
 
 globalThis.OSLabSegmentation = {segments: SEGMENT_DESCRIPTORS, operations: SEGMENT_OPERATIONS, buildAccess: buildSegmentAccess};
+// A separate physical-memory snapshot: B occupies part of the formerly free range.
+// Addresses and lengths remain in the same schematic units as the segment example.
+function buildSegmentCompaction() {
+  const state = {
+    capacity:64, request:16, paused:false, allocated:false, copied:0, updates:0,
+    blocks:[
+      {id:'os',name:'OS',start:0,size:8},
+      {id:'code',name:'A 代码',start:8,size:8,base:8},
+      {id:'heap',name:'A 堆',start:24,size:6,base:24},
+      {id:'b',name:'B 的段',start:30,size:14,base:30},
+      {id:'stack',name:'A 栈',start:48,size:8,base:56},
+    ],
+    memory:Array.from({length:64},()=>null),
+  };
+  for(const block of state.blocks) for(let offset=0;offset<block.size;offset++) state.memory[block.start+offset]={owner:block.id,offset,value:`${block.id}:${offset}`};
+  const frames=[];
+  const add=(label,title,text,mutate)=>{
+    if(mutate)mutate();
+    const free=[];
+    for(let address=0;address<state.capacity;){
+      if(state.memory[address]!==null){address++;continue;}
+      const start=address;while(address<state.capacity&&state.memory[address]===null)address++;
+      free.push({start,size:address-start});
+    }
+    frames.push({...structuredClone(state),free,totalFree:free.reduce((sum,block)=>sum+block.size,0),largestFree:Math.max(0,...free.map(block=>block.size)),label,title,text,stage:frames.length});
+  };
+  const relocate=(id,start)=>{
+    const block=state.blocks.find(entry=>entry.id===id);
+    const contents=structuredClone(state.memory.slice(block.start,block.start+block.size));
+    for(let offset=0;offset<block.size;offset++)state.memory[block.start+offset]=null;
+    for(let offset=0;offset<block.size;offset++)state.memory[start+offset]=contents[offset];
+    block.start=start;block.base=id==='stack'?start+block.size:start;
+    state.copied+=block.size;state.updates++;
+  };
+  add('申请新段','空闲总量足够，却没有足够大的连续块','可用区域分别为 8、4、8 单位。新段需要连续的 16 单位，三块分散的空闲区域不能直接拼成一个段。');
+  add('暂停进程','OS 暂停相关进程，准备移动内容','移动段时，需要保持内容与段设置一致。A、B 暂停后，OS 才开始复制并修改基址。',()=>{state.paused=true;});
+  add('移动 A 堆','复制 6 单位堆内容，更新堆基址','A 的堆由物理 24–29 移到 16–21；base 从 24 改为 16。段长仍为 6，虚拟地址仍为 16–21。',()=>relocate('heap',16));
+  add('移动 B 段','复制 14 单位内容，继续合并空闲区域','B 的段由 30–43 移到 22–35，基址改为 22。复制需正确处理源与目标区域重叠的情况。',()=>relocate('b',22));
+  add('移动 A 栈','移动栈后，得到连续的 20 单位空闲区','A 的栈由 48–55 移到 36–43；向下增长的栈以 44 为物理上边界，base 更新为 44。虚拟栈地址保持不变。',()=>relocate('stack',36));
+  add('分配新段','在整理出的空闲区中分配 16 单位','新段占物理 44–59，剩余 60–63 可用。整理没有增加空闲总量，而是让空闲区域相邻。',()=>{
+    const block={id:'new',name:'新段',start:44,size:16,base:44};state.blocks.push(block);
+    for(let offset=0;offset<16;offset++)state.memory[44+offset]={owner:'new',offset,value:null};state.allocated=true;
+  });
+  add('恢复运行','分配成功，但付出了暂停与复制的代价','本次整理复制 28 单位内容，更新 3 个已存在段的基址。OS 恢复进程后，硬件按新设置转换地址。',()=>{state.paused=false;});
+  return frames.map((frame,index)=>({...frame,complete:index===frames.length-1}));
+}
+globalThis.OSLabSegmentation.buildCompaction=buildSegmentCompaction;

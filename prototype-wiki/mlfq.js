@@ -6,13 +6,13 @@ function renderMlfqPage(root) {
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">CPU 虚拟化 / 调度</p>
         <h1 id="page-title">多级反馈队列 <span>MLFQ</span></h1>
-        <p class="lead">怎样依据已经使用的 CPU 时间，调整进程的优先级？</p>
+        <p class="lead">不知道任务还要运行多久，也要让短任务及时响应，让长任务继续推进。</p>
         <p class="definition">MLFQ 将就绪进程分入不同优先级的队列：高层优先，同层采用<a class="inline-link" href="round-robin.html">时间片轮转</a>。新进程先进入最高层，再根据累计 CPU 用量调整层级。</p>
         <p class="model-note">单核、零切换开销、三个固定队列；Q0 最高，Q2 最低。时间片长度为 1 / 2 / 4，本层配额为 2 / 4 / 8 个示意时间单位。I/O 固定延迟且可并行，无设备争用；不同操作系统的反馈规则和参数并不相同。</p>
         <p class="model-note"><a class="inline-link" href="mlfq-homework.html">多级反馈队列作业：程序说明与六题参考实践</a></p>
       </section>
       <section class="mlfq-demo" id="demo" aria-labelledby="demo-title">
-        <div class="section-heading"><div><p class="section-index">01 / FEEDBACK QUEUES</p><h2 id="demo-title">先选最高优先级的非空队列，再取队首进程</h2></div><p class="rr-clock">当前时刻 <strong id="mlfq-time">0</strong> / <span id="mlfq-total"></span></p></div>
+        <div class="section-heading"><div><h2 id="demo-title">先选最高优先级的非空队列，再取队首进程</h2></div><p class="rr-clock">当前时刻 <strong id="mlfq-time">0</strong> / <span id="mlfq-total"></span></p></div>
         <div class="rr-toolbar mlfq-toolbar">
           <div class="rr-transport" role="group" aria-label="播放控制">
             <button type="button" class="icon-button primary" id="mlfq-play" title="播放" aria-label="播放" aria-pressed="false"><span aria-hidden="true">▶</span></button>
@@ -43,7 +43,7 @@ function renderMlfqPage(root) {
         <div class="mlfq-comparison" id="mlfq-comparison" hidden><h3>整体优先级提升对 A 再次获得 CPU 的影响</h3><p>高层新任务从 t=4 陆续到达后，A 再次获得 CPU 的时刻：</p><dl><div><dt>不提升</dt><dd id="mlfq-without-boost"></dd></div><div><dt>每 12 单位提升</dt><dd id="mlfq-with-boost"></dd></div></dl><p>两次完整运行的 CPU 需求相同。新任务数量有限，关闭提升时 A 也最终完成；提前再次运行，不等于一定更早完成。</p></div>
       </section>
       <section class="rr-rules" id="rules" aria-labelledby="rules-title">
-        <div class="section-heading"><div><p class="section-index">02 / THE RULE</p><h2 id="rules-title">时间片长度决定轮换，累计配额决定降级</h2></div></div>
+        <div class="section-heading"><div><h2 id="rules-title">时间片长度决定轮换，累计配额决定降级</h2></div></div>
         <dl class="concepts rr-concepts">
           <div><dt>先比较层级，同层再轮转</dt><dd>新进程进入 Q0。只要更高层有就绪进程，就抢占低层运行者；本变体把被抢占者放回原层队首，保留本次时间片使用量和累计配额。</dd></div>
           <div><dt>时间片结束，不必立即降级</dt><dd>Q0 时间片长度为 1、累计配额为 2。第一次用完时间片，回 Q0 队尾；累计用满 2，才进入 Q1 并清零计数。Q2 不再下降，配额耗尽后仍在 Q2 轮转。</dd></div>
@@ -62,12 +62,16 @@ function renderMlfqPage(root) {
   homework.className = 'process-homework-link';
   root.querySelector('#rules').after(homework);
   const sceneNote = root.querySelector('#mlfq-scene-note');
+  const purpose = document.createElement('p');
+  purpose.id = 'mlfq-purpose';
+  purpose.className = 'cpu-takeaway';
   const conditions = document.createElement('p');
   conditions.className = 'mlfq-conditions';
   conditions.textContent = '单核，切换开销为零。时间片限制单次连续运行；配额累计进程在本层使用的 CPU 时间。';
   demo.querySelector('.rr-toolbar').before(sceneNote, conditions);
   const stagePanel = demo.querySelector('.mlfq-stage');
   stagePanel.before(root.querySelector('.mlfq-checkpoint'), root.querySelector('#mlfq-position'), root.querySelector('.mlfq-event'));
+  stagePanel.after(purpose);
   const ledger = document.createElement('details');
   ledger.className = 'mlfq-reference';
   ledger.innerHTML = '<summary>全部进程的状态、用量与等待时间</summary>';
@@ -122,6 +126,11 @@ function renderMlfqPage(root) {
     }
   };
   const prepareRun = () => {
+    purpose.textContent = {
+      feedback: '先给新任务较高优先级；持续消耗 CPU 的任务逐步下移。观察 B 到达时如何抢占低层任务：调度器只依据使用历史，不预知 B 是短任务。',
+      io: '分多次使用 CPU，也累计在同一份配额里。观察 B 每次 I/O 返回后的本层用量：主动让出 CPU 不会抹掉已经消耗的配额。',
+      boost: '高层任务不断到来，低层的 A 可能长期等待。打开整体提升，对照 A 再次运行的时刻，观察重新进入高层带来的机会。',
+    }[sceneId];
     root.querySelector('#mlfq-total').textContent = run.duration;
     root.querySelector('#mlfq-scene-note').textContent = scenarios[sceneId].description;
     position.max = run.duration;

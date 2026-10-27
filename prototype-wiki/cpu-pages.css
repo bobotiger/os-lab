@@ -1,0 +1,82 @@
+/* CPU teaching pages only: controls, state changes, and their consequences. */
+.cpu-next-topic { grid-column: 1 / -1; padding: 18px 0 24px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+.cpu-next-topic p { margin: 0 0 8px; max-width: 62em; font-size: 15px; line-height: 1.8; }
+.cpu-next-topic a { display: inline-block; padding: 8px 0; color: var(--accent); font-size: 15px; font-weight: 600; text-decoration: none; }
+.cpu-next-topic a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.cpu-next-topic a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.scheduling-workload { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; padding: 14px 0; border-block: 1px solid var(--line); margin-top: 22px; }
+.scheduling-workload p { margin: 0; font-size: 14px; line-height: 1.8; }
+.scheduling-workload .sjf-scenario-control { font-size: 14px; flex-wrap: wrap; }
+.scheduling-workload select { min-height: 44px; max-width: 100%; }
+.scheduling-workload small { color: var(--muted); font-size: 12px; }
+.cpu-caption { color: var(--muted); font-size: 13px; line-height: 1.8; margin: 14px 0; }
+.cpu-metric-reading { font-size: 15px; line-height: 1.8; margin: 16px 0; }
+.cpu-takeaway { border-left: 3px solid var(--accent); padding: 12px 18px; background: var(--accent-soft); font-size: 15px; line-height: 1.8; margin: 18px 0; }
+.cpu-reference { border-top: 1px solid var(--line); padding: 12px 0; }
+.cpu-reference summary { min-height: 32px; cursor: pointer; font-size: 14px; color: var(--muted); }
+.cpu-reference > p { font-size: 14px; line-height: 1.9; margin: 12px 0; }
+.cpu-comparison-scroll { overflow-x: auto; }
+.cpu-scroll-hint { display: none; }
+.cpu-comparison-table { width: 100%; min-width: 690px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.cpu-comparison-table th, .cpu-comparison-table td { text-align: left; padding: 18px 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.cpu-comparison-table thead th { color: var(--muted); font-size: 12px; font-weight: 500; }
+.cpu-comparison-table tbody th { width: 75px; }
+.cpu-comparison-table tbody th small { display: block; font-size: 11px; font-weight: 400; }
+.cpu-comparison-table td:nth-child(2) { width: 43%; }
+.cpu-comparison-table tr.is-current { background: #f5f7f6; }
+.cpu-mini-timeline { display: flex; gap: 2px; height: 46px; }
+.cpu-mini-timeline > span { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0; font-size: 14px; border-radius: 3px; }
+.cpu-mini-timeline small { font-size: 10px; }
+#cpu-job-metrics { font-size: 14px; line-height: 1.8; }
+.cpu-sharing { display: grid; grid-template-columns: 1fr 1.2fr 1fr; align-items: stretch; gap: 18px; margin: 20px 0; }
+.cpu-sharing > div { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px; gap: 6px; border-radius: 6px; }
+.cpu-sharing-process { background: transparent; border: 1px solid var(--line); }
+.cpu-sharing-process strong { font-size: 15px; }
+.cpu-sharing-core { background: var(--surface); border-bottom: 3px solid currentColor; }
+.cpu-sharing-core strong { font-size: 22px; }
+.cpu-sharing-core > span, .cpu-sharing-process > span { font-size: 13px; }
+.cpu-sharing > p { grid-column: 1/-1; margin: 0; text-align: center; font-size: 14px; line-height: 1.8; }
+.cpu-context-controls { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: 22px 0; }
+.cpu-context-controls button { min-height: 44px; padding: 8px 16px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; cursor: pointer; }
+.cpu-context-controls button[aria-pressed="true"] { border-bottom-color: var(--accent); color: var(--accent); }
+.cpu-context-controls button:hover { background: var(--surface); }
+.cpu-reference summary:focus-visible, .cpu-comparison-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.cpu-context-demo h3 { font-size: 17px; margin: 18px 0; }
+.cpu-context-layout { display: grid; grid-template-columns: 1fr 66px 1fr 66px 1fr; align-items: stretch; margin: 20px 0; }
+.cpu-saved, .cpu-registers { display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 20px; border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
+.cpu-saved { border-style: dashed; color: var(--muted); font-size: 13px; }
+.cpu-saved strong { font-size: 14px; color: var(--ink); font-weight: 500; }
+.cpu-saved h3 { margin: 0 0 6px; font-size: 16px; color: var(--ink); }
+.cpu-saved.has-context, .cpu-saved.is-transferring { border-style: solid; }
+.cpu-saved.is-transferring { border-color: var(--accent); background: var(--accent-soft); }
+.cpu-registers strong { font-size: 18px; }
+.cpu-registers span { font-size: 13px; }
+.cpu-context-arrow { align-self: center; text-align: center; font-size: 13px; color: var(--muted); }
+.cpu-context-arrow-icon { display: inline-block; margin-right: 3px; }
+.cpu-context-transfer { margin: 24px 0; padding: 20px 0; border-block: 1px solid var(--line); }
+.cpu-transfer-action { font-size: 17px; font-weight: 600; margin: 0; }
+.cpu-lde-context { grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+.cpu-lde-context .cpu-registers { align-self: center; min-height: 145px; text-align: center; }
+.cpu-cache-slots { display: flex; gap: 6px; margin: 12px 0; }
+.cpu-cache-slots span { flex: 1; min-height: 34px; display: grid; place-items: center; font-size: 13px; border: 1px dashed var(--line); border-radius: 3px; }
+.cpu-cache-slots .possibly-warm { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.cpu-cache-path { border-top: 1px solid var(--line); padding-top: 10px; font-size: 12px; line-height: 1.9; }
+.cpu-cache-path span { display: block; color: var(--muted); }
+.share-mechanism { display: flex; flex-direction: column; }
+.share-mechanism > section { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--line); min-width: 0; }
+.share-mechanism > section h4 { margin: 0 0 12px; font-size: 13px; color: var(--muted); }
+.share-result-legend { margin: 10px 0; }
+.cpu-practice-paths { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 24px 0; }
+.cpu-practice-paths > div { border-top: 2px solid var(--accent); padding: 14px 0; }
+.cpu-practice-paths p { font-size: 14px; margin-top: 8px; }
+@media (max-width: 700px) {
+  .cpu-scroll-hint { display: block; font-size: 12px; color: var(--muted); margin: 8px 0; }
+  .cpu-sharing { gap: 8px; }
+  .cpu-context-layout { grid-template-columns: 1fr; gap: 8px; }
+  .cpu-context-arrow { padding: 2px; }
+  .cpu-context-arrow-icon { transform: rotate(90deg); }
+  .cpu-saved, .cpu-registers { padding: 14px; }
+  .cpu-lde-context .cpu-registers { min-height: 100px; }
+  .cpu-practice-paths { grid-template-columns: 1fr; gap: 8px; }
+  .cpu-transfer-action { font-size: 16px; }
+}

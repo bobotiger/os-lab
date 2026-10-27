@@ -82,17 +82,18 @@ function renderProcessPage(root) {
         <section class="intro" aria-labelledby="page-title">
           <p class="eyebrow">CPU 虚拟化 / 进程</p>
           <h1 id="page-title">进程 <span>Process</span></h1>
-          <p class="lead">进程是程序的一次执行。</p>
-          <p class="definition">程序包含指令和相关数据，同一份程序可以由多个进程执行。操作系统分别记录每个进程的标识、执行位置、计算状态和所需资源。</p>
+          <p class="lead">CPU 虚拟化通过轮流执行，让多个程序共享 CPU，并继续各自的计算。</p>
+          <p class="definition">进程是程序的一次执行。程序包含指令和相关数据，同一份程序可以由多个进程执行。操作系统分别记录每个进程的标识、执行位置、计算状态和所需资源。</p>
         </section>
 
         <section class="state-section" id="states" aria-labelledby="states-title">
-          <div class="section-heading"><div><p class="section-index">01 / 状态变化</p><h2 id="states-title">一个进程读文件时，状态怎样变化？</h2></div></div>
-          <p class="section-description">本例采用单核 CPU，以进程为调度对象。文件读取属于输入/输出（I/O），本次读取需要等待数据返回。</p>
+          <div class="section-heading"><div><h2 id="states-title">一个进程读文件时，状态怎样变化？</h2></div></div>
+          <p class="section-description">一颗 CPU 轮流执行 A、B。A 读取文件并等待数据时，B 可以继续计算；数据返回后，A 仍需等待调度。</p>
           <div class="story">
             <div class="story-heading"><h3>从创建到读取完成，再退出</h3><div class="process-story-controls" role="group" aria-label="文件读取步骤控制"><button type="button" id="process-story-prev">上一步</button><button type="button" id="process-story-next">下一步</button><button type="button" id="process-story-return" hidden>从头查看读取过程</button></div></div>
             <div class="story-sequence-scroll" role="region" aria-label="文件读取步骤" tabindex="0"><ol class="story-steps">${DATA.story.map((step, index) => `<li><button type="button" data-step="${index}" aria-pressed="false"><span class="step-number">${String(index + 1).padStart(2, '0')}</span><span class="step-title">${step.title}</span><span class="step-state">${DATA.states.find(state => state.id === step.state).short}</span></button></li>`).join('')}</ol></div>
           </div>
+          <div id="process-sharing" class="cpu-sharing" aria-label="单核上的两个进程"></div>
           <div class="state-workbench">
             <aside class="state-detail" aria-label="当前步骤或状态说明" aria-live="polite" aria-atomic="true"></aside>
             <div class="diagram-surface">${stateDiagramSvg('desktop')}${stateDiagramSvg('mobile')}<p class="diagram-caption">五种基本状态的主要转换</p></div>
@@ -101,26 +102,43 @@ function renderProcessPage(root) {
         </section>
 
         <section class="pcb-section" id="pcb" aria-labelledby="pcb-title">
-          <div class="section-heading"><div><p class="section-index">02 / 保存与恢复</p><h2 id="pcb-title">进程暂停后，靠什么继续执行？</h2></div></div>
+          <div class="section-heading"><div><h2 id="pcb-title">进程暂停后，靠什么继续执行？</h2></div></div>
           <p class="section-description">进程控制块（PCB）是 OS 记录进程信息的数据结构。进程暂停时，保存的执行现场记录了执行位置和计算状态。</p>
-          <dl class="process-context"><div><dt>执行到哪里？</dt><dd>程序计数器（PC）<span>下一条待执行指令的地址</span></dd></div><div><dt>计算到什么状态？</dt><dd>寄存器现场<span>暂停时的 CPU 寄存器值</span></dd></div></dl>
+          <div class="cpu-context-demo"><div class="cpu-context-controls" role="group" aria-label="现场保存与恢复"><button type="button" data-context="0" aria-pressed="true">A 执行</button><button type="button" data-context="1" aria-pressed="false">切换到 B</button><button type="button" data-context="2" aria-pressed="false">恢复 A</button></div><div id="process-context-view" aria-live="polite" aria-atomic="true"></div><p class="cpu-caption">PC 记录下一条指令地址，R 示意一个通用寄存器；数值仅作示意。此处省略内核入口、内核上下文及返回过程，“受限直接执行”页展开这些环节。</p></div>
           <p class="section-description" id="context-switch">上下文切换先保存当前进程的现场，再恢复另一个进程的现场。之前的进程再次获得 CPU 时，才能从保存的位置继续执行。</p>
           <details class="process-reference"><summary>查看 PCB 的完整字段说明</summary><div class="pcb-reference-scroll" role="region" aria-label="PCB 典型字段" tabindex="0"><table class="pcb-table"><caption>PCB 中的典型信息，具体组织随操作系统实现而异</caption><thead><tr><th scope="col">字段</th><th scope="col">保存什么</th><th scope="col">为什么需要</th></tr></thead><tbody>${DATA.pcb.map(row => `<tr><th scope="row">${row.field}<span>${row.english}</span></th><td>${row.value}</td><td>${row.desc}</td></tr>`).join('')}</tbody></table></div></details>
         </section>
 
         <section class="related-section" id="related" aria-labelledby="related-title">
-          <div class="section-heading"><div><p class="section-index">03 / 延伸概念</p><h2 id="related-title">进一步理解</h2></div></div>
+          <div class="section-heading"><div><h2 id="related-title">进一步理解</h2></div></div>
           <details class="process-reference" id="thread"><summary>进程与线程有什么区别？</summary><p>线程是进程内的执行流。同一进程的线程通常共享地址空间，但各自保存程序计数器和寄存器值。现代系统通常以线程为调度单位，本页的单核示例以进程为调度对象。</p></details>
           <details class="process-reference" id="scheduling"><summary>调度怎样决定谁获得 CPU？</summary><p>调度从就绪的执行对象中选择一个，并为它分配 CPU。<a class="inline-link" href="${WIKI_PAGES.roundRobin.href}">时间片轮转</a>按就绪队列顺序分配 CPU；时间片耗尽时，未完成的进程回到队尾。</p></details>
           <details class="process-reference" id="virtual-memory"><summary>进程的地址空间与物理内存是什么关系？</summary><p>虚拟地址是进程使用的地址，虚拟地址空间是这些地址的集合。<a class="inline-link" href="${WIKI_PAGES.paging.href}">分页地址转换</a>根据映射关系得到物理地址。操作系统管理映射和访问权限，硬件在访问时执行相应检查。</p></details>
         </section>
-        <section class="related-section" id="practice" aria-labelledby="process-practice-title"><div class="section-heading"><div><p class="section-index">04 / 参考实践</p><h2 id="process-practice-title">用运行记录对照进程状态</h2></div></div><p class="process-homework-link"><a class="inline-link" href="process-homework.html">进程作业：计算与 I/O 等待</a></p><p class="process-homework-link"><a class="inline-link" href="cpu-virtualization-experiments.html">CPU 虚拟化实验：观察进程与 CPU 共享</a></p></section>
+        <section class="related-section" id="practice" aria-labelledby="process-practice-title"><div class="section-heading"><div><h2 id="process-practice-title">用运行记录对照进程状态</h2></div></div><p class="process-homework-link"><a class="inline-link" href="process-homework.html">进程作业：计算与 I/O 等待</a></p><p class="process-homework-link"><a class="inline-link" href="cpu-virtualization-experiments.html">CPU 虚拟化实验：观察进程与 CPU 共享</a></p></section>
         ${wikiRelated('process')}
       </main>
       <footer><span>OSLab / CPU 虚拟化</span><a href="#top">回到页首 ↑</a></footer>
     </div>`;
 
   const detail = root.querySelector('.state-detail');
+  const sharing = [
+    {cpu: 'B', a: '新建', b: '运行', note: 'A 正在创建，B 已在 CPU 上执行。'},
+    {cpu: 'B', a: '就绪', b: '运行', note: 'A 已准备好，但此刻 CPU 仍由 B 使用。'},
+    {cpu: 'A', a: '运行', b: '就绪', note: '调度器将 CPU 交给 A，B 暂停并等待。'},
+    {cpu: 'B', a: '阻塞', b: '运行', note: 'A 等待文件数据，CPU 转而执行 B。'},
+    {cpu: 'B', a: '就绪', b: '运行', note: 'I/O 完成只让 A 恢复运行资格；B 此刻仍在执行。'},
+    {cpu: 'A', a: '运行', b: '终止', note: '本例 B 完成后，调度器恢复 A，继续处理读到的数据。'},
+    {cpu: null, a: '终止', b: '终止', note: 'A、B 均已完成；本例没有其他就绪任务，CPU 空闲。'},
+  ];
+  const showContext = index => {
+    root.querySelectorAll('[data-context]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.context) === index)));
+    const cpu = index === 1 ? 'B' : 'A';
+    const title = ['A 的下一条指令与计算结果保存在 CPU 中', '先保存 A，再装入 B 的执行现场', '装回 A 的现场，继续尚未完成的计算'][index];
+    root.querySelector('#process-context-view').innerHTML = `<h3>${title}</h3><div class="cpu-context-layout"><div class="cpu-saved ${index > 0 ? 'has-context' : ''}"><span>A 的保存区</span><strong>${index > 0 ? 'PC = 12 · R = 7' : '尚未保存本次现场'}</strong></div><div class="cpu-context-arrow" aria-label="${index === 1 ? '保存 A 的现场' : index === 2 ? '恢复 A 的现场' : '正在运行'}"><span class="cpu-context-arrow-icon" aria-hidden="true">${index === 1 ? '←' : index === 2 ? '→' : '—'}</span>${index === 1 ? '保存' : index === 2 ? '恢复' : ''}</div><div class="cpu-registers process-${cpu.toLowerCase()}"><span>CPU · 正在执行 ${cpu}</span><strong>PC = ${cpu === 'A' ? 12 : 40}</strong><strong>R = ${cpu === 'A' ? 7 : 20}</strong></div><div class="cpu-context-arrow"><span class="cpu-context-arrow-icon" aria-hidden="true">${index === 1 ? '←' : index === 2 ? '→' : '—'}</span>${index === 1 ? '恢复' : index === 2 ? '保存' : ''}</div><div class="cpu-saved has-context"><span>B 的保存区</span><strong>PC = 40 · R = 20</strong></div></div><p class="cpu-caption">${index === 0 ? 'B 已有可恢复的现场，当前等待 CPU。' : index === 1 ? 'CPU 现在使用 B 的值；A 的值保留在内核管理的保存区中。' : '为突出保存与恢复，省略了两次切换之间 B 的指令执行；A 仍从 PC = 12、R = 7 继续，不会从程序开头重来。'}</p>`;
+  };
+  root.querySelectorAll('[data-context]').forEach(button => button.addEventListener('click', () => showContext(Number(button.dataset.context))));
+  showContext(0);
   let currentStory = 0;
   const select = (stateId, edgeIndex, storyIndex) => {
     root.querySelectorAll('[data-state]').forEach(node => node.setAttribute('aria-pressed', String(node.dataset.state === stateId)));
@@ -130,6 +148,10 @@ function renderProcessPage(root) {
     const transition = DATA.transitions[edgeIndex];
     const step = DATA.story[storyIndex];
     currentStory = step ? storyIndex : null;
+    const shared = sharing[storyIndex];
+    const sharedPanel = root.querySelector('#process-sharing');
+    sharedPanel.hidden = !shared;
+    if (shared) sharedPanel.innerHTML = `<div class="cpu-sharing-process process-a"><strong>进程 A</strong><span>${shared.a}</span></div><div class="cpu-sharing-core ${shared.cpu ? `process-${shared.cpu.toLowerCase()}` : ''}"><span>单核 CPU</span><strong>${shared.cpu ? `执行 ${shared.cpu}` : '空闲'}</strong></div><div class="cpu-sharing-process process-b"><strong>进程 B</strong><span>${shared.b}</span></div><p>${shared.note}</p>`;
     root.querySelector('#process-story-prev').disabled = currentStory === null || currentStory === 0;
     root.querySelector('#process-story-next').disabled = currentStory === null || currentStory === DATA.story.length - 1;
     root.querySelector('#process-story-return').hidden = currentStory !== null;

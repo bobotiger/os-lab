@@ -1,219 +1,102 @@
-const FAULT_ADDRESS = 10;
-const FAULT_PAGE = Math.floor(FAULT_ADDRESS / OSLabSimulation.PAGE_SIZE);
-const FAULT_OFFSET = FAULT_ADDRESS % OSLabSimulation.PAGE_SIZE;
-const FAULT_FRAME = Array.from({length: OSLabSimulation.DEMAND_FRAME_COUNT}, (_, frame) => frame).find(frame => !OSLabSimulation.demandPagingScene.some(entry => entry.frame === frame));
-const FAULT_STAGES = [
-  {label: '发起访问', state: '运行', mode: '用户态', title: '访问虚拟地址 10', text: '地址 10 属于页 2，页内偏移为 2。此时只是发起访问，尚未读取到目标数据。'},
-  {label: '检查页表', state: '运行', mode: '用户态', title: '页 2 的驻留位是 0', text: '驻留位记录页面当前是否在物理内存中。页 2 属于 A，且允许本次访问，但驻留位为 0，没有可用页框号，因此地址转换不能直接完成。'},
-  {label: '缺页异常', state: '运行', mode: '内核态', title: '硬件触发异常，进入内核处理', text: '缺页由这次内存访问触发，不是普通程序主动发起的系统调用。目标访问尚未完成，操作系统检查地址合法性并准备载入页面。'},
-  {label: '等待载入', state: '阻塞', mode: '等待 I/O', title: 'A 等待磁盘读取，让出 CPU', text: '操作系统使用空闲页框 1，发起页 2 的磁盘读取。A 因等待 I/O 而阻塞；CPU 可运行其他就绪进程，不必空等磁盘。'},
-  {label: '更新页表', state: '就绪', mode: '等待调度', title: '页 2 进入框 1，驻留位变为 1', text: '磁盘读取完成，操作系统建立页 2 → 框 1 的映射，并使 A 回到就绪状态。页面已经在内存，不代表 A 已经获得 CPU。'},
-  {label: '重新调度', state: '运行', mode: '用户态', title: 'A 再次获得 CPU，重试同一条指令', text: '从引发缺页的指令继续，仍然访问虚拟地址 10，而不是跳过这次访问。页号和偏移都没有改变。'},
-  {label: '访问完成', state: '运行', mode: '用户态', title: '重试成功，物理地址是 6', text: '现在页 2 已驻留在框 1。物理地址 = 1 × 4 + 2 = 6，这次重试不会再次触发缺页。'},
-];
-const FAULT_HIT_STAGES = [
-  {label: '发起访问', state: '运行', mode: '用户态', title: '同样访问虚拟地址 10', text: '对照场景中，页 2 起初已驻留在框 1。访问的仍是页 2、偏移 2。'},
-  {label: '检查页表', state: '运行', mode: '用户态', title: '驻留位为 1，直接找到框 1', text: '这次映射已经可用，无须磁盘读取，也不会因这次访问而进入缺页处理。'},
-  {label: '访问完成', state: '运行', mode: '用户态', title: '直接访问物理地址 6', text: '物理地址 = 1 × 4 + 2 = 6。进程没有因这次访问阻塞，缺页次数为 0。'},
-];
-
-function pageFaultFrame(scenario, stage) {
-  const stages = scenario === 'fault' ? FAULT_STAGES : FAULT_HIT_STAGES;
-  const resident = scenario === 'hit' || stage >= 4;
-  const pages = OSLabSimulation.demandPagingScene.map(entry => entry.page === FAULT_PAGE ? {...entry, resident, frame: resident ? FAULT_FRAME : null} : {...entry});
-  const allocation = {
-    pageTables: new Map([['A', pages.filter(entry => entry.resident).map(entry => ({page: entry.page, frame: entry.frame}))]]),
-    frameTable: Array.from({length: OSLabSimulation.DEMAND_FRAME_COUNT}, (_, frame) => {
-      const entry = pages.find(page => page.frame === frame);
-      return {frame, processId: entry ? 'A' : null, page: entry?.page ?? null};
-    }),
-  };
-  const complete = stage === stages.length - 1;
-  return {pages, allocation, resident, complete, faultCount: scenario === 'fault' && stage >= 2 ? 1 : 0, loading: scenario === 'fault' && stage === 3, translation: complete ? OSLabSimulation.translateAddress('A', FAULT_ADDRESS, allocation) : null, ...stages[stage]};
+(function(){
+'use strict';
+const M=OSLabPageFault,root=document.getElementById('root'),overview=M.overview();
+const controls=id=>`<div id="${id}-controls" class="pf-controls" role="group" aria-label="${id==='access'?'访问过程':'页框回收'}播放控制"><button type="button" data-action="prev" aria-label="上一步">←</button><button type="button" data-action="play" class="pf-primary" aria-label="播放" aria-pressed="false">▶</button><button type="button" data-action="next" aria-label="下一步">→</button><button type="button" data-action="reset" aria-label="重置">↺</button><select aria-label="播放速度"><option value="2200">慢速</option><option value="1300" selected>正常</option><option value="650">快速</option></select><span class="pf-position"></span></div>`;
+const metric=(label,value)=>`<div><dt>${label}</dt><dd>${value}</dd></div>`;
+root.innerHTML=`<div class="page pf-page" id="top"><a class="pf-skip" href="#pf-main">跳到正文</a>${wikiHeader('pageFault',[])}<main id="pf-main" tabindex="-1">
+<header class="pf-intro"><h1>缺页与按需分页</h1><p>进程的页面不必同时装入物理内存。<strong>访问尚未驻留的合法页面时，OS 先准备页面，再让原指令重试。</strong>按需分页由此支持大于物理内存的地址空间，部分访问则需要等待较慢的存储设备。</p><button type="button" id="pf-open-location" class="pf-text-button">容量示例：11 个有效页，4 个物理页框 →</button></header>
+<section id="access" aria-labelledby="pf-access-title"><div class="pf-section-heading"><div><h2 id="pf-access-title">先调入页面，再完成这次读取</h2><p id="pf-condition">A 的页 1 未驻留，内容保存在交换区。</p></div><div class="pf-request"><span>进程 A · 同一条读取指令</span><strong>读取 VA 70</strong><small>页 1 ＋ 偏移 6 · 每页 64 B</small></div></div>
+<div id="pf-supply" class="pf-choices" role="group" aria-label="调入前的页框条件"><button type="button" data-supply="free" aria-pressed="true">有空闲页框</button><button type="button" data-supply="clean" aria-pressed="false">回收干净页</button><button type="button" data-supply="dirty" aria-pressed="false">先写回脏页</button></div>
+<div class="pf-access-toolbar">${controls('access')}<dl id="pf-counts" class="pf-counts"></dl></div><div id="pf-stages" class="pf-stages" role="group" aria-label="处理环节"></div>
+<div id="pf-lab" class="pf-lab"><div class="pf-access-context"><div id="pf-access-log" class="pf-log" aria-live="polite" aria-atomic="true"><span id="pf-actor"></span><h3 id="pf-action"></h3><p id="pf-reason"></p></div><aside class="pf-process"><div class="pf-process-heading"><h3>进程 A</h3><span id="pf-process-state"></span></div><div class="pf-result"><span>原读取的结果</span><strong id="pf-register">尚未取得</strong><small id="pf-read-state">原指令尚未完成</small></div><dl id="pf-bits" class="pf-bits"></dl><div class="pf-cpu"><span>CPU 当前运行</span><strong id="pf-cpu"></strong><p id="pf-other-work"></p></div></aside></div>
+<figure class="pf-storage" id="pf-storage"><div class="pf-storage-heading"><h3>物理内存</h3><span>4 个页框 · 每框 64 B</span></div><div class="pf-frame-row" id="pf-frames">${Array.from({length:4},(_,i)=>`<div class="pf-block" id="pf-frame-${i}" data-frame="${i}" data-bytes="64"><span class="pf-block-address">页框 ${i}</span><div class="pf-page-window"><div class="pf-page-content"><b></b><small></small></div></div></div>`).join('')}</div>
+<div class="pf-transfer-band"><p id="pf-transfer-note"></p></div><svg id="pf-transfer" class="pf-transfer" aria-hidden="true"><defs><marker id="pf-arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="context-stroke"/></marker></defs><line id="pf-transfer-line" marker-end="url(#pf-arrow)"/><g id="pf-transfer-dot"><rect x="-30" y="-14" width="60" height="28" rx="4"/><text x="0" y="4" text-anchor="middle"></text></g></svg>
+<div class="pf-disk-row">${[0,2].map((b,i)=>`<div class="pf-block pf-disk-block" id="pf-disk-${b}" data-block="${b}" data-bytes="64" style="grid-column:${i+2}"><span class="pf-block-address">交换块 ${b}</span><b></b><small></small></div>`).join('')}</div><div class="pf-storage-heading pf-disk-heading"><h3>磁盘交换区</h3><span>显示与本次读取有关的页块</span></div><figcaption id="pf-storage-note"></figcaption></figure></div>
+<div class="pf-access-bottom"><p id="pf-access-result"></p></div>
+<details id="pf-details" class="pf-details"><summary>页表、TLB 与原指令</summary><div class="pf-detail-columns"><div><h3>同一个虚拟地址，重新执行原指令</h3><dl id="pf-instruction" class="pf-detail-metrics"></dl><p class="pf-note">页表更新后，A 先变为就绪。重新获得 CPU 才会重试；此时若 TLB 仍未命中，硬件重新查表并填入转换。</p><label class="pf-check"><input id="pf-fine" type="checkbox">逐步查看 TLB 查找、填入与重试</label></div><div><h3>硬件检查，OS 准备页面</h3><p>硬件检查映射与权限；合法页未驻留时，触发缺页异常。OS 查找后备位置、取得页框并发起 I/O，完成后更新驻留状态和页框号。</p><p class="pf-note">本例由硬件管理 TLB，一次 I/O 分为 3 个示意时段，不对应真实耗时。未驻留的目标页已有交换区副本。程序文件也可提供后备内容；首次使用的匿名页可由 OS 准备零页，缺页不总是读磁盘。</p><dl id="pf-translation" class="pf-detail-metrics"></dl></div></div></details>
+<details id="pf-conditions" class="pf-details"><summary>比较已驻留、无效页面与权限限制</summary><div class="pf-choices" role="group" aria-label="目标页条件"><button type="button" data-kind="absent" aria-pressed="true">合法，未驻留</button><button type="button" data-kind="resident" aria-pressed="false">合法，已驻留</button><button type="button" data-kind="invalid" aria-pressed="false">无效虚拟页</button><button type="button" data-kind="denied" aria-pressed="false">禁止读取</button></div><div class="pf-condition-toggles"><label class="pf-check" id="pf-cached-label" hidden><input id="pf-cached" type="checkbox">TLB 已有该转换</label><label class="pf-check" id="pf-ready-label"><input id="pf-ready" type="checkbox" checked>等待 I/O 时，有其他就绪进程 B</label></div><p id="pf-condition-note" class="pf-note"></p></details>
+</section>
+<section id="pool" class="pf-pool" aria-labelledby="pf-pool-title"><header class="pf-section-heading"><div><h2 id="pf-pool-title">提前回收，减少等待空闲页框</h2><p>页面调入之前必须取得页框。OS 可以保留一些空闲页框，避免每次用尽后才开始回收。</p></div><button type="button" id="pf-open-pool" class="pf-text-button" aria-expanded="false" aria-controls="pf-pool-body">比较两种回收时机 ↓</button></header><div id="pf-pool-body" hidden>
+<div class="pf-pool-intro"><p>两组都有 8 个页框，初始空闲 4 个，接收相同的 8 次页框申请。</p><div class="pf-choices" role="group" aria-label="页框请求到达方式"><button type="button" data-pattern="spaced" aria-pressed="true">请求间隔到达</button><button type="button" data-pattern="burst" aria-pressed="false">请求集中到达</button></div></div><p id="pf-arrival-note" class="pf-note"></p>${controls('pool')}
+<div id="pf-pool-log" class="pf-log" aria-live="polite" aria-atomic="true"><h3 id="pf-pool-action"></h3><p id="pf-pool-reason"></p></div><div class="pf-pool-comparison">${['ondemand','background'].map(mode=>`<section class="pf-pool-case" data-mode="${mode}"><header><h3>${mode==='background'?'按水位提前回收':'用尽后才回收'}</h3><p>${mode==='background'?'低于 2 页启动，达到 4 页停止。':'请求到达且没有空闲页框时启动。'}</p></header><div class="pf-pool-readout"><strong class="pf-free-count"></strong><span>个空闲页框</span><b class="pf-worker"></b></div><div class="pf-gauge"><div class="pf-pool-frames"></div>${mode==='background'?'<span class="pf-watermark pf-low">低 2</span><span class="pf-watermark pf-high">高 4</span>':''}</div><p class="pf-pool-change"></p><ol class="pf-request-list" aria-label="八次页框申请的状态"></ol><dl class="pf-pool-counts"></dl></section>`).join('')}</div>
+<p class="pf-pool-legend">每格一个页框，按空闲与占用数量归组；请求标记：灰色待到达，橙色等待，绿色已取得页框。</p><div id="pf-pool-conclusion" class="pf-takeaway"></div><details class="pf-details"><summary>回收速度与本例条件</summary><p>每个示意时段先分配页框，再完成至多 1 页的回收；新释放的页框供下一时段使用。候选页面已有一致后备副本，无需写回。这些时段表示事件顺序，不对应真实耗时。</p><p>两组只比较取得页框之前的等待，之后仍需准备目标页。后台回收到高水位会保留储备，因此可能比用尽后回收更多页面；集中请求也可能消耗掉这些储备。</p><p>批量回收还便于合并写回操作。具体选择哪些页会影响后续缺页次数，见 <a href="replacement.html">页面置换策略</a>。</p></details></div></section>
+<nav class="pf-footer" aria-label="相关知识"><div><a href="tlb.html">TLB（快表）</a><a href="replacement.html">页面置换策略</a></div><a href="#top">回到页首 ↑</a></nav></main>
+<dialog id="pf-location" class="pf-location" aria-labelledby="pf-location-title"><header><div><h2 id="pf-location-title">11 个有效页，只有 4 个驻留</h2><p>有效表示属于进程的地址空间；驻留表示当前已在物理内存中。</p></div><button type="button" id="pf-close-location" aria-label="关闭页面分布">×</button></header><div class="pf-location-racks"><section><h3>物理内存 <small>4 个页框</small></h3><div id="pf-memory-overview" class="pf-overview-grid"></div></section><section><h3>交换区 <small>8 个页块</small></h3><div id="pf-swap-overview" class="pf-overview-grid"></div></section></div><div id="pf-location-result" class="pf-location-result" aria-live="polite"></div><p class="pf-note">每个方块为 64 B，两侧尺度相同。本图记录页面的当前所在位置，已驻留页可能保留的后备副本未计入。</p><p>后备存储保存暂时不驻留的内容。CPU 访问页面中的数据前，仍要先把页面准备到物理内存中。</p></dialog></div>`;
+root.querySelector('.site-header nav')?.remove();document.title='缺页与按需分页 · OSLab';
+const $=s=>root.querySelector(s),$$=s=>[...root.querySelectorAll(s)],text=(s,t)=>$(s).textContent=t;
+let kind='absent',supply='free',cached=false,otherReady=true,fine=false,at=0,pattern='spaced',pt=0,story=[],poolPair={},poolLength=0,overviewKey='A:1';
+const controllers=[],motion=createPageFaultMotion(root);
+function pauseAll(){controllers.forEach(c=>c.pause());}
+function controller(id,getLength,getIndex,change){const host=$('#'+id+'-controls');let timer=null;const b=a=>host.querySelector('[data-action="'+a+'"]');function update(){const end=getIndex()===getLength()-1;b('prev').disabled=getIndex()===0;b('next').disabled=end;b('play').setAttribute('aria-pressed',String(timer!==null));b('play').setAttribute('aria-label',timer!==null?'暂停':end?'重新播放':'播放');b('play').textContent=timer!==null?'Ⅱ':end?'↻':'▶';host.querySelector('.pf-position').textContent=(getIndex()+1)+' / '+getLength();$('#pf-'+id+'-log').setAttribute('aria-live',timer===null?'polite':'off');}function pause(settle=false){clearInterval(timer);timer=null;if(settle)motion.settle(id);else motion.pause(id);update();}function seek(n){pauseAll();change(Math.max(0,Math.min(getLength()-1,n)));update();}function advance(){change(getIndex()+1);if(getIndex()>=getLength()-1)pause(true);else update();}function play(){pauseAll();if(getIndex()===getLength()-1)change(0);motion.resume(id,Number(host.querySelector('select').value));timer=setInterval(advance,Number(host.querySelector('select').value));update();}host.addEventListener('click',e=>{const a=e.target.closest('[data-action]')?.dataset.action;if(a==='play'){if(timer===null)play();else pause();}if(a==='prev')seek(getIndex()-1);if(a==='next')seek(getIndex()+1);if(a==='reset')seek(0);});host.querySelector('select').addEventListener('change',()=>{if(timer!==null){pause();play();}});const c={pause,seek,update};controllers.push(c);return c;}
+function makeStory(){const all=M.access({kind,supply,cached,otherReady}).snapshots;if(fine)return all;const retained=['request','fault','victim','invalidate','reserve','reclaim','write-start','write-wait','write-done','read-start','read-wait','read-done','map','resume','translated','access','exception'];return all.filter(s=>retained.includes(s.phase)||kind!=='absent'&&['pte','hit'].includes(s.phase));}
+function groupFor(s){if(['request','miss','pte','fault','exception'].includes(s.phase))return 'check';if(['victim','invalidate','reserve','reclaim'].includes(s.phase))return 'frame';if(s.phase.startsWith('write'))return 'write';if(s.phase.startsWith('read'))return 'read';return 'retry';}
+function describe(s){const data={
+request:['A 准备读取 VA 70',kind==='absent'?'页 1 的内容在交换块 0。原读取需要的值是 42，但页面还没有驻留。':kind==='resident'?'页 1 已驻留在页框 1，可以按映射读取物理内存。':'先检查地址是否有效，以及当前访问是否被允许。'],
+miss:['TLB 未命中，转而查页表','缺少缓存转换并不等于缺页，还要查看页表中的有效性、权限和驻留状态。'],
+pte:['读取页表项',!s.pages[1].valid?'V = 0：该虚拟页无效。':!s.pages[1].allowed?'页面有效，但读取权限被禁止。':s.pages[1].present?'V = 1、P = 1：页面合法且已驻留。':'V = 1、P = 0：页面合法，但未驻留。'],
+fault:['合法页未驻留，硬件触发缺页异常','控制转入 OS 的缺页处理程序。原读取尚未完成，OS 需要先为页 1 准备物理页框。'],
+reserve:['OS 保留空闲页框 1','该页框将用于 A 的页 1；内容还未调入，驻留位仍是 P = 0。'],
+victim:['内存已满，先选定一个回收页','本次选定 B 的页 2，它占用页框 1。目标仍是 A 的页 1，尚未开始调入。'],
+invalidate:['撤销 B 页 2 的驻留映射','OS 同时使旧的 TLB 转换失效，防止继续沿旧映射访问即将复用的页框。'],
+reclaim:['页框 1 已可复用',supply==='dirty'?'B 页 2 的修改已经写回磁盘。现在可以把页框留给 A 的页 1。':'B 页 2 已有一致的后备副本，直接回收即可，无需写回。'],
+'write-start':['先写回 B 页 2 的修改','页框中的内容标记是 77，磁盘副本仍为 22。写回完成前，不能覆盖这份修改。'],
+'write-wait':['A 仍在等待写回完成',otherReady?'磁盘处理写回时，CPU 运行其他就绪进程 B；A 的原读取仍未完成。':'当前没有其他就绪进程，CPU 暂时空闲；A 仍在等待 I/O。'],
+'write-done':['写回完成，磁盘副本更新为 77','修改已经保存。下一步回收页框，再读入 A 的目标页。'],
+'read-start':['OS 从交换块 0 读入整页','A 阻塞等待 I/O。读入的是整个 64 B 页，原指令只需要其中偏移 6 的内容。'],
+'read-wait':['页面仍在调入，A 继续等待',otherReady?'CPU 可继续运行 B。页面传输尚未结束，A 不能提前取得读取结果。':'没有其他就绪进程可运行，CPU 暂时空闲。页面传输仍在继续。'],
+'read-done':['内容已经读入，驻留映射尚待更新','页 1 已进入页框 1；此时页表仍是 P = 0，原指令也还没有读到 42。'],
+map:['OS 更新映射，A 变为就绪','页表改为 P = 1、页框号 1。A 需要重新获得 CPU，原读取尚未完成。'],
+resume:['A 重新获得 CPU，重试原指令','程序仍读取 VA 70，页号和偏移保持不变。此时目标页已经驻留。'],
+'retry-miss':['重试时，TLB 仍然未命中','页表已更新，而缓存转换尚未填入。硬件再次读取页表，不需要再次调页。'],
+'retry-pte':['再次查表，取得页框号 1','驻留位现在是 P = 1。此次查表可以得到可用的地址转换。'],
+fill:['把页 1 → 页框 1 填入 TLB','缓存转换已就绪，接下来重新执行原读取。'],
+retry:['再次执行同一条读取','内部重试没有增加程序要读取的数据次数，原指令仍未完成。'],
+hit:['TLB 命中并通过权限检查','取得页框号 1，接下来与偏移 6 组合成物理地址。'],
+translated:['物理地址已生成，数据尚未读取','PA = 1 × 64 + 6 = 70。地址转换完成，接下来才访问目标数据。'],
+access:['原读取完成，A 取得 42',s.faults?'页面位置与处理过程由系统管理；程序仍完成同一条读取。调入和可能的写回增加了等待。':'直接从驻留页读取，不需要页面调入。TLB 未命中时，查表即可取得转换。'],
+exception:[s.exception==='invalid'?'虚拟页无效，转入异常处理':'读取被禁止，转入保护异常处理','OS 根据异常原因处置。此路径没有调入页面，也没有完成目标读取。']
+};return data[s.phase];}
+function renderAccess(){const s=story[at],t=s.pages[1],info=describe(s);$('#pf-lab').dataset.phase=s.phase;$('#pf-lab').dataset.rawTick=s.tick;
+text('#pf-access-title',kind==='absent'?'先调入页面，再完成这次读取':kind==='resident'?'页面已驻留，查到映射即可读取':'先检查访问是否合法');text('#pf-condition',kind==='absent'?(supply==='free'?'初始：A 的页 1 未驻留，内容保存在交换区。':supply==='clean'?'初始：页框已用满；B 页 2 是干净页，后备副本与内存一致。':'初始：页框已用满；B 页 2 是脏页，修改尚未写回。'):kind==='resident'?'初始：目标页面已在物理内存。':kind==='invalid'?'同一个地址，改为无效虚拟页。':'同一个地址，页面已驻留但禁止读取。');$('#pf-supply').hidden=kind!=='absent';
+text('#pf-actor',s.actor==='A'?'进程 A':s.actor==='硬件'?'硬件':s.actor==='OS'?'操作系统':otherReady?'磁盘 I/O · B 运行':'磁盘 I/O');text('#pf-action',info[0]);text('#pf-reason',info[1]);$('#pf-access-log').classList.toggle('is-error',Boolean(s.exception));
+const groups=[...new Set(story.map(groupFor))],current=groupFor(s),labels={check:'检查映射',frame:'准备页框',write:'写回修改',read:'调入页面',retry:'继续读取'};$('#pf-stages').innerHTML=groups.map(g=>`<button type="button" data-stage="${g}" aria-pressed="${g===current}">${labels[g]}</button>`).join('');
+text('#pf-process-state',s.processState);$('#pf-process-state').dataset.state=s.processState;text('#pf-register',s.register===null?'尚未取得':String(s.register));text('#pf-read-state',s.completed?'原指令已完成':s.exception?'原读取未完成：访问被拒绝':'原指令尚未完成');$('.pf-result').classList.toggle('is-complete',Boolean(s.completed));
+$('#pf-bits').innerHTML=metric('有效 V',Number(t.valid))+metric('驻留 P',t.valid?Number(t.present):'—');text('#pf-cpu',s.cpu==='空闲'?'暂时空闲':s.cpu==='B'?'进程 B':s.mode==='内核态'?'OS 处理程序':'进程 A');text('#pf-other-work',s.completed?'原指令已完成':s.bWork?'B 已完成 '+s.bWork+' 个示意计算时段':s.cpu==='空闲'?'没有其他就绪进程':s.cpu==='B'?'A 等待重新获得 CPU':'本次读取的程序位置保持不变');
+s.frames.forEach(f=>{const node=$('#pf-frame-'+f.frame);node.className='pf-block is-'+f.state+(f.frame===1?' is-target':'');node.dataset.state=f.state;node.dataset.page=f.page??'';node.querySelector('b').textContent=f.page?f.page.replace(':',' · 页 '):f.state==='free'?'空闲':'已保留';node.querySelector('small').textContent=f.page==='A:1'?(f.state==='loaded'?'待更新映射':'偏移 6：42'):f.page==='B:2'?'内容标记 '+f.value:f.page?'已驻留':f.state==='free'?'可分配':'等待目标页';});
+s.disk.forEach(d=>{const node=$('#pf-disk-'+d.block);node.hidden=d.block===2&&(kind!=='absent'||supply==='free');node.className='pf-block pf-disk-block'+(d.page?'':' is-free');node.dataset.page=d.page??'';node.querySelector('b').textContent=d.page?d.page.replace(':',' · 页 '):'空闲';node.querySelector('small').textContent=d.page==='A:1'?'偏移 6：'+d.value:d.page?'内容标记 '+d.value:'没有内容';});
+const io=s.io,activeIO=/^(read|write)-(start|wait|done)$/.test(s.phase);text('#pf-transfer-note',activeIO?(io.kind==='read'?'读入 64 B':'写回 64 B')+' · '+io.progress+' / '+io.total:s.phase==='map'?'页表已更新':s.phase==='translated'?'PA 70 → 页框 1，偏移 6':s.completed?'从物理内存读取完成':'');$('#pf-transfer-note').dataset.kind=activeIO?io.kind:'';if(activeIO)$('#pf-transfer-note').innerHTML='<span>'+(io.kind==='read'?'读入 64 B':'写回 64 B')+'</span><small>时段 '+io.progress+' / '+io.total+'</small>';
+text('#pf-storage-note',supply==='dirty'&&kind==='absent'?(s.writeDone?'B 页 2 的修改已经写回。后备副本保留了 77，页框可用于其他页面。':'B 页 2 在内存中的内容标记为 77，后备副本为 22；脏页的修改需要先写回。'):'每个方块都是 64 B。页面调入后，磁盘后备副本仍可保留。');
+$('#pf-counts').innerHTML=metric('缺页次数',s.faults)+metric('读入完成',s.readDone)+metric('写回完成',s.writeDone)+metric('目标读取',s.completed);
+text('#pf-access-result',s.completed?(s.faults?'完成同一条读取：'+s.readDone+' 次调入'+(s.writeDone?' ＋ '+s.writeDone+' 次写回':'')+'，最后从内存取得 42。':'页面 I/O 为 0，完成 1 次目标读取。'):s.exception?'异常路径未访问目标数据。':s.phase==='map'?'P 已变为 1，但原读取仍未完成。':activeIO?(io.complete?'页面 I/O 已完成，原读取尚未完成。':otherReady?'A 等待页面 I/O 时，B 可以继续运行。':'当前没有其他就绪进程，CPU 暂时空闲。'):'页面准备与目标读取分别计数。');
+$('#pf-instruction').innerHTML=metric('原指令位置 PC',s.pc)+metric('内部重试',s.retries)+metric('目标物理地址',s.physical??'—')+metric('目标读取完成',s.completed);
+$('#pf-translation').innerHTML=metric('页表读取',s.tableReads)+metric('TLB 中的转换',s.cache?'页 1 → 框 1':'无')+metric('当前页框号',t.present?t.frame:'—')+metric('读取权限',t.valid?(t.allowed?'允许':'禁止'):'无效页');
+$$('button[data-kind]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.kind===kind)));$$('[data-supply]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.supply===supply)));$('#pf-cached-label').hidden=kind!=='resident';$('#pf-ready-label').hidden=kind!=='absent';
+text('#pf-condition-note',kind==='absent'?'缺页：页面合法但未驻留。此例内容来自交换区，OS 调入后重试。':kind==='resident'?'TLB 未命中不等于缺页：页面已驻留时，只需查表并缓存转换，无需磁盘 I/O。':'无效地址或权限违规需要异常处置；把页面调入内存不能消除这些问题。');motion.access(s,at,story,Number($('#access-controls select').value));drawTransfer();
 }
-
-function faultDemandDiagram() {
-  const scene = OSLabSimulation.demandPagingScene;
-  return `<p class="pt-copy">拥有一个虚拟页，不等于它的数据此刻已在物理内存。A 有五个虚拟页，而本例物理内存只有四个页框；按需分页先保留地址空间，只在需要时准备相应页面。</p><figure class="pf-demand"><figcaption><strong>A 的虚拟地址空间 · 页 2 起初未驻留</strong><span>驻留位描述当前是否在内存，不决定地址是否合法。</span></figcaption><div class="pf-page-strip">${scene.map(entry => `<div class="${entry.resident ? 'pf-resident' : 'pf-nonresident'}${entry.page === FAULT_PAGE ? ' pf-target' : ''}"><strong>页 ${entry.page}</strong><span>VA ${entry.page * 4}–${entry.page * 4 + 3}</span><small>${entry.resident ? `已驻留 · 框 ${entry.frame}` : '尚未驻留'}</small></div>`).join('')}</div><p class="pf-demand-total">起初 ${scene.filter(entry => entry.resident).length} 页驻留；框 ${FAULT_FRAME} 空闲。访问 VA ${FAULT_ADDRESS} 时，页 ${FAULT_PAGE} 才需要载入；其他未访问的页不因这次访问自动载入。</p></figure>
-    <div class="pf-trigger"><strong>请求 VA 10 · 页 2 / 偏移 2</strong><span>地址属于 A、访问被允许</span><span>但驻留位为 0</span><p>硬件无法完成这次访问，触发缺页异常。OS 再检查地址空间与访问权限，不能仅凭驻留位为 0 就决定读磁盘。</p></div>
-    <div class="pf-decisions"><section><h3>已驻留，且本次访问被允许</h3><p>按现有映射完成地址转换，再访问数据；不因本次访问进入载入流程。</p></section><section><h3>合法非驻留，已有磁盘副本</h3><p>找到空闲页框，读取页 2，建立映射，等 A 重新获得 CPU 后重试。</p></section><section><h3>地址不合法，或本次访问不被允许</h3><p>不能套用“载入就能修好”的流程；由 OS 按相应的错误或保护异常规则处理。</p></section></div><p class="pt-caption">页表中驻留与权限信息的具体编码随体系结构变化。匿名页首次访问可能按需提供零页；写时复制等也可能触发故障处理。并非所有缺页都需要磁盘读取；页 2 的载入需要读取它已有的磁盘副本。</p>`;
-}
-
-function renderPageFaultPage(root) {
-  root.innerHTML = `<div class="page fault-page" id="top">
-    ${wikiHeader('pageFault', [{href: '#why', title: '为何按需'}, {href: '#demo', title: '缺页流程'}, {href: '#rules', title: '关键区别'}])}
-    <main>
-      <section class="intro" aria-labelledby="page-title">
-        <p class="eyebrow">内存虚拟化 / 按需载入</p>
-        <h1 id="page-title">缺页与按需分页 <span>Page Fault</span></h1>
-        <p class="lead">访问被允许但目标页不在物理内存时，先准备页面，再重试原指令。</p>
-        <p class="definition">驻留表示页面当前已存放在物理内存中。<a class="inline-link" href="${WIKI_PAGES.paging.href}">分页地址转换</a>需要可用的页框映射；本例目标页合法且允许访问，却尚未驻留，因此硬件触发缺页异常。操作系统准备好页面后，进程重新获得 CPU，再重试原指令。按需分页使页面在需要时才占用物理页框。</p>
-        <p class="pt-copy"><a class="inline-link" href="tlb.html">TLB</a> 缓存地址转换，<a class="inline-link" href="small-page-tables.html">多级页表</a>组织映射并可减少稀疏地址空间的页表存储，按需分页负责在访问需要时准备尚未驻留的页面。TLB 未命中可以查表后直接访问，不一定触发缺页；未映射或不允许访问的地址，也不能一概载入后重试。</p>
-        <p class="model-note">A 有 5 个虚拟页，物理内存有 4 个页框，页大小为 4 个示意地址单位。页 2 属于 A，且本次访问被允许。未驻留时，它已有磁盘副本，框 1 空闲；驻留对照中，它起初就在框 1。执行阶段表示事件顺序，不表示实际耗时。</p>
-      </section>
-      <section class="rr-rules" id="why"><p class="section-index">01 / RESIDENCY IS NOT VALIDITY</p><h2>地址合法性、访问权限与页面驻留是不同条件</h2>${faultDemandDiagram()}</section>
-      <section class="paging-demo pt-section" id="demo" aria-labelledby="demo-title">
-        <div class="section-heading"><div><p class="section-index">02 / DEMAND PAGING</p><h2 id="demo-title">同一次访问，暂停后怎样继续？</h2></div><p>进程 A / 固定访问</p></div>
-        <div class="fault-toolbar">
-          <div class="rr-transport" role="group" aria-label="缺页演示控制">
-            <button type="button" class="icon-button primary" id="fault-play" aria-label="播放" title="播放" aria-pressed="false"><span aria-hidden="true">▶</span></button>
-            <button type="button" class="icon-button" id="fault-step" aria-label="下一步" title="下一步"><span aria-hidden="true">↦</span></button>
-            <button type="button" class="icon-button" id="fault-reset" aria-label="重新开始" title="重新开始"><span aria-hidden="true">↺</span></button>
-          </div>
-          <fieldset class="fault-scenarios"><legend>页 2 的初始状态</legend><div><label><input type="radio" name="fault-scenario" value="fault" checked><span>页未驻留</span></label><label><input type="radio" name="fault-scenario" value="hit"><span>页已驻留</span></label></div></fieldset>
-        </div>
-        <dl class="fault-request"><div><dt>虚拟地址</dt><dd>${FAULT_ADDRESS}</dd></div><div><dt>页号</dt><dd>${FAULT_PAGE}</dd></div><div><dt>页内偏移</dt><dd>${FAULT_OFFSET}</dd></div><div><dt>物理地址</dt><dd id="fault-physical">—</dd></div></dl>
-        <div class="paging-stages fault-stages" id="fault-stages" role="group" aria-label="访问阶段"></div>
-        <div class="pf-execution"><div><span>本次访问 · VA 10 始终不变</span><strong id="fault-access-state"></strong><small id="fault-retry-note"></small></div><div><span>CPU 与 A</span><strong id="fault-process-state"></strong><small id="fault-process-mode"></small><small id="fault-cpu-note"></small></div><div><span>页 2 与映射</span><strong id="fault-page-state"></strong><small id="fault-page-note"></small></div></div>
-        <div class="fault-map">
-          <svg class="pf-route" aria-hidden="true"></svg>
-          <div class="pf-table-node"><h3>A 的页表</h3><p class="map-subtitle">驻留位 0 = 尚不在内存</p><table class="paging-table fault-table"><thead><tr><th scope="col">页号</th><th scope="col">驻留位</th><th scope="col">页框号</th></tr></thead><tbody>${OSLabSimulation.demandPagingScene.map(entry => `<tr data-fault-page="${entry.page}"><th scope="row">${entry.page}</th><td class="fault-resident"></td><td class="fault-mapping"></td></tr>`).join('')}</tbody></table><p class="pf-table-status" id="fault-table-status"></p></div>
-          <div class="fault-storage"><h3>磁盘副本</h3><p class="map-subtitle">页 2 的后备内容</p><div class="fault-storage-page"><span>页 ${FAULT_PAGE}</span><small>已有内容</small></div><p class="fault-transfer" id="fault-transfer"></p><p class="fault-storage-note">载入是复制，不会删除这份磁盘内容。</p></div>
-          <div class="pf-memory-node"><h3>物理内存</h3><p class="map-subtitle">页 2 的目标位置是框 1</p><div class="fault-frames">${Array.from({length: OSLabSimulation.DEMAND_FRAME_COUNT}, (_, frame) => `<div class="fault-frame" data-fault-frame="${frame}"><p>框 ${frame} <span>${frame * OSLabSimulation.PAGE_SIZE}–${(frame + 1) * OSLabSimulation.PAGE_SIZE - 1}</span></p><strong></strong><span class="fault-frame-note"></span><div class="pf-frame-units">${Array.from({length: OSLabSimulation.PAGE_SIZE}, (_, offset) => `<span data-fault-address="${frame * OSLabSimulation.PAGE_SIZE + offset}">${frame * OSLabSimulation.PAGE_SIZE + offset}</span>`).join('')}</div></div>`).join('')}</div><p class="pf-address-result" id="fault-address-result"></p></div>
-        </div>
-        <p class="pt-caption">橙色实线：正在复制；橙色虚线：本例已完成的复制，不是再次读磁盘。蓝色路径：已建立的页表映射。移动标记只示意复制方向，不代表实际延迟；蓝线不表示搬动数据。</p>
-        <div class="fault-observation"><div><span>缺页次数</span><strong id="fault-count"></strong></div><div><span>本次磁盘读取</span><strong id="fault-io"></strong></div></div>
-        <div class="paging-event fault-event" aria-live="polite" aria-atomic="true"><p class="detail-kicker" id="fault-event-stage"></p><h3 id="fault-event-title"></h3><p id="fault-event-text"></p></div>
-      </section>
-      <section class="paging-rules" id="rules" aria-labelledby="rules-title">
-        <div class="section-heading"><div><p class="section-index">03 / THE DISTINCTION</p><h2 id="rules-title">缺页，不等于地址错误</h2></div></div>
-        <dl class="concepts rr-concepts">
-          <div><dt>合法但尚未驻留</dt><dd>页 2 属于 A 的地址空间，本次访问也被允许，只是数据还不在内存。非法地址或权限错误不能按这里的“载入后重试”流程处理。</dd></div>
-          <div><dt>载入完成，先回到就绪</dt><dd>等待读取时 A 阻塞；读取完成后回到<a class="inline-link" href="${WIKI_PAGES.process.href}">就绪状态</a>，还要等待 CPU。就绪与运行不是一回事。</dd></div>
-          <div><dt>缺页，不一定需要置换</dt><dd>本例有空闲页框，可以直接装入，不必淘汰已有页面。只有找不到可用页框时，才可能需要回收或置换；缺页次数也不等于页面置换次数。</dd></div>
-        </dl>
-        <div class="pf-consequences"><section><h3>为什么要重试，而不是跳过？</h3><p>首次访问没有取得目标数据，原指令不能按成功访问继续。OS 保存恢复执行所需的信息；页面准备好且 A 再次获得 CPU 后，从引发异常的指令重试。访问始终指向 VA 10，改变的是页 2 的驻留状态与映射。</p></section><section><h3>按需载入节省什么，又付出什么？</h3><p>未访问的页面不必全部提前载入，能推迟占用页框和读取后备内容。但首次使用非驻留页会增加异常处理、可能的 I/O 与等待调度；若频繁缺页，程序就会反复等待。具体代价取决于页面来源、存储设备与调度等待，不能由阶段数量推算。</p></section></div>
-        <p class="pt-copy">一次 TLB 未命中只是没找到缓存转换；一次页表遍历只是寻找映射；本例的缺页则需要准备页面并暂停未完成的访问。三者不能互相等同，载入完成也不意味着这次访问已经完成。</p>
-      </section>
-      ${wikiRelated('pageFault')}
-    </main><footer><span>OSLab / 内存虚拟化</span><a href="#top">回到页首 ↑</a></footer>
-  </div>`;
-  let scenario = 'fault';
-  let stage = 0;
-  let timer = null;
-  const playButton = root.querySelector('#fault-play');
-  const stepButton = root.querySelector('#fault-step');
-  const stageList = root.querySelector('#fault-stages');
-  const motion = matchMedia('(prefers-reduced-motion: reduce)');
-  stageList.after(root.querySelector('.fault-event'));
-  const stages = () => scenario === 'fault' ? FAULT_STAGES : FAULT_HIT_STAGES;
-  const cancel = () => root.querySelector('.fault-map').getAnimations({subtree: true}).forEach(animation => animation.cancel());
-  const drawPaths = (animate = false) => {
-    const diagram = root.querySelector('.fault-map');
-    const svg = diagram.querySelector('.pf-route');
-    const snapshot = pageFaultFrame(scenario, stage);
-    const bounds = diagram.getBoundingClientRect();
-    const vertical = getComputedStyle(diagram).gridTemplateColumns.split(' ').length === 1;
-    const connections = [];
-    const destination = diagram.querySelector(`[data-fault-frame="${FAULT_FRAME}"]`).getBoundingClientRect();
-    const connect = (source, name, color) => {
-      const start = source.getBoundingClientRect();
-      const reverse = !vertical && start.left > destination.left;
-      const sourceX = (reverse ? start.left - 3 : start.right + 3) - bounds.left;
-      const sourceY = start.top - bounds.top + start.height / 2;
-      const targetX = (vertical || reverse ? destination.right + 3 : destination.left - 5) - bounds.left;
-      const targetY = destination.top - bounds.top + destination.height / 2;
-      const middleX = vertical ? bounds.width - (name === 'mapping' ? 14 : 5) : (sourceX + targetX) / 2;
-      const path = `M ${sourceX} ${sourceY} L ${middleX} ${sourceY} L ${middleX} ${targetY} L ${targetX} ${targetY}`;
-      connections.push({name, color, path});
-    };
-    if (scenario === 'fault' && stage >= 3) connect(diagram.querySelector('.fault-storage-page'), 'copy', '#965520');
-    if (snapshot.resident && stage >= 1) connect(diagram.querySelector(`[data-fault-page="${FAULT_PAGE}"]`), 'mapping', '#385974');
-    svg.setAttribute('viewBox', `0 0 ${bounds.width} ${bounds.height}`);
-    svg.innerHTML = connections.map(connection => `<defs><marker id="pf-arrow-${connection.name}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 8 4 L 0 8 Z" fill="${connection.color}"/></marker></defs><path data-pf-path="${connection.name}" d="${connection.path}" fill="none" stroke="${connection.color}" stroke-width="2"${connection.name === 'copy' && !snapshot.loading ? ' stroke-dasharray="4 4"' : ''} marker-end="url(#pf-arrow-${connection.name})"/>`).join('');
-    const copy = connections.find(connection => connection.name === 'copy');
-    if (animate && snapshot.loading && !motion.matches && copy) {
-      const token = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      token.setAttribute('r', '4');
-      token.setAttribute('fill', copy.color);
-      token.style.offsetPath = `path('${copy.path}')`;
-      svg.append(token);
-      const animation = token.animate([{offsetDistance: '0%'}, {offsetDistance: '100%'}], {duration: 600, easing: 'ease-in-out'});
-      animation.onfinish = animation.oncancel = () => token.remove();
-    }
-  };
-  const paint = () => {
-    cancel();
-    const snapshot = pageFaultFrame(scenario, stage);
-    root.querySelectorAll('[data-fault-page]').forEach(row => {
-      const entry = snapshot.pages.find(page => page.page === Number(row.dataset.faultPage));
-      row.querySelector('.fault-resident').textContent = entry.resident ? '1' : '0';
-      row.querySelector('.fault-mapping').textContent = entry.frame ?? '—';
-      row.classList.toggle('active', stage >= 1 && entry.page === FAULT_PAGE);
-      row.classList.toggle('pf-missing', stage >= 1 && entry.page === FAULT_PAGE && !entry.resident);
-    });
-    root.querySelectorAll('[data-fault-frame]').forEach(node => {
-      const slot = snapshot.allocation.frameTable[Number(node.dataset.faultFrame)];
-      node.querySelector('strong').textContent = slot.frame === FAULT_FRAME && snapshot.loading ? '预留 · 页 2' : slot.page === null ? '空闲' : `A · 页 ${slot.page}`;
-      node.querySelector('.fault-frame-note').textContent = slot.frame === FAULT_FRAME && snapshot.loading ? '正在读取页 2' : slot.frame === FAULT_FRAME && snapshot.complete ? '访问地址 6' : slot.page === null ? '尚无映射' : '已驻留';
-      node.classList.toggle('active', slot.frame === FAULT_FRAME && snapshot.resident);
-      node.classList.toggle('loading', slot.frame === FAULT_FRAME && snapshot.loading);
-    });
-    stageList.querySelectorAll('[data-fault-stage]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.faultStage) === stage)));
-    root.querySelector('#fault-physical').textContent = snapshot.translation?.physicalAddress ?? '—';
-    root.querySelector('#fault-process-state').textContent = snapshot.state;
-    root.querySelector('#fault-process-mode').textContent = snapshot.mode;
-    root.querySelector('#fault-count').textContent = snapshot.faultCount;
-    root.querySelector('#fault-io').textContent = scenario === 'hit' || stage < 3 ? '未发起' : stage === 3 ? '读取中' : '已完成';
-    root.querySelector('#fault-transfer').textContent = snapshot.loading ? '页 2 → 框 1 / 读取中' : scenario === 'fault' && stage >= 4 ? '页 2 → 框 1 / 已复制' : scenario === 'hit' ? '本次访问无须读取' : '尚未发起读取';
-    root.querySelector('#fault-access-state').textContent = snapshot.complete ? scenario === 'fault' ? '同一次访问 · 重试完成' : '同一次访问 · 直接完成' : scenario === 'fault' && stage === 5 ? '重试原指令 · 仍访问 VA 10' : '访问尚未完成';
-    root.querySelector('#fault-retry-note').textContent = snapshot.complete ? scenario === 'fault' ? '目标数据访问完成；重试没有再次触发缺页。' : '目标数据访问完成；本次没有触发缺页。' : scenario === 'fault' && stage >= 2 ? '首次没有读到目标数据，不能跳过这条指令。' : '先检查映射，尚未读到目标数据。';
-    root.querySelector('#fault-cpu-note').textContent = snapshot.loading ? 'A 阻塞，CPU 可运行其他就绪进程，不必空等磁盘。' : snapshot.state === '就绪' ? 'I/O 已完成，A 仍需等待重新获得 CPU。' : snapshot.mode === '内核态' ? '正在处理异常，不是 A 主动调用载入接口。' : scenario === 'fault' && stage >= 5 ? 'A 已再次获得 CPU，恢复原指令的访问。' : 'A 正在执行这次访问。';
-    root.querySelector('#fault-page-state').textContent = snapshot.resident ? '驻留位 1 · 页 2 → 框 1' : snapshot.loading ? '框 1 已预留 · 仍未驻留' : '驻留位 0 · 没有可用映射';
-    root.querySelector('#fault-page-note').textContent = snapshot.complete ? '本次访问已完成；页 2 继续驻留在框 1。' : snapshot.loading ? '读取期间不把预留框当成可访问的驻留页面。' : snapshot.resident ? '页面已准备好，不等于进程已运行或访问已完成。' : '合法且有后备副本；不是非法地址。';
-    root.querySelector('#fault-table-status').textContent = stage === 0 ? '尚未检查本次表项。' : snapshot.resident ? '映射可用；驻留位为 1，页框号为 1。' : snapshot.loading ? 'I/O 未完成，表项仍为 0 / —。' : '没有可用页框号，不能完成这次地址转换。';
-    root.querySelectorAll('[data-fault-address]').forEach(node => node.classList.toggle('pf-address-selected', snapshot.complete && Number(node.dataset.faultAddress) === snapshot.translation.physicalAddress));
-    root.querySelector('#fault-address-result').textContent = snapshot.complete ? '框起点 4 + 本次偏移 2 = PA 6 · 目标访问完成' : snapshot.resident ? '映射已准备；本次目标数据尚未访问。' : '没有可用于本次访问的物理地址。';
-    root.querySelector('#fault-event-stage').textContent = `${String(stage).padStart(2, '0')} / ${snapshot.label}`;
-    root.querySelector('#fault-event-title').textContent = snapshot.title;
-    root.querySelector('#fault-event-text').textContent = snapshot.text;
-    playButton.disabled = snapshot.complete;
-    stepButton.disabled = snapshot.complete;
-    drawPaths(true);
-  };
-  const pause = () => {
-    clearInterval(timer);
-    timer = null;
-    playButton.setAttribute('aria-pressed', 'false');
-    playButton.setAttribute('aria-label', '播放');
-    playButton.title = '播放';
-    playButton.firstElementChild.textContent = '▶';
-  };
-  const advance = () => {
-    stage = Math.min(stage + 1, stages().length - 1);
-    if (stage === stages().length - 1) pause();
-    paint();
-  };
-  const reset = () => {
-    pause();
-    stage = 0;
-    stageList.style.setProperty('--stage-count', stages().length);
-    stageList.innerHTML = stages().map((entry, index) => `<button type="button" data-fault-stage="${index}" aria-pressed="${index === 0}"><span>${String(index).padStart(2, '0')}</span>${entry.label}</button>`).join('');
-    paint();
-  };
-  playButton.addEventListener('click', () => {
-    if (timer !== null) { pause(); return; }
-    playButton.setAttribute('aria-pressed', 'true');
-    playButton.setAttribute('aria-label', '暂停');
-    playButton.title = '暂停';
-    playButton.firstElementChild.textContent = 'Ⅱ';
-    timer = setInterval(advance, 1400);
-  });
-  stepButton.addEventListener('click', () => { pause(); advance(); });
-  root.querySelector('#fault-reset').addEventListener('click', reset);
-  stageList.addEventListener('click', event => {
-    const button = event.target.closest('[data-fault-stage]');
-    if (!button) return;
-    pause();
-    stage = Number(button.dataset.faultStage);
-    paint();
-  });
-  root.querySelectorAll('[name="fault-scenario"]').forEach(input => input.addEventListener('change', () => { scenario = input.value; reset(); }));
-  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
-  window.addEventListener('pagehide', pause);
-  window.addEventListener('resize', () => drawPaths());
-  motion.addEventListener('change', event => { if (event.matches) cancel(); });
-  reset();
-}
-
-renderPageFaultPage(document.getElementById('root'));
+function drawTransfer(){const s=story[at],line=$('#pf-transfer-line'),svg=$('#pf-transfer');const show=/^(read|write)-(start|wait|done)$/.test(s.phase);svg.style.visibility=show?'visible':'hidden';if(!show){motion.transfer(s,null);return;}const wrap=$('#pf-storage').getBoundingClientRect(),f=$('#pf-frame-1').getBoundingClientRect(),d=$('#pf-disk-'+(s.io.kind==='read'?0:2)).getBoundingClientRect();let start={x:d.left+d.width/2-wrap.left,y:d.top-wrap.top-3},end={x:f.left+f.width/2-wrap.left,y:f.bottom-wrap.top+3};if(s.io.kind==='write')[start,end]=[end,start];svg.setAttribute('viewBox',`0 0 ${wrap.width} ${wrap.height}`);for(const [k,v] of Object.entries({x1:start.x,y1:start.y,x2:end.x,y2:end.y}))line.setAttribute(k,v);svg.dataset.kind=s.io.kind;motion.transfer(s,start,end);}
+function resetAccess(){pauseAll();story=makeStory();at=0;renderAccess();ac.update();}
+function buildPool(){poolPair={ondemand:M.pool({pattern,mode:'ondemand'}).snapshots,background:M.pool({pattern,mode:'background'}).snapshots};poolLength=Math.max(...Object.values(poolPair).map(a=>a.length));}
+function renderPool(){const tick=pt-1,current={};for(const mode of ['ondemand','background']){const a=poolPair[mode],i=Math.min(pt,a.length-1),s=a[i],prev=a[Math.max(0,i-1)],host=$('[data-mode="'+mode+'"]'),granted=s.served.length-prev.served.length,beforeReclaim=s.free-Number(s.reclaimed);current[mode]=s;host.dataset.tick=s.tick;host.querySelector('.pf-free-count').textContent=s.free;host.querySelector('.pf-worker').textContent=pt===0?'尚未回收':s.active?'回收继续':s.reclaimed?'本次回收完成':'回收未运行';host.querySelector('.pf-worker').dataset.active=String(s.active);
+const frameStrip=host.querySelector('.pf-pool-frames');if(!frameStrip.children.length)frameStrip.innerHTML=Array.from({length:8},()=>'<i><span></span></i>').join('');[...frameStrip.children].forEach((node,n)=>{const free=n<s.free;node.className=free?'is-free':'is-occupied';node.dataset.free=String(Number(free));node.setAttribute('aria-label',(free?'空闲':'占用')+'页框');node.querySelector('span').textContent=free?'空':'占';});
+host.querySelector('.pf-pool-change').textContent=pt===0?'起初有 4 个空闲页框。':pt>=a.length?'全部请求已取得页框。':`本时段分配 ${granted} 页后剩 ${beforeReclaim} 页${s.reclaimed?'，回收 1 页后剩 '+s.free+' 页。':'，没有完成回收。'}`;
+const requests=host.querySelector('.pf-request-list');if(!requests.children.length)requests.innerHTML=Array.from({length:8},(_,n)=>`<li data-request="${n+1}"><span>${n+1}</span><small></small></li>`).join('');[...requests.children].forEach((node,n)=>{const id=n+1,status=s.served.includes(id)?'served':s.pending.includes(id)?'waiting':'future';node.className='is-'+status;node.dataset.status=status;node.querySelector('small').textContent=status==='served'?'已取得':status==='waiting'?'等待':'待到达';});
+host.querySelector('.pf-pool-counts').innerHTML=metric('已取得页框',s.served.length+'/8')+metric('曾等待的请求',s.delayed)+metric('累计回收',s.reclaims);}
+const bg=current.background,fg=current.ondemand,bga=poolPair.background,prev=bga[Math.max(0,Math.min(pt-1,bga.length-1))],trigger=pt>0&&!prev.active&&bg.reclaimed&&bg.free-1<2;let title,reason;
+if(pt===0){title='相同的请求，比较是否需要等页框';reason='空闲储备用尽后，请求只能先等待回收。提前回收尝试在请求到来之前补足储备。';}
+else if(pt===poolLength-1){title=bg.delayed?'集中请求仍可能耗尽空闲储备':'提前回收组的 8 次请求都无需等页框';reason=`两组都满足 8 次申请。用尽后回收有 ${fg.delayed} 次请求曾等待，提前回收有 ${bg.delayed} 次；后者累计回收 ${bg.reclaims} 页，留下 ${bg.free} 页储备。`;}
+else if(fg.pending.length||bg.pending.length){title='空闲页框用尽，请求进入等待';reason=`用尽后回收组有 ${fg.pending.length} 个请求等待，提前回收组有 ${bg.pending.length} 个。刚回收的页框在下一时段才能分配。`;}
+else if(trigger){title='分配后低于低水位，启动后台回收';reason=`空闲数先降至 ${bg.free-1}，低于 2；本时段回收 1 页后变为 ${bg.free}。回收会持续到高水位 4。`;}
+else if(bg.reclaimed&&!bg.active){title='空闲数达到 4，后台回收停止';reason='恢复到高水位后保留储备，供后续请求直接分配。';}
+else if(bg.active){title='后台继续回收，补足空闲储备';reason='回收已经启动，回到低水位 2 不会立即停止；目标是高水位 4。';}
+else {title=bg.newRequests.length?'请求到达，先分配已有空闲页框':'当前没有新请求，也无需回收';reason=bg.free===2?'提前回收组当前恰有 2 个空闲页框；启动条件是低于 2，尚未满足。':'取得页框后才能继续准备目标页；当前比较到取得页框为止。';}
+text('#pf-pool-action',title);text('#pf-pool-reason',reason);text('#pf-arrival-note',pattern==='spaced'?'每 3 个示意时段到达 1 次请求。':'每个示意时段到达 2 次请求，共持续 4 个时段。');text('#pf-pool-conclusion',pt===poolLength-1?(bg.delayed?'提前回收不能保证不等待：请求消耗快于回收补充时，空闲储备仍会用尽。':'提前回收把部分回收工作移到请求到达之前，减少取得页框的等待；它没有省掉后续页面调入。'):'低水位决定何时启动，高水位决定何时停止。');$('#pf-pool-body').dataset.tick=tick;motion.pool(current,pt,poolPair,Number($('#pool-controls select').value));$$('[data-pattern]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.pattern===pattern)));}
+function renderOverview(){const tile=(p,where)=>{const empty=p.process===null,k=empty?'':p.process+':'+p.vpn;return `<${empty?'div':'button type="button"'} class="pf-overview-tile ${empty?'is-free':where==='memory'?'is-resident':'is-backed'}" data-bytes="64"${empty?'':` data-overview="${k}" aria-pressed="${k===overviewKey}"`}><span>${where==='memory'?'页框 '+p.frame:'交换块 '+p.block}</span><b>${empty?'空闲':p.process+' · 页 '+p.vpn}</b></${empty?'div':'button'}>`;};$('#pf-memory-overview').innerHTML=overview.memory.map(p=>tile(p,'memory')).join('');$('#pf-swap-overview').innerHTML=overview.swap.map(p=>tile(p,'swap')).join('');const p=overview.processes.flatMap(p=>p.pages).find(p=>p.process+':'+p.vpn===overviewKey);$('#pf-location-result').innerHTML=`<strong>${p.process} 的页 ${p.vpn}：V = 1，P = ${Number(p.present)}</strong><p>${p.present?'已驻留于物理页框 '+p.frame+'，可按映射访问。':'内容在交换块 '+p.block+'，仍属于该进程的地址空间。访问前需要先准备到物理内存。'}</p>`;}
+story=makeStory();buildPool();const ac=controller('access',()=>story.length,()=>at,n=>{at=n;renderAccess();}),pc=controller('pool',()=>poolLength,()=>pt,n=>{pt=n;renderPool();});
+root.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.supply){supply=b.dataset.supply;resetAccess();}if(b.dataset.kind){kind=b.dataset.kind;resetAccess();}if(b.dataset.stage){ac.seek(story.findIndex(s=>groupFor(s)===b.dataset.stage));$('[data-stage="'+b.dataset.stage+'"]').focus({preventScroll:true});}if(b.dataset.pattern){pauseAll();pattern=b.dataset.pattern;buildPool();pt=0;renderPool();pc.update();}if(b.dataset.overview){overviewKey=b.dataset.overview;renderOverview();$('[data-overview="'+overviewKey+'"]').focus({preventScroll:true});}});
+$('#pf-fine').addEventListener('change',()=>{pauseAll();const earlier=story.slice(0,at+1).reverse();fine=$('#pf-fine').checked;story=makeStory();at=-1;for(const old of earlier){at=story.findIndex(s=>s.phase===old.phase&&s.tick===old.tick);if(at>=0)break;}if(at<0)at=0;renderAccess();ac.update();});$('#pf-cached').addEventListener('change',()=>{cached=$('#pf-cached').checked;resetAccess();});$('#pf-ready').addEventListener('change',()=>{otherReady=$('#pf-ready').checked;resetAccess();});
+$('#pf-open-location').addEventListener('click',()=>{pauseAll();renderOverview();$('#pf-location').showModal();});$('#pf-close-location').addEventListener('click',()=>$('#pf-location').close());$('#pf-location').addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();$('#pf-location').close();}});$('#pf-location').addEventListener('close',()=>$('#pf-open-location').focus({preventScroll:true}));$('#pf-open-pool').addEventListener('click',()=>{pauseAll();const show=$('#pf-pool-body').hidden;$('#pf-pool-body').hidden=!show;$('#pf-open-pool').setAttribute('aria-expanded',String(show));text('#pf-open-pool',show?'收起比较 ↑':'比较两种回收时机 ↓');});
+$('#pf-stages').addEventListener('keydown',e=>{if(!e.target.matches('[data-stage]')||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const groups=[...new Set(story.map(groupFor))],i=groups.indexOf(e.target.dataset.stage),n=e.key==='Home'?0:e.key==='End'?groups.length-1:Math.max(0,Math.min(groups.length-1,i+(e.key==='ArrowRight'?1:-1)));ac.seek(story.findIndex(s=>groupFor(s)===groups[n]));$('[data-stage="'+groups[n]+'"]').focus({preventScroll:true});});
+$$('summary').forEach(el=>el.addEventListener('click',pauseAll));document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseAll();});window.addEventListener('pagehide',pauseAll);new ResizeObserver(()=>requestAnimationFrame(drawTransfer)).observe($('#pf-storage'));
+function anchor(){const h=location.hash.slice(1);if(['pool','reclaim','pfd-pool'].includes(h)){$('#pf-pool-body').hidden=false;$('#pf-open-pool').setAttribute('aria-expanded','true');text('#pf-open-pool','收起比较 ↑');$('#pool').scrollIntoView();}if(['demo','access','pfd-access'].includes(h))$('#access').scrollIntoView();if(['location','pfd-location'].includes(h))$('#pf-open-location').click();}
+window.addEventListener('hashchange',()=>{pauseAll();anchor();});renderAccess();renderPool();renderOverview();controllers.forEach(c=>c.update());setupWikiNavigation();anchor();
+})();

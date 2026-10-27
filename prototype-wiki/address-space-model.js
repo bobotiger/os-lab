@@ -15,6 +15,10 @@ function buildAddressSpaceScenario(scene = 'lifetime') {
   if (!Object.hasOwn(ADDRESS_SPACE_SCENES, scene)) throw new Error('地址空间场景无效');
   const process = (id, value) => ({id, globals: {2: id === 'A' ? 1 : 2, 3: true}, objects: scene === 'lifetime' ? [] : [{id: 'buffer', address: 6, value}], frames: [{id: 'main', addresses: [14, 15]}], references: scene === 'lifetime' ? [{owner: 'main', name: 'saved', slot: 14, address: null}] : [], released: []});
   const state = {processes: [process('A', 10), process('B', 20)]};
+  if (scene === 'layout') {
+    state.processes[0].frames.push({id: 'work', addresses: [12, 13], local: 7});
+    state.processes[0].references.push({owner: 'main', name: 'saved', slot: 14, address: 6});
+  }
   const snapshots = [];
   const add = (label, title, text, focus, address, change) => {
     if (change) change();
@@ -33,7 +37,8 @@ function buildAddressSpaceScenario(scene = 'lifetime') {
     add('调用函数', '调用 work：栈中增加一个调用帧', 'main 调用 work，把 saved 的位置传给它。work 的调用帧保存本次调用的局部数据 local = 7；main 的调用帧仍然存在。', 'A', 12, () => { state.processes[0].frames.push({id: 'work', addresses: [12, 13], local: 7}); });
     add('申请动态对象', '堆中出现 buffer，main.saved 指向它', 'work 请求并初始化一个堆对象，将引用写入 main 的 saved。地址 6 是本例固定的虚拟地址；malloc 可以复用分配器已有空间，不保证每次向 OS 申请新的物理页。', 'A', 6, () => { state.processes[0].objects.push({id: 'buffer', address: 6, value: 10}); state.processes[0].references[0].address = 6; });
     add('函数返回', 'work 的调用帧结束，buffer 仍然存在', '返回只结束 work 的调用帧及局部数据的生命周期。main 仍持有 saved 引用，堆对象不因分配它的函数返回而自动释放。', 'A', 6, () => { state.processes[0].frames.pop(); });
-    add('释放对象', 'main 释放 buffer，并将 saved 设为 NULL', 'free 结束 buffer 的生命周期，随后本例显式清空 saved；清空引用不是 free 自动完成的。旧对象不能再合法使用，底层字节不保证清零，也不保证物理页立即归还 OS。', 'A', 6, () => { state.processes[0].objects.pop(); state.processes[0].released.push(6); state.processes[0].references[0].address = null; });
+    add('释放对象', 'buffer 已释放，saved 的旧引用已失效', 'free 结束 buffer 的生命周期，并不自动清空 saved。旧引用不能再用于访问对象；底层字节不保证清零，也不保证物理页立即归还 OS。', 'A', 6, () => { state.processes[0].objects.pop(); state.processes[0].released.push(6); });
+    add('清空引用', 'main 显式将 saved 设为 NULL', '清空 saved 是单独的赋值动作，不是再次释放对象。buffer 在上一阶段已经释放，其他引用也不会因这次赋值而自动清空。', 'A', 14, () => { state.processes[0].references[0].address = null; });
   }
   return snapshots.map((snapshot, index) => ({...snapshot, complete: index === snapshots.length - 1}));
 }
@@ -46,7 +51,7 @@ function inspectAddressSpace(snapshot, processId, address) {
   const frame = process.frames.find(frame => frame.addresses.includes(address));
   if (object) return {region: region.id, content: `${object.id} = ${object.value}`, value: object.value, location: `${processId} 的私有对象存储`, active: true};
   const reference = process.references.find(reference => reference.slot === address);
-  if (reference) return {region: region.id, content: `${reference.owner}.${reference.name} = ${reference.address === null ? 'NULL' : reference.address}`, value: reference.address, location: `${processId} 的私有调用帧存储`, active: true};
+  if (reference) return {region: region.id, content: reference.address !== null && process.released.includes(reference.address) ? `${reference.owner}.${reference.name}：旧引用 ${reference.address} 已失效` : `${reference.owner}.${reference.name} = ${reference.address === null ? 'NULL' : reference.address}`, value: reference.address, location: `${processId} 的私有调用帧存储`, active: true};
   if (frame && frame.local !== undefined && address === frame.addresses[0]) return {region: region.id, content: `${frame.id}.local = ${frame.local}`, value: frame.local, location: `${processId} 的私有调用帧存储`, active: true};
   if (frame) return {region: region.id, content: `${frame.id} 的调用帧`, value: null, location: `${processId} 的私有调用帧存储`, active: true};
   if (region.id === 'code') return {region: region.id, content: address === 0 ? '程序指令 / 计算与分支' : '程序指令 / 访存与调用', value: null, location: '代码的物理位置由映射决定', active: true};
@@ -55,4 +60,31 @@ function inspectAddressSpace(snapshot, processId, address) {
   return {region: region.id, content: region.id === 'unused' ? '未使用的虚拟地址，不保证允许访问' : '此处没有活对象或调用帧', value: null, location: '虚拟布局不决定物理页驻留', active: false};
 }
 
-globalThis.OSLabAddressSpace = {regions: ADDRESS_SPACE_REGIONS, scenes: ADDRESS_SPACE_SCENES, buildScenario: buildAddressSpaceScenario, inspect: inspectAddressSpace};
+// Shared mappings resolve to one storage record, rather than two copied values.
+function inspectMappingComparison(snapshot, caseId, processId) {
+  const entry = snapshot.cases.find(entry => entry.id === caseId);
+  const mapping = entry?.mappings.find(mapping => mapping.process === processId);
+  if (!mapping) throw new Error('映射对象无效');
+  const object = entry.objects.find(object => object.id === mapping.target);
+  return {...mapping, value: object.value};
+}
+
+function buildMappingComparison() {
+  const state = {phase: 'initial', cases: [
+    {id: 'private', mappings: [{process: 'A', address: 6, target: 'private-A'}, {process: 'B', address: 6, target: 'private-B'}], objects: [{id: 'private-A', value: 10}, {id: 'private-B', value: 10}], readB: null},
+    {id: 'shared', mappings: [{process: 'A', address: 6, target: 'shared'}, {process: 'B', address: 10, target: 'shared'}], objects: [{id: 'shared', value: 10}], readB: null},
+  ]};
+  const snapshots = [structuredClone(state)];
+  for (const entry of state.cases) {
+    const mapping = inspectMappingComparison(state, entry.id, 'A');
+    entry.objects.find(object => object.id === mapping.target).value = 99;
+  }
+  state.phase = 'written';
+  snapshots.push(structuredClone(state));
+  for (const entry of state.cases) entry.readB = inspectMappingComparison(state, entry.id, 'B').value;
+  state.phase = 'read';
+  snapshots.push(structuredClone(state));
+  return snapshots;
+}
+
+globalThis.OSLabAddressSpace = {regions: ADDRESS_SPACE_REGIONS, scenes: ADDRESS_SPACE_SCENES, buildScenario: buildAddressSpaceScenario, inspect: inspectAddressSpace, buildMappingComparison, inspectMappingComparison};

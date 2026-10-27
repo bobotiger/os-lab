@@ -1,146 +1,268 @@
 function renderAddressTranslationPage(root) {
-  const {contents, buildAccess, buildRelocation} = OSLabAddressTranslation;
-  root.innerHTML = `<div class="page rr-page lde-page at-page" id="top">${wikiHeader('addressTranslation', [{href: '#demo', title: '检查与转换'}, {href: '#boundary', title: '越界拒绝'}, {href: '#relocation', title: '动态重定位'}, {href: '#limits', title: '连续分配的限制'}])}
-    <main><section class="intro"><p class="eyebrow">内存虚拟化 / 实现机制</p><h1>地址转换 <span>Address Translation</span></h1><p class="lead">先检查虚拟地址范围，再用基址计算物理地址。</p><p class="definition">程序使用虚拟地址，物理地址标识实际内存位置。本例采用基址与界限机制。</p></section>
-      <section class="rr-rules" id="demo" aria-labelledby="at-title"><p class="section-index">01 / 检查与转换</p><h2 id="at-title">先检查范围，再生成物理地址</h2>
-        <p class="at-section-lead">进程 A 的完整地址空间连续放置，每次访问一个示意单位。虚拟范围为 0–15，物理内存为 0–63，其中 0–7 保留给 OS。</p>
-        <div id="at-access-mount"><div id="at-demo">
-        <div class="rr-toolbar lde-toolbar"><div class="rr-transport" role="group" aria-label="演示控制"><button type="button" class="icon-button primary" id="at-play" aria-label="播放" title="播放" aria-pressed="false"><span aria-hidden="true">▶</span></button><button type="button" class="icon-button" id="at-next" aria-label="下一阶段" title="下一阶段"><span aria-hidden="true">↦</span></button><button type="button" class="icon-button" id="at-reset" aria-label="重新开始" title="重新开始"><span aria-hidden="true">↺</span></button></div><label>观察过程<select id="at-scene"><option value="access">硬件检查与转换</option><option value="relocation">OS 搬移与动态重定位</option></select></label><label>播放速度<select id="at-speed"><option value="1600">慢速</option><option value="1000" selected>正常</option><option value="500">快速</option></select></label><p class="at-progress">阶段 <strong id="at-stage">1</strong> / <span id="at-total">4</span></p></div>
-        <div class="at-settings"><label>虚拟地址 VA<input id="at-address" type="number" min="0" max="20" step="1" value="6" inputmode="numeric"></label><label>基址 base · 物理起点<select id="at-base"><option value="24">24 · 占据 24–39</option><option value="40">40 · 占据 40–55</option></select></label></div><p id="at-input-error" class="at-input-error" role="alert" hidden></p>
-        <div id="at-content"><ol class="at-steps" id="at-steps" aria-label="转换阶段"></ol>
-          <div class="lde-event" aria-live="polite" aria-atomic="true"><p class="detail-kicker" id="at-label"></p><h3 id="at-event-title"></h3><p id="at-event-text"></p></div>
-          <div class="at-registers"><div><span>base · 物理起点</span><strong id="at-reg-base">24</strong></div><div><span>bounds · 空间长度</span><strong>16</strong></div><div><span>当前控制</span><strong id="at-mode">用户态</strong></div><div><span>进程 A</span><strong id="at-process">访问路径</strong></div></div>
-          <div class="at-workbench"><section class="at-program" aria-labelledby="at-program-title"><h3 id="at-program-title">程序的虚拟地址</h3><p class="at-subtitle">0–15 / 各区域用途</p><div class="at-virtual-grid" id="at-virtual"></div></section>
-            <section class="at-hardware" aria-labelledby="at-hardware-title"><h3 id="at-hardware-title">硬件检查与转换</h3><dl class="at-computation"><div><dt>输入 · 虚拟地址</dt><dd id="at-va"></dd></div><div><dt>边界检查</dt><dd id="at-check"></dd></div><div><dt>转换计算</dt><dd id="at-sum"></dd></div><div><dt>输出 · 物理地址</dt><dd id="at-pa"></dd></div></dl><p class="at-status" id="at-status"></p></section>
-            <section class="at-physical" aria-labelledby="at-physical-title"><h3 id="at-physical-title">物理内存</h3><p class="at-subtitle">0–63 / 区域归属；高亮表示转换目标</p><div class="at-physical-grid" id="at-physical"></div><div class="at-legend"><span class="at-legend-os">OS</span><span class="at-legend-a">A 的整段区域</span><span class="at-legend-copy" id="at-copy-legend" hidden>搬移中的副本</span><span>无归属区域</span></div></section></div>
-          <input id="at-position" type="range" min="0" max="3" step="1" value="0" aria-label="演示阶段">
-        </div></div></div>
-        <p id="at-access-return" hidden><button type="button" class="at-case-button" data-at-scene="access">观察检查与转换</button></p>
-        <p class="at-caption">每次访存由硬件检查与转换；base 和 bounds 由 OS 特权设置，用户程序不能任意修改。</p>
-      </section>
-      <section class="rr-rules at-section" id="boundary"><p class="section-index">02 / 越界拒绝</p><h2>为什么虚拟地址 16 会被拒绝？</h2><p class="at-section-lead">bounds = 16 表示长度，最后一个合法地址是 15。VA = 16 已越界，即使 24 + 16 = 40 落在物理内存范围内，硬件也不能执行这次转换与访问。</p><div class="at-case-actions"><button type="button" class="at-case-button" data-at-address="6">观察 VA = 6</button><button type="button" class="at-case-button" data-at-address="16">观察 VA = 16</button></div><p class="at-caption">越界触发保护异常，由 OS 决定后续处置；不是载入页面就能解决的缺页。</p></section>
-      <section class="rr-rules at-section" id="relocation"><p class="section-index">03 / 动态重定位</p><h2>物理位置改变，程序的地址不必改变</h2><p class="at-section-lead">OS 将 A 的整段内容从 24–39 搬到 40–55。程序中的虚拟引用不变，改变的是转换时使用的物理起点。</p><div id="at-relocation-summary"><dl class="at-relocation-comparison"><div><dt>虚拟地址</dt><dd>6 <span>保持不变</span></dd></div><div><dt>搬移前 / 后的物理地址</dt><dd>30 <span aria-hidden="true">→</span> 46</dd></div><div><dt>搬移前 / 后的内容</dt><dd>buffer = 10 <span>保持不变</span></dd></div></dl><button type="button" class="at-case-button" data-at-scene="relocation">观察搬移过程</button></div><div id="at-relocation-mount"></div><p class="at-caption">只改 base 不会复制数据。A 在搬移期间暂停，复制完成后才更新 base 并恢复访问；搬移不是每次访存的步骤。</p></section>
-      <section class="rr-rules at-section" id="limits"><p class="section-index">04 / 连续分配的限制</p><h2>整段连续放置，为什么仍会浪费或难以分配？</h2><dl class="at-limits"><div><dt>未使用区域也占物理空间</dt><dd>A 的整个 16 单位空间连续分配，包括未使用区域和堆、栈中尚无对象的位置。</dd></div><div><dt>总空闲足够，单块仍可能不足</dt><dd>分散的空闲块不能直接容纳一个连续区域。这种外部碎片会造成分配困难。</dd></div><div><dt>改变分配单位</dt><dd><a class="inline-link" href="segmentation.html">分段</a>分别映射各逻辑区域；<a class="inline-link" href="paging.html">分页</a>通过固定大小的页与页框映射，允许整段空间分散存放。</dd></div></dl></section>
-      <section class="at-section at-further" aria-labelledby="at-further-title"><h2 id="at-further-title">进一步理解</h2><details><summary>通过界限检查，为什么对象访问仍可能不合法？</summary><p>base/bounds 检查进程的虚拟范围，不检查每个 C 对象的边界或生命周期。对象越界和释放后使用可能仍落在 0–15 内；通过整段检查不代表这种访问合法。</p></details><details><summary>一次访问多个单位时，怎样检查界限？</summary><p>本例每次访问一个单位。更宽的访问必须检查整个访问范围，而不只是起始地址。</p></details><details id="roles"><summary>硬件与 OS 分别负责什么？</summary><div class="at-roles"><article><h3>硬件</h3><ul><li>提供基址、界限寄存器与特权修改机制。</li><li>每次访存检查虚拟范围，转换合法地址。</li><li>越界时触发保护异常，进入内核。</li></ul></article><article><h3>OS</h3><ul><li>分配、回收连续物理区域并设置寄存器。</li><li>切换进程时保存、恢复各自的转换设置。</li><li>搬移内容，完成后更新基址。</li><li>处理保护异常并决定后续处置。</li></ul></article></div><p>切换到另一进程后必须使用它自己的设置，不能继续套用 A 的 base。</p></details><details><summary>物理图中的地址、内容和区域归属有什么区别？</summary><p>图中每格表示一个示意地址单位，不是页框。无归属表示该区域未分配给某个进程，不保证字节为零，也不允许 A 绕过界限访问。物理空间已分配不代表其中每个位置都存在有效的 C 对象。</p></details></section>
-      ${wikiRelated('addressTranslation')}
-    </main><footer><span>OSLab / 内存虚拟化</span><a href="#top">回到页首 ↑</a></footer></div>`;
-  let scene = 'access';
-  let address = 6;
-  let base = 24;
-  let frames = buildAccess();
-  let stage = 0;
-  let timer = null;
-  const playButton = root.querySelector('#at-play');
-  const nextButton = root.querySelector('#at-next');
-  const position = root.querySelector('#at-position');
-  const motion = matchMedia('(prefers-reduced-motion: reduce)');
-  const demonstration = root.querySelector('#at-demo');
-  const cancelHighlights = () => root.querySelector('.at-workbench').getAnimations({subtree: true}).forEach(animation => animation.cancel());
-  const paint = () => {
-    const frame = frames[stage];
-    cancelHighlights();
-    if (scene === 'relocation') {
-      root.querySelector('#at-address').value = frame.address;
-      root.querySelector('#at-base').value = frame.base;
-    }
-    root.querySelector('#at-stage').textContent = stage + 1;
-    root.querySelector('#at-reg-base').textContent = frame.base;
-    root.querySelector('#at-mode').textContent = frame.mode === 'kernel' ? '内核态' : '用户态';
-    root.querySelector('#at-process').textContent = frame.paused ? '暂停' : frame.fault ? '等待 OS 处置' : '访问路径';
-    root.querySelector('#at-va').textContent = frame.paused ? 'A 已暂停，无用户访存' : frame.address;
-    root.querySelector('#at-check').textContent = frame.checked === null ? '尚未检查' : `${0 <= frame.address && frame.address < 16 ? '0 ≤ ' + frame.address + ' < 16' : frame.address + ' 不在 0–15'} · ${frame.checked ? '通过' : '拒绝'}`;
-    root.querySelector('#at-sum').textContent = frame.physicalAddress === null ? frame.checked === false ? '禁止转换' : '尚未生成' : `${frame.base} + ${frame.address} = ${frame.physicalAddress}`;
-    root.querySelector('#at-pa').textContent = frame.physicalAddress === null ? '无' : frame.physicalAddress;
-    root.querySelector('#at-status').textContent = frame.paused ? 'A 已暂停；操作系统正在搬移或更新内存区域' : frame.fault ? '保护异常，CPU 已转入内核处理' : frame.accessed ? `已访问目标位置，其内容或用途为：${frame.value}` : frame.physicalAddress !== null ? '物理地址已生成，目标位置尚未访问' : frame.checked === false ? '边界检查失败；目标内存未被访问' : '虚拟地址已提交，边界检查尚未完成';
-    root.querySelector('#at-status').classList.toggle('at-rejected', frame.checked === false);
-    root.querySelector('#at-copy-legend').hidden = !frame.physical.some(cell => cell.owner === 'copy');
-    root.querySelector('#at-virtual').innerHTML = contents.map((content, index) => `<button type="button" class="at-virtual-cell" data-address="${index}" aria-label="虚拟地址 ${index}，${content}" aria-pressed="${frame.address === index}" ${scene === 'relocation' ? 'disabled' : ''}><strong>${index}</strong><span>${index < 2 ? '代码' : index < 4 ? '全局数据' : index < 8 ? '堆' : index < 12 ? '未使用' : '栈'}</span></button>`).join('');
-    root.querySelector('#at-physical').innerHTML = frame.physical.map(cell => `<div class="at-physical-cell ${cell.owner === 'OS' ? 'at-os' : cell.owner === 'A' ? 'at-owned' : cell.owner === 'copy' ? 'at-copy' : ''}${cell.address === frame.physicalAddress ? ' at-target' : ''}" aria-label="物理地址 ${cell.address}，${cell.owner === 'copy' ? '临时副本' : cell.owner === 'A' ? 'A 的区域' : cell.owner === 'OS' ? 'OS 保留' : '无归属'}${cell.address === frame.physicalAddress ? '，转换目标' : ''}"><span>${cell.address}</span></div>`).join('');
-    root.querySelector('#at-label').textContent = `阶段 ${stage + 1} / ${frame.label}`;
-    root.querySelector('#at-event-title').textContent = frame.title;
-    root.querySelector('#at-event-text').textContent = frame.text;
-    root.querySelectorAll('[data-stage]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.stage) === stage)));
-    position.value = stage;
-    position.setAttribute('aria-valuetext', `阶段 ${stage + 1}，${frame.label}`);
-    playButton.disabled = frame.complete;
-    nextButton.disabled = frame.complete;
-    if (!motion.matches) root.querySelector('#at-status').animate([{opacity: .5}, {opacity: 1}], {duration: 180});
-  };
-  const pause = () => { clearInterval(timer); timer = null; playButton.setAttribute('aria-pressed', 'false'); playButton.setAttribute('aria-label', '播放'); playButton.title = '播放'; playButton.firstElementChild.textContent = '▶'; };
-  const rebuild = () => {
-    pause(); stage = 0;
-    frames = scene === 'relocation' ? buildRelocation() : buildAccess(address, base);
-    root.querySelector('#at-total').textContent = frames.length;
-    root.querySelector('#at-steps').style.setProperty('--at-step-count', frames.length);
-    position.max = frames.length - 1;
-    root.querySelector('#at-content').hidden = false;
-    root.querySelector('#at-input-error').hidden = true;
-    root.querySelector('#at-steps').innerHTML = frames.map((frame, index) => `<li><button type="button" data-stage="${index}" aria-pressed="false"><span>${index + 1}</span>${frame.label}</button></li>`).join('');
-    paint();
-  };
-  const advance = () => { stage = Math.min(stage + 1, frames.length - 1); if (frames[stage].complete) pause(); paint(); };
-  const play = () => { if (frames[stage].complete) return; playButton.setAttribute('aria-pressed', 'true'); playButton.setAttribute('aria-label', '暂停'); playButton.title = '暂停'; playButton.firstElementChild.textContent = 'Ⅱ'; timer = setInterval(advance, Number(root.querySelector('#at-speed').value)); };
-  const readAddress = () => {
-    pause();
-    const raw = root.querySelector('#at-address').value.trim();
-    const value = Number(raw);
-    if (!raw || !Number.isInteger(value) || value < 0 || value > 20) {
-      cancelHighlights();
-      root.querySelector('#at-content').hidden = true;
-      root.querySelector('#at-input-error').hidden = false;
-      root.querySelector('#at-input-error').textContent = '演示输入须为 0–20 的整数。16–20 可用于观察界限拒绝；空值、小数等不作为一次有效的地址请求。';
-      root.querySelector('#at-stage').textContent = '未开始';
-      playButton.disabled = true; nextButton.disabled = true;
-      return;
-    }
-    address = value;
-    rebuild();
-  };
-  playButton.addEventListener('click', () => timer === null ? play() : pause());
-  nextButton.addEventListener('click', () => { pause(); advance(); });
-  root.querySelector('#at-reset').addEventListener('click', () => scene === 'access' ? readAddress() : rebuild());
-  root.querySelector('#at-address').addEventListener('input', readAddress);
-  root.querySelector('#at-base').addEventListener('change', event => { base = Number(event.target.value); readAddress(); });
-  const switchScene = value => {
-    const focused = document.activeElement;
-    scene = value;
-    root.querySelector('#at-scene').value = scene;
-    root.querySelector(scene === 'access' ? '#at-access-mount' : '#at-relocation-mount').append(demonstration);
-    root.querySelector('#at-access-return').hidden = scene === 'access';
-    root.querySelector('#at-relocation-summary').hidden = scene === 'relocation';
-    root.querySelector('#at-address').disabled = scene === 'relocation';
-    root.querySelector('#at-base').disabled = scene === 'relocation';
-    if (scene === 'access') {
-      root.querySelector('#at-address').value = address;
-      root.querySelector('#at-base').value = base;
-    }
-    scene === 'relocation' ? rebuild() : readAddress();
-    if (demonstration.contains(focused)) focused.focus({preventScroll: true});
-  };
-  root.querySelector('#at-scene').addEventListener('change', event => {
-    switchScene(event.target.value);
-    root.querySelector(scene === 'access' ? '#demo' : '#relocation').scrollIntoView({block: 'start'});
-  });
-  root.querySelectorAll('[data-at-scene], [data-at-address]').forEach(button => button.addEventListener('click', () => {
-    if (button.dataset.atAddress !== undefined) {
-      address = Number(button.dataset.atAddress);
-      base = 24;
-    }
-    switchScene(button.dataset.atScene || 'access');
-    root.querySelector(scene === 'access' ? '#demo' : '#relocation').scrollIntoView({block: 'start'});
-    playButton.focus({preventScroll: true});
-  }));
-  root.querySelectorAll('a[href="#demo"], a[href="#relocation"]').forEach(link => link.addEventListener('click', () => {
-    switchScene(link.getAttribute('href') === '#demo' ? 'access' : 'relocation');
-  }));
-  root.querySelector('#at-speed').addEventListener('change', () => { if (timer !== null) { pause(); play(); } });
-  root.querySelector('#at-steps').addEventListener('click', event => { const button = event.target.closest('[data-stage]'); if (button) { pause(); stage = Number(button.dataset.stage); paint(); } });
-  root.querySelector('#at-virtual').addEventListener('click', event => { const button = event.target.closest('[data-address]'); if (button && scene === 'access') { address = Number(button.dataset.address); root.querySelector('#at-address').value = address; rebuild(); root.querySelector(`[data-address="${address}"]`).focus({preventScroll: true}); } });
-  position.addEventListener('input', event => { pause(); stage = Number(event.target.value); paint(); });
-  motion.addEventListener('change', event => { if (event.matches) cancelHighlights(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
-  window.addEventListener('pagehide', pause);
-  rebuild();
-}
+  const {buildAccess, buildRelocation} = OSLabAddressTranslation;
+  const controls = id => `<div class="tx-controls" role="group" aria-label="${id === 'access' ? '地址转换' : '移动过程'}播放控制">
+    <button type="button" data-control="prev" aria-label="上一步" title="上一步">←</button>
+    <button type="button" data-control="play" class="tx-play" aria-pressed="false">播放</button>
+    <button type="button" data-control="next" aria-label="下一步" title="下一步">→</button>
+    <button type="button" data-control="reset">重置</button>
+    <label><span>速度</span><select aria-label="播放速度"><option value="1800">慢速</option><option value="1100" selected>正常</option><option value="600">快速</option></select></label>
+  </div>`;
+  root.innerHTML = `<div class="page tx-page" id="top"><a class="tx-skip" href="#main-content">跳到主要内容</a>${wikiHeader('addressTranslation', [])}
+    <main id="main-content" tabindex="-1"><header class="tx-intro"><p class="tx-kicker">内存虚拟化 / 基址与界限</p><h1>地址转换 <span>Address Translation</span></h1>
+      <p class="tx-lead">程序给出<strong>虚拟地址</strong>，硬件找到<strong>物理位置</strong>。</p><p>先从整段连续存放的方案开始：程序的地址空间从 0 开始，可以装入不同物理位置。一对基址与界限负责整个地址空间的转换与保护。</p>
+    </header>
+    <section id="demo" class="tx-lab" aria-labelledby="tx-lab-title">
+      <header class="tx-lab-head"><div><h2 id="tx-lab-title">先检查界限，再加上基址</h2><p>执行访存指令时，取指令与访问数据分别进行地址转换。</p></div><span class="tx-mode" id="tx-mode">用户态</span></header>
+      <div class="tx-request"><div class="tx-presets" role="group" aria-label="选择访问情境">
+        <button type="button" data-address="6">读数据 <b>6</b></button><button type="button" data-address="0">取指令 <b>0</b></button><button type="button" data-address="16" id="boundary">越界访问 <b>16</b></button>
+      </div><label class="tx-custom">虚拟地址 <input id="tx-address" type="number" min="-1" max="63" step="1" value="6" aria-describedby="tx-input-error" inputmode="numeric"></label></div>
+      <p id="tx-input-error" role="alert" hidden></p>
+      <div id="tx-access-view">
+        <div class="tx-circuit" id="tx-circuit" role="group" aria-label="一次访存的转换路径">
+          <button type="button" class="tx-node tx-source" data-step="0"><span class="tx-node-owner">进程 A</span><span class="tx-node-title">发出虚拟地址</span><strong class="tx-number" id="tx-va">6</strong><span class="tx-node-note" id="tx-source-note">读取 buffer</span></button>
+          <div class="tx-mmu"><span class="tx-mmu-title">MMU · 硬件地址转换单元</span>
+            <button type="button" class="tx-node tx-check" data-step="1"><span class="tx-register">界限 bounds <b>16</b></span><span class="tx-node-title">检查范围</span><strong class="tx-formula" id="tx-check-formula">0 ≤ VA &lt; 16</strong><span class="tx-node-note" id="tx-check-note">16 是长度，最后有效地址为 15</span></button>
+            <button type="button" class="tx-node tx-add" data-step="2"><span class="tx-register">基址 base <b id="tx-base">24</b></span><span class="tx-node-title">加上物理起点</span><strong class="tx-formula" id="tx-add-formula">24 + 6</strong><span class="tx-node-note" id="tx-add-note">检查通过后才计算</span></button>
+          </div>
+          <button type="button" class="tx-node tx-destination" data-step="3"><span class="tx-node-owner" id="tx-destination-owner">物理内存</span><span class="tx-node-title" id="tx-destination-title">访问目标位置</span><strong class="tx-number" id="tx-pa">—</strong><span class="tx-node-note" id="tx-value">等待物理地址</span></button>
+        </div>
+        <div class="tx-register-note">base 与 bounds 由 OS 特权设置，用户程序不能自行修改。<a href="#roles">进程切换时如何处理 →</a></div>
+        <div class="tx-physical"><div class="tx-memory-head"><h3>物理内存 <span>0–63</span></h3><span>选择 A 的装入位置，比较转换结果</span></div>
+          <div class="tx-memory-map" id="tx-memory-map"><span class="tx-os">OS</span><span class="tx-memory-other">空闲</span>
+            <button type="button" data-base="24" aria-pressed="true"><b>24–39</b><span>进程 A</span></button><button type="button" data-base="40" aria-pressed="false"><b>40–55</b><span>可用区域</span></button>
+            <span id="tx-target" class="tx-target" hidden></span>
+          </div><div class="tx-scale" aria-hidden="true"><span style="left:0">0</span><span style="left:12.5%">8</span><span style="left:37.5%">24</span><span style="left:62.5%">40</span><span style="left:87.5%">56</span><span style="right:0">64</span></div>
+        </div>
+        <div class="tx-reading" id="tx-access-log" aria-live="polite"><span class="tx-progress" id="tx-progress"></span><div><h3 id="tx-status-title"></h3><p id="tx-status"></p></div></div>
+      </div>
+      <div class="tx-transport" id="tx-access-controls">${controls('access')}<button type="button" class="tx-boundary-link" data-address="15">比较最后有效地址 15</button></div>
+    </section>
+    <p class="tx-premise">本例的地址单位不对应真实字节，每次访问 1 单位；A 占连续的 16 单位物理空间，0–7 保留给 OS。</p>
+    <div class="tx-next-mechanism"><p><strong>整段分配，也会占用堆与栈之间的空白。</strong>分段保留基址与界限的思路，改为给代码、堆、栈分别设置映射。</p><a href="segmentation.html">分段：分别放置各区域 →</a></div>
+    <div class="tx-further" aria-label="地址转换的进一步分析">
+      <details id="roles" class="tx-detail" name="translation-detail"><summary><span><small>寄存器与进程</small><strong>OS 维护设置，硬件完成每次转换</strong></span><span class="tx-expand" aria-hidden="true">＋</span></summary>
+        <div class="tx-detail-body"><p class="tx-detail-lead">每个 CPU 只有一对 base / bounds 寄存器。切换进程时，OS 要让它们对应即将运行的进程。</p>
+          <ol class="tx-switch-flow"><li>暂停进程 A<small>将 A 的设置保存到 PCB</small></li><li>装入进程 B 的设置<small>更新 CPU 的 base / bounds</small></li><li>恢复进程 B<small>硬件按 B 的设置转换地址</small></li></ol>
+          <p class="tx-small">PCB 是 OS 保存进程状态的数据结构。OS 还负责在创建进程时分配内存、退出时回收内存，并处理硬件报告的保护异常。</p>
+          <section id="relocation" class="tx-move" aria-labelledby="tx-move-title"><header><h3 id="tx-move-title">移动地址空间后，程序仍使用原来的虚拟地址</h3><p>先暂停 A，复制内容并更新基址，再恢复运行。</p></header>
+            <div class="tx-move-top"><span>程序使用 <strong>VA 6</strong></span><span>A 的基址 <strong id="tx-move-base">24</strong></span><span id="tx-move-mode">A 正在运行</span></div>
+            <div id="tx-move-picture"></div><p class="tx-move-key"><i class="tx-unused" aria-hidden="true"></i>斜纹：堆与栈之间未使用的区域，仍随整段一起分配。</p>
+            <div class="tx-move-steps" id="tx-move-steps" role="group" aria-label="移动地址空间的阶段"></div>
+            <div class="tx-reading" aria-live="polite"><span class="tx-progress" id="tx-move-progress"></span><div><h4 id="tx-move-status-title"></h4><p id="tx-move-status"></p></div></div>
+            <div id="tx-move-controls">${controls('move')}</div>
+          </section>
+          <p class="tx-insight"><strong>动态重定位发生在每次访存时。</strong>硬件实时转换地址；复制整个地址空间是 OS 改变存放位置时的单独操作。</p>
+        </div>
+      </details>
+      <details id="limits" class="tx-detail" name="translation-detail"><summary><span><small>速度与空间</small><strong>检查和加法很简单，整段分配却可能浪费内存</strong></span><span class="tx-expand" aria-hidden="true">＋</span></summary>
+        <div class="tx-detail-body tx-cost"><div><h3>堆与栈之间的空白，也在分配范围内</h3><p>只用一对基址与界限，整个地址空间就要连续存放。中间暂未使用的 4 单位仍占物理内存，不能直接分配给其他进程。</p><div class="tx-cost-numbers"><span><b>16</b> 单位整段分配</span><span><b>4</b> 单位中间空白</span></div></div>
+          <figure class="tx-allocation"><figcaption>进程 A 的 16 单位地址空间</figcaption><div class="tx-allocation-bar"><span style="grid-column:span 4">代码 / 数据</span><span style="grid-column:span 4">堆</span><span class="tx-unused" style="grid-column:span 4">未使用</span><span style="grid-column:span 4">栈</span></div><div class="tx-allocation-scale"><span>0</span><span>4</span><span>8</span><span>12</span><span>16</span></div><p>斜纹区域属于 A 的分配范围，是整段分配产生的内部碎片。</p></figure>
+          <p class="tx-insight"><strong>时间上：</strong>正常访存只需硬件检查与加法，无需每次进入 OS。<br><strong>空间上：</strong>整段连续分配会保留未使用区域。</p>
+        </div>
+      </details>
+      <details id="exercise" class="tx-detail" name="translation-detail"><summary><span><small>练习解析</small><strong>请解释什么是重定位？为什么要重定位？</strong></span><span class="tx-expand" aria-hidden="true">＋</span></summary>
+        <div class="tx-detail-body"><p class="tx-detail-lead"><strong>重定位</strong>是根据程序的实际装入位置，将程序中的逻辑地址转换或修正为相应物理地址的过程。</p>
+          <figure class="tx-binding"><figcaption><h3>同一程序，两种装入位置</h3><span>buffer 的逻辑地址始终为 <b>6</b></span></figcaption><div id="tx-binding-cases"></div>
+            <p class="tx-insight">同一个逻辑地址 6，需要随装入位置对应到 30 或 46。重定位使程序能够装入不同的可用区域，并正确访问自己的指令与数据。</p><p id="tx-old-explanation" aria-live="polite">物理地址 30 只对应第一种装入结果。</p>
+          </figure>
+          <div class="tx-relocation-types"><p><strong>装入时修改地址</strong><span>静态重定位：装入程序按实际位置修正地址。</span></p><p><strong>运行时转换地址</strong><span>动态重定位：硬件在每次访存时完成转换，本页的基址机制属于这一类。</span></p></div>
+        </div>
+      </details>
+    </div>
+    </main><footer class="site-footer"><span>OSLab / 内存虚拟化</span><a href="#top">回到页首 ↑</a></footer></div>`;
+  root.querySelector('.site-header nav').remove();
+  const $ = selector => root.querySelector(selector);
+  const $$ = selector => Array.from(root.querySelectorAll(selector));
+  let address = 6, base = 24, validInput = true;
+  const accessPanel = $('#tx-access-controls'), movePanel = $('#tx-move-controls');
+  $('.tx-request').after(accessPanel);
+  $('#tx-circuit').before($('#tx-access-log'));
+  const stages = ['发出地址', '检查界限', '加上基址', '访问内存'];
+  const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[char]));
 
+  // Playback consumes immutable model snapshots; seeking never performs an extra access.
+  function makeController(panel, frames, paint) {
+    let index = 0, timer = null, disabled = false;
+    const buttons = Object.fromEntries(Array.from(panel.querySelectorAll('[data-control]'), button => [button.dataset.control, button]));
+    const controller = {
+      get index() { return index; },
+      get frames() { return frames; },
+      pause() { clearInterval(timer); timer = null; updateControls(); },
+      seek(next) { controllers.forEach(other => other.pause()); index = Math.max(0, Math.min(next, frames.length - 1)); render(); },
+      replace(next) { controllers.forEach(other => other.pause()); frames = next; index = 0; render(); },
+      refresh: render,
+      disable(value) { disabled = value; panel.querySelector('select').disabled = disabled; updateControls(); },
+    };
+    function updateControls() {
+      if (disabled) { Object.values(buttons).forEach(button => {button.disabled = true;}); return; }
+      buttons.play.disabled = false; buttons.reset.disabled = false;
+      buttons.prev.disabled = index === 0;
+      buttons.next.disabled = index === frames.length - 1;
+      buttons.play.textContent = timer !== null ? '暂停' : index === frames.length - 1 ? '重播' : '播放';
+      buttons.play.setAttribute('aria-pressed', String(timer !== null));
+    }
+    function render() { paint(frames[index], index, frames.length); updateControls(); }
+    function play() {
+      controllers.forEach(other => other.pause());
+      if (index === frames.length - 1) { index = 0; render(); }
+      timer = setInterval(() => {
+        index = Math.min(index + 1, frames.length - 1);
+        if (index === frames.length - 1) controller.pause();
+        render();
+      }, Number(panel.querySelector('select').value));
+      updateControls();
+    }
+    buttons.play.addEventListener('click', () => timer === null ? play() : controller.pause());
+    buttons.prev.addEventListener('click', () => controller.seek(index - 1));
+    buttons.next.addEventListener('click', () => controller.seek(index + 1));
+    buttons.reset.addEventListener('click', () => controller.seek(0));
+    panel.querySelector('select').addEventListener('change', () => {if (timer !== null) play();});
+    return controller;
+  }
+  const controllers = [];
+  const access = makeController(accessPanel, buildAccess(), paintAccess);
+  const move = makeController(movePanel, buildRelocation(), paintMove);
+  controllers.push(access, move);
+
+  function paintAccess(frame, index, total) {
+    const rejected = frame.checked === false;
+    $('#tx-circuit').dataset.state = rejected ? 'rejected' : frame.accessed ? 'accessed' : 'pending';
+    $('#tx-circuit').dataset.stage = index;
+    $('#tx-va').textContent = frame.address;
+    $('#tx-base').textContent = frame.base;
+    $('#tx-source-note').textContent = frame.address === 6 ? '读取 buffer' : frame.address < 2 && frame.address >= 0 ? '获取程序指令' : `访问 VA ${frame.address}`;
+    $('#tx-check-formula').textContent = frame.checked === null ? '0 ≤ VA < 16' : rejected ? frame.address < 0 ? `${frame.address} < 0` : `${frame.address} ≥ 16` : `0 ≤ ${frame.address} < 16`;
+    $('#tx-check-note').textContent = frame.checked === null ? '长度 16 · 有效地址 0–15' : rejected ? '未通过 · 不进行基址加法' : '范围检查通过';
+    $('#tx-add-formula').textContent = rejected ? '不计算' : `${frame.base} + ${frame.address}`;
+    $('#tx-add-note').textContent = rejected ? '本次访问被阻止' : frame.physicalAddress === null ? '检查通过后才计算' : `= ${frame.physicalAddress}`;
+    $('#tx-destination-owner').textContent = rejected ? '硬件报告 → OS 处理' : '物理内存';
+    $('#tx-destination-title').textContent = rejected ? '保护异常' : '访问目标位置';
+    $('#tx-pa').textContent = frame.fault ? '×' : rejected ? '—' : frame.physicalAddress === null ? '—' : frame.physicalAddress;
+    $('#tx-value').textContent = frame.fault ? '控制转入内核' : rejected ? '目标内存未被访问' : frame.accessed ? frame.value : frame.physicalAddress === null ? '等待物理地址' : '地址已生成，尚未读取';
+    $('#tx-mode').textContent = frame.mode === 'kernel' ? '内核态' : '用户态';
+    $('#tx-mode').dataset.mode = frame.mode;
+    $$('.tx-circuit [data-step]').forEach(button => {
+      const step = Number(button.dataset.step);
+      const active = step === (rejected && index === 2 ? 3 : index);
+      button.setAttribute('aria-pressed', String(active));
+      button.setAttribute('aria-label', step === 3 && rejected ? '保护异常' : stages[step]);
+      button.tabIndex = active ? 0 : -1;
+      button.disabled = step === 2 && rejected;
+      if (step === 2) button.hidden = rejected;
+      button.dataset.done = String(step < index && !(rejected && step === 2));
+    });
+    $$('[data-address]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.address) === frame.address)));
+    $$('[data-base]').forEach(button => {
+      const selected = Number(button.dataset.base) === frame.base;
+      button.setAttribute('aria-pressed', String(selected));
+      button.querySelector('span').textContent = selected ? '进程 A' : '可用区域';
+      button.setAttribute('aria-label', `将 A 装入 ${button.dataset.base}–${Number(button.dataset.base) + 15}`);
+    });
+    const marker = $('#tx-target');
+    marker.hidden = frame.physicalAddress === null;
+    if (!marker.hidden) {
+      marker.style.left = `${frame.physicalAddress / 64 * 100}%`;
+      marker.dataset.address = frame.physicalAddress;
+      marker.dataset.accessed = frame.accessed;
+      marker.setAttribute('aria-label', `PA ${frame.physicalAddress}，${frame.accessed ? '已访问' : '尚未访问'}`);
+    } else { delete marker.dataset.address; delete marker.dataset.accessed; }
+    const titles = rejected ? ['程序发出虚拟地址', '地址超出了 A 的虚拟范围', '硬件触发保护异常，OS 接管'] : ['程序无需知道数据实际存在哪里', '地址位于 0–15，检查通过', `物理地址是 ${frame.physicalAddress}，尚未访问内存`, '硬件完成访问，无需每次进入 OS'];
+    const descriptions = rejected ? [
+      '', `${frame.address} 不满足 0 ≤ VA < 16。即使加上基址后仍落在物理内存中，也不能通过检查。`, '目标内存没有被访问。OS 根据异常决定后续处置，通常会终止越界的进程。'
+    ] : [
+      `A 使用虚拟地址 ${frame.address}。它的整段空间实际从物理地址 ${frame.base} 开始，两个地址不能直接混用。`,
+      `bounds 表示长度，${frame.address} 小于 16。检查针对进程的地址范围，与机器还有多少空闲内存无关。`,
+      `${frame.base} + ${frame.address} = ${frame.physicalAddress}。程序使用的虚拟地址仍为 ${frame.address}；绿色标记指向转换后的目标位置。`,
+      frame.address >= 8 && frame.address <= 11 ? '该位置在整段范围内，但属于未使用区域。界限检查不负责判断 C 对象是否存在或访问是否符合其生命周期。' : `通过物理地址 ${frame.physicalAddress} ${frame.address <= 1 ? '取到程序指令' : '访问目标位置'}。检查与转换由硬件完成，OS 无需逐次参与正常访存。`
+    ];
+    $('#tx-status-title').textContent = titles[index];
+    $('#tx-status').textContent = descriptions[index];
+    $('#tx-progress').textContent = `${index + 1} / ${total}`;
+    $('#tx-access-log').dataset.fault = rejected;
+  }
+
+  function paintMove(frame, index, total) {
+    $('#tx-move-base').textContent = frame.base;
+    $('#tx-move-mode').textContent = frame.paused ? 'A 已暂停 · 内核态' : 'A 正在运行 · 用户态';
+    $('#tx-move-picture').innerHTML = [24, 40].map(start => {
+      const cells = frame.physical.slice(start, start + 16), populated = cells[0].owner !== null;
+      const active = frame.base === start;
+      const state = cells[0].owner === 'copy' ? '内容已复制，尚未启用' : cells[0].owner === 'A' ? '属于进程 A' : index > 2 && start === 24 ? '已释放，可供复用' : '可用目标区域';
+      return `<div class="tx-move-row" data-start="${start}" data-owner="${cells[0].owner || 'none'}"><div class="tx-move-row-title"><strong>物理 ${start}–${start + 15}</strong><span>${state}</span>${active ? '<b>当前基址</b>' : ''}</div><div class="tx-move-memory" role="img" aria-label="${state}${populated ? '，buffer 为 10，保存的虚拟引用为 6，中间 4 单位未使用' : ''}">
+        ${cells.map((cell, offset) => `<span class="tx-cell${populated && offset >= 8 && offset <= 11 ? ' tx-unused' : ''}" data-address="${cell.address}" data-selected="${cell.address === frame.physicalAddress}" title="${cell.address}${populated ? ' · ' + escapeHtml(cell.content) : ' · 可用'}">${populated && offset === 6 ? '<b>10</b>' : populated && offset === 14 ? '<b>6</b>' : ''}</span>`).join('')}</div><div class="tx-move-labels">${populated ? `<span style="grid-column:6 / span 3">buffer · ${start + 6}</span><span style="grid-column:14 / span 3">saved · ${start + 14}</span>` : '<span class="tx-empty-note">没有 A 的有效内容</span>'}</div></div>`;
+    }).join('');
+    $('#tx-move-status-title').textContent = frame.title;
+    $('#tx-move-status').textContent = [
+      '硬件使用 base = 24，将 VA 6 转换为 PA 30。buffer 的值为 10，saved 保存的虚拟地址为 6。',
+      'OS 暂停 A，准备可用的连续区域 40–55。此时新位置还没有 A 的内容。',
+      '16 单位内容全部复制到新位置，包含中间未使用的 4 单位。A 仍暂停，基址仍为 24。',
+      'OS 将 A 的基址设置更新为 40，原区域可供复用。A 仍暂停，尚未恢复访存。',
+      'A 恢复后，VA 6 对应 PA 46。buffer 仍为 10，saved 仍为 6；程序中的虚拟地址不需要随物理位置修改。'
+    ][index];
+    $('#tx-move-progress').textContent = `${index + 1} / ${total}`;
+    $$('#tx-move-steps button').forEach((button, step) => {button.setAttribute('aria-pressed', String(step === index)); button.tabIndex = step === index ? 0 : -1;});
+  }
+  $('#tx-move-steps').innerHTML = ['原处访问', '暂停 A', '复制内容', '更新基址', '恢复访问'].map((label, index) => `<button type="button" data-move-step="${index}">${label}</button>`).join('');
+
+  function readAddress() {
+    access.pause();
+    const raw = $('#tx-address').value.trim(), value = Number(raw);
+    validInput = raw !== '' && Number.isInteger(value) && value >= -1 && value <= 63;
+    $('#tx-input-error').hidden = validInput;
+    $('#tx-input-error').textContent = validInput ? '' : '请输入 −1 至 63 的整数。0–15 有效，其他地址用于观察越界。';
+    $('#tx-address').setAttribute('aria-invalid', String(!validInput));
+    $('#tx-access-view').hidden = !validInput;
+    access.disable(!validInput);
+    if (validInput) {address = value; access.replace(buildAccess(address, base));}
+  }
+  $('#tx-address').addEventListener('input', readAddress);
+  $$('[data-address]').forEach(button => button.addEventListener('click', () => {$('#tx-address').value = button.dataset.address; readAddress();}));
+  $$('[data-base]').forEach(button => button.addEventListener('click', () => {base = Number(button.dataset.base); readAddress();}));
+  $('#tx-circuit').addEventListener('click', event => {const button = event.target.closest('[data-step]'); if (button) access.seek(Math.min(Number(button.dataset.step), access.frames.length - 1));});
+  $('#tx-move-steps').addEventListener('click', event => {const button = event.target.closest('[data-move-step]'); if (button) move.seek(Number(button.dataset.moveStep));});
+  function stepKeys(container, selector, controller) {
+    container.addEventListener('keydown', event => {
+      if (!event.target.closest(selector) || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+      event.preventDefault();
+      controller.seek(event.key === 'Home' ? 0 : event.key === 'End' ? controller.frames.length - 1 : controller.index + (event.key === 'ArrowRight' ? 1 : -1));
+      container.querySelector('[aria-pressed="true"]').focus({preventScroll:true});
+    });
+  }
+  stepKeys($('#tx-circuit'), '[data-step]', access);
+  stepKeys($('#tx-move-steps'), '[data-move-step]', move);
+  $$('.tx-detail > summary').forEach(summary => summary.addEventListener('click', () => controllers.forEach(controller => controller.pause())));
+  $$('.tx-detail').forEach(detail => detail.addEventListener('toggle', () => {
+    if (!detail.open && detail.id === 'roles') move.pause();
+    if (detail.open) controllers.forEach(controller => controller.pause());
+    if (!validInput) access.disable(true);
+  }));
+  document.addEventListener('visibilitychange', () => {if (document.hidden) controllers.forEach(controller => controller.pause());});
+  window.addEventListener('pagehide', () => controllers.forEach(controller => controller.pause()));
+
+  // Exercise maps use a common physical scale, so a different load position is visible.
+  $('#tx-binding-cases').innerHTML = [24, 40].map(start => `<div class="tx-binding-case" data-load="${start}"><div class="tx-binding-head"><strong>装入起点 ${start}</strong><span><b class="tx-blue">VA 6</b> + ${start} = <b class="tx-green">PA ${start + 6}</b></span></div>
+    <div class="tx-binding-map"><div class="tx-binding-memory"><span class="tx-binding-allocation" style="left:${start / 64 * 100}%;width:25%"><span>A · ${start}–${start + 15}</span></span><span class="tx-binding-target" data-address="${start + 6}" style="left:${(start + 6) / 64 * 100}%"></span></div>
+    <span class="tx-binding-target-label" style="left:${(start + 6.5) / 64 * 100}%">buffer = 10<strong>${start + 6}</strong></span><span class="tx-map-zero">0</span><span class="tx-map-end">63</span>
+    ${start === 40 ? '<button type="button" id="tx-old-address" aria-pressed="false" aria-describedby="tx-old-explanation" style="left:47.65625%">旧址<br><b>30</b></button>' : ''}</div></div>`).join('');
+  $('#tx-old-address').addEventListener('click', event => {
+    const button = event.currentTarget, pressed = button.getAttribute('aria-pressed') !== 'true';
+    button.setAttribute('aria-pressed', String(pressed));
+    $('#tx-old-explanation').textContent = pressed ? '如果仍访问原物理地址 30，就会落到 A 的新区域 40–55 之外。正确的 buffer 位置是 46。' : '物理地址 30 只对应第一种装入结果。';
+    $('#tx-old-explanation').dataset.wrong = pressed;
+  });
+  function openAnchor(value) {
+    const hash = typeof value === 'string' ? value : location.hash.slice(1);
+    if (['roles','relocation','limits','exercise'].includes(hash)) {
+      const detail = $(hash === 'relocation' ? '#roles' : `#${hash}`);
+      detail.open = true;
+      requestAnimationFrame(() => $(hash === 'relocation' ? '#relocation' : `#${hash}`).scrollIntoView({block:'start'}));
+    } else if (hash === 'boundary') {$('#tx-address').value = 16; readAddress(); $('#demo').scrollIntoView({block:'start'});}
+  }
+  root.addEventListener('click', event => {
+    const link = event.target.closest('a[href^="#"]');
+    if (link) openAnchor(link.getAttribute('href').slice(1));
+  });
+  window.addEventListener('hashchange', openAnchor);
+  access.refresh(); move.refresh(); openAnchor();
+}
 renderAddressTranslationPage(document.getElementById('root'));

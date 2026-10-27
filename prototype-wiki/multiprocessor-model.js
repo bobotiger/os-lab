@@ -1,13 +1,13 @@
 const MULTIPROCESSOR_SCENES = Object.freeze({
   queues: {title: '每核队列与负载均衡', text: 'CPU 0 分配 A、B、C，CPU 1 分配 D。一个核空闲时，是否从另一核队尾迁移一个排队任务？'},
   shared: {title: '共享队列', text: '两个 CPU 从同一队列领取任务，按 CPU 0、CPU 1 的顺序协调取队首，锁争用开销取零。'},
-  affinity: {title: '缓存亲和性', text: 'A 曾在 CPU 0 执行，现在重新就绪。两个核都可用，可以留在原核或迁移到 CPU 1；原运行关联可能影响缓存复用，但不保证命中。'},
+  affinity: {title: '缓存亲和性', text: 'A 曾在 CPU 0 执行，现在重新就绪。两个核都可用，可以留在原核或迁移到 CPU 1；留在原核可能复用缓存中的数据，但这些数据也可能已被移出缓存。'},
 });
 
 function buildMultiprocessorRun(scene = 'queues', balance = true, target = 0) {
   if (!Object.hasOwn(MULTIPROCESSOR_SCENES, scene) || typeof balance !== 'boolean' || ![0, 1].includes(target)) throw new Error('多处理器场景无效');
   if (scene === 'affinity') {
-    const state = {time: 0, cpus: [null, null], queues: [['A'], []], shared: [], busy: [0, 0], migrations: 0, cache: [['A'], []], tasks: [{id: 'A', burst: 2, remaining: 2}], events: ['A 重新就绪，原运行关联在 CPU 0。']};
+    const state = {time: 0, cpus: [null, null], queues: [['A'], []], shared: [], busy: [0, 0], migrations: 0, cache: [['A'], []], tasks: [{id: 'A', burst: 2, remaining: 2}], events: ['A 重新就绪，此前曾在 CPU 0 运行。']};
     const snapshots = [structuredClone(state)];
     state.time = 1;
     state.queues[0] = [];
@@ -19,7 +19,7 @@ function buildMultiprocessorRun(scene = 'queues', balance = true, target = 0) {
     state.busy[target] = 1;
     state.tasks[0].remaining = 1;
     state.cache[target] = ['A'];
-    state.events = ['A 已在所选 CPU 执行一个示意单位；有运行关联不保证缓存内容仍驻留。'];
+    state.events = ['A 已在所选 CPU 执行一个示意单位；曾在此核运行，不保证所需数据仍在缓存中。'];
     snapshots.push(structuredClone(state));
     state.time = 3;
     state.busy[target] = 2;

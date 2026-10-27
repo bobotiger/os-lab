@@ -6,12 +6,12 @@ function renderSharePage(root) {
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">CPU 虚拟化 / 调度</p>
         <h1 id="page-title">比例份额调度 <span>Proportional Share</span></h1>
-        <p class="lead">权重确定目标 CPU 份额，不保证每轮的分配顺序。</p>
-        <p class="definition">目标份额 = 自身权重 ÷ 当前可运行进程的总权重。彩票调度和步长调度（Stride）使用同样的权重，以不同规则选择每轮的运行者。</p>
+        <p class="lead">除了响应与周转，调度还可以按权重分配 CPU 份额。</p>
+        <p class="definition">目标份额 = 自身权重 ÷ 当前可运行进程的总权重，不保证每轮的分配顺序。彩票调度和步长调度（Stride）使用同样的权重，以不同规则选择每轮的运行者。</p>
         <p class="model-note">单核，三个进程始终就绪并持续竞争 CPU，无 I/O，切换开销为零，每次分配 1 个示意 CPU 单位。一条序列内权重固定；彩票使用给定种子的伪随机抽签序列。Stride 初始 pass 均为 0，并列按 A、B、C 顺序选择。</p>
       </section>
       <section class="share-demo" id="demo" aria-labelledby="demo-title">
-        <div class="section-heading"><div><p class="section-index">01 / PROPORTIONAL SHARE</p><h2 id="demo-title">同一组进程权重下的彩票调度与步长调度</h2></div><p class="rr-clock">已分配 <strong id="share-time">0</strong> / <span id="share-total">60</span></p></div>
+        <div class="section-heading"><div><h2 id="demo-title">同一组进程权重下的彩票调度与步长调度</h2></div><p class="rr-clock">已分配 <strong id="share-time">0</strong> / <span id="share-total">60</span></p></div>
         <div class="rr-toolbar share-toolbar">
           <div class="rr-transport" role="group" aria-label="播放控制">
             <button type="button" class="icon-button primary" id="share-play" title="播放" aria-label="播放" aria-pressed="false"><span aria-hidden="true">▶</span></button>
@@ -26,14 +26,14 @@ function renderSharePage(root) {
         <p class="share-workload" id="share-workload"></p>
         <div class="share-mechanisms">
           <section class="share-mechanism" aria-labelledby="lottery-title">
-            <p class="section-index">LOTTERY / 随机选择</p><h3 id="lottery-title">彩票调度</h3>
+            <h3 id="lottery-title">彩票调度</h3>
             <p class="share-method-note">权重对应票数。每轮抽一张票，拥有者获得 1 个 CPU 单位；票数占总数的比例就是中奖概率。</p>
             <div class="share-ticket-pool" id="share-ticket-pool" role="img" aria-label="票池"></div>
             <div class="share-winner"><p>最近一轮中奖票号 <strong id="share-ticket">—</strong></p><p>分配给 <strong id="lottery-winner">—</strong></p></div>
             <p class="share-decision" id="lottery-reason" aria-live="polite"></p>
           </section>
           <section class="share-mechanism" aria-labelledby="stride-title">
-            <p class="section-index">STRIDE / 确定性选择</p><h3 id="stride-title">步长调度</h3>
+            <h3 id="stride-title">步长调度</h3>
             <p class="share-method-note">步长 = ${strideScale} ÷ 权重。pass 是用于排序的累计虚拟进度；每轮选最小者，运行后增加它自己的步长。</p>
             <table class="share-pass"><thead><tr><th scope="col">进程</th><th scope="col">步长</th><th scope="col">pass 前</th><th scope="col">pass 后</th></tr></thead><tbody id="share-passes"></tbody></table>
             <p class="share-decision" id="stride-reason" aria-live="polite"></p>
@@ -47,9 +47,9 @@ function renderSharePage(root) {
         <p class="share-observation" id="share-observation" aria-live="polite"></p>
       </section>
       <section class="rr-rules" id="rules" aria-labelledby="rules-title">
-        <div class="section-heading"><div><p class="section-index">02 / THE FAMILY</p><h2 id="rules-title">目标 CPU 份额与进程选择规则</h2></div></div>
+        <div class="section-heading"><div><h2 id="rules-title">目标 CPU 份额与进程选择规则</h2></div></div>
         <dl class="concepts rr-concepts">
-          <div><dt>彩票调度：概率上的份额</dt><dd>拥有 5 张票、总票数 10，每轮中奖概率为 50%。短期可能连续获胜，也可能连续没被选中；理想均匀抽签的长期统计趋向票数比例，但没有有限等待上界或固定窗口配额保证。</dd></div>
+          <div><dt>彩票调度：概率上的份额</dt><dd>拥有 5 张票、总票数 10，每轮中奖概率为 50%。短期可能连续获胜，也可能连续没被选中；理想均匀抽签的长期统计趋向票数比例，但不能保证在指定轮数内恰好按比例分配，也没有确定的最长等待时间。</dd></div>
           <div><dt>Stride：优先选择累计虚拟进度最小的进程</dt><dd>本例 stride = ${strideScale} ÷ 权重。权重越大，步长越小；每次运行后 pass 增加自己的步长，因此更频繁地成为 pass 最小者。pass 不是实际时间或剩余工作量。</dd></div>
           <div><dt>公平份额，不是完成时间排序</dt><dd>它不根据短任务、完成期限或 MLFQ 的行为反馈选择进程。即使长期份额合适，也不等于每轮公平、响应时间最短，或任何进程一定最快完成。</dd></div>
         </dl>
@@ -76,10 +76,22 @@ function renderSharePage(root) {
   for (const mechanism of root.querySelectorAll('.share-mechanism')) {
     mechanism.querySelector('.share-method-note').after(mechanism.querySelector('.share-decision'));
   }
-  demo.querySelector('.share-timeline-heading').before(root.querySelector('#share-observation'));
+  // Keep each strategy's running total beside the choice that produced it.
+  const results = root.querySelector('.share-results');
+  root.querySelectorAll('.share-mechanism').forEach(mechanism => {
+    const total = results.children[0];
+    total.querySelector('h4').textContent = '累计分配';
+    mechanism.append(total);
+  });
+  results.remove();
+  demo.querySelector('.share-results-heading').remove();
+  const legend = document.createElement('p');
+  legend.className = 'cpu-caption share-result-legend';
+  legend.textContent = '累计份额：实色条表示实际获得的比例，竖线表示权重对应的目标。';
+  demo.querySelector('.share-mechanisms').after(legend, root.querySelector('#share-observation'));
   const assumptions = document.createElement('details');
   assumptions.className = 'share-reference';
-  assumptions.innerHTML = '<summary>计算前提与份额指标</summary><p>实际份额 = 已获得的 CPU 单位 ÷ 已分配轮数。偏差取实际占比与目标占比之差的绝对值；最大偏差是三个进程中最大的偏差。</p><p>pass 用于选择顺序，不是实际时间或剩余工作量。120 只确定虚拟进度的尺度，不是时间片长度。</p>';
+  assumptions.innerHTML = '<summary>计算前提与份额指标</summary><p>实际份额 = 已获得的 CPU 单位 ÷ 已分配轮数。偏差取实际占比与目标占比之差的绝对值；最大偏差是三个进程中最大的偏差。</p><p>pass 用于选择顺序，不是实际时间或剩余工作量。120 用于计算步长，不表示实际时间，也不决定时间片长度。</p>';
   assumptions.append(root.querySelector('.intro .model-note'));
   demo.append(assumptions);
   for (const tradeoff of root.querySelectorAll('#rules .rr-tradeoff')) {

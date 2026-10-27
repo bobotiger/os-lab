@@ -5,7 +5,7 @@ function renderProcessApiPage(root) {
     <main>
       <section class="intro" aria-labelledby="page-title"><p class="eyebrow">CPU 虚拟化 / UNIX 接口</p><h1 id="page-title">进程 API <span>Interlude: Process API</span></h1><p class="lead">fork 创建子进程，exec 替换程序，wait 收集退出状态。</p><p class="definition">PID 是进程编号。程序映像包括进程执行的代码、数据和用户栈；更换程序映像与创建另一个进程是不同的操作。</p></section>
       <section class="lde-demo" id="demo" aria-labelledby="api-basics-title">
-        <div class="section-heading"><div><p class="section-index">01 / 创建与替换</p><h2 id="api-basics-title">fork 与 exec，分别改变什么？</h2></div></div>
+        <div class="section-heading"><div><h2 id="api-basics-title">创建进程、替换程序与等待退出</h2></div></div>
         <div id="api-basic-mount"><div id="api-example"><h3 id="demo-title" class="api-scenario-title"></h3>
         <div class="rr-toolbar lde-toolbar"><div class="rr-transport" role="group" aria-label="演示控制"><button type="button" class="icon-button primary" id="api-play" aria-label="播放" aria-pressed="false" title="播放"><span aria-hidden="true">▶</span></button><button type="button" class="icon-button" id="api-step" aria-label="下一阶段" title="下一阶段"><span aria-hidden="true">↦</span></button><button type="button" class="icon-button" id="api-reset" aria-label="重新开始" title="重新开始"><span aria-hidden="true">↺</span></button></div><label>调用场景<select id="api-scenario">${['fork', 'exec', 'shell'].map(id => `<option value="${id}">${scenarios[id].title}</option>`).join('')}</select></label><label>播放速度<select id="api-speed"><option value="1600">慢速</option><option value="1000" selected>正常</option><option value="500">快速</option></select></label><p class="api-progress">阶段 <strong id="api-stage-index">1</strong> / <span id="api-stage-total">4</span></p></div>
         <div class="api-command"><span>调用 / 命令</span><code id="api-command"></code></div><p class="lde-scene-note" id="api-scene-note"></p>
@@ -17,8 +17,8 @@ function renderProcessApiPage(root) {
         </div></div>
         <div class="api-case-actions"><button type="button" data-api-scenario="fork">观察 fork</button><button type="button" data-api-scenario="exec">对照 exec</button></div>
       </section>
-      <section class="lde-entry-section" id="separation" aria-labelledby="separation-title"><div class="section-heading"><div><p class="section-index">02 / Shell 命令</p><h2 id="separation-title">把创建、重定向和等待串成一条命令</h2></div></div><p class="section-description">Shell 先 fork，在子进程中准备输入输出，再 exec 装载 sort；父 Shell 保留自身程序，用 waitpid 等待并收集子进程的退出状态。</p><p class="api-descriptor-note">文件描述符是访问已打开 I/O 资源的编号。0 为标准输入，1 为标准输出，2 为标准错误；重定向改变它们对应的输入输出目标。</p><div id="api-shell-mount"></div><p id="api-shell-start"><button type="button" class="api-case-button" data-api-scenario="shell">观察 Shell 命令</button></p><p class="api-conditions">重定向在子进程中执行，因此父 Shell 的输入输出仍连接终端。sort 只读标准输入、写标准输出，不需要解析 Shell 的重定向语法。</p></section>
-      <section class="rr-rules" id="contract" aria-labelledby="contract-title"><div class="section-heading"><div><p class="section-index">03 / 接口说明</p><h2 id="contract-title">返回值、失败情况与资源规则</h2></div></div>
+      <section class="lde-entry-section" id="separation" aria-labelledby="separation-title"><div class="section-heading"><div><h2 id="separation-title">把创建、重定向和等待串成一条命令</h2></div></div><p class="section-description">Shell 先 fork，在子进程中准备输入输出，再 exec 装载 sort；父 Shell 保留自身程序，用 waitpid 等待并收集子进程的退出状态。</p><p class="api-descriptor-note">文件描述符是访问已打开 I/O 资源的编号。0 为标准输入，1 为标准输出，2 为标准错误；重定向改变它们对应的输入输出目标。</p><p id="api-shell-start"><button type="button" class="api-case-button" data-api-scenario="shell">观察 Shell 命令</button></p><p class="api-conditions">重定向在子进程中执行，因此父 Shell 的输入输出仍连接终端。sort 只读标准输入、写标准输出，不需要解析 Shell 的重定向语法。</p></section>
+      <section class="rr-rules" id="contract" aria-labelledby="contract-title"><div class="section-heading"><div><h2 id="contract-title">返回值、失败情况与资源规则</h2></div></div>
         <details class="api-reference"><summary>fork、exec、wait 分别怎样返回？失败后会怎样？</summary><div class="api-contract-scroll" role="region" aria-label="进程接口返回值与边界" tabindex="0"><table class="api-contract-table"><thead><tr><th scope="col">接口</th><th scope="col">改变什么</th><th scope="col">返回与边界</th></tr></thead><tbody><tr><th scope="row"><code>fork()</code></th><td>新增子进程。父子从同一调用之后继续，普通私有内存此后独立。</td><td>成功时父进程收到子 PID，子进程收到 0；失败返回 -1，不产生子进程。父子执行顺序不固定。</td></tr><tr><th scope="row"><code>exec*</code></th><td>替换当前进程的代码、数据、用户栈等程序映像，不新增 PID。</td><td>成功不返回旧程序；失败通常返回 -1 并设置 errno，原程序仍在。子分支必须处理失败，不能落入父 Shell 的逻辑。</td></tr><tr><th scope="row"><code>wait / waitpid</code></th><td>等待并收集子进程退出状态，回收退出记录。</td><td>子进程已经退出时可立即取得状态；也有非阻塞选项。本例用阻塞的 waitpid 等待指定前台子进程，正常退出码须用等待状态宏读取。</td></tr></tbody></table></div></details>
         <details class="api-reference"><summary>父子文件描述符独立，为什么仍可能共享文件偏移？</summary><p>fork 后父子各有描述符表，继承的描述符可引用同一内核打开文件描述，因而共享文件偏移等属性。对子进程执行 dup2 或 close 不会直接改父进程的描述符表；不是复制了两份文件。</p></details>
         <details class="api-reference"><summary>exec 后，哪些文件描述符会保留？</summary><p>本例的标准描述符未设置 close-on-exec，因此保留。设置该标志的描述符会在成功 exec 时关闭；不是所有资源都原样保留。PID 保持，但 exec 仍可能改变其他进程属性。</p></details>
@@ -26,7 +26,7 @@ function renderProcessApiPage(root) {
         <details class="api-reference"><summary>fork 与 exec 分开，还能准备什么？能否使用组合接口？</summary><p>exec 前的准备代码仍是 Shell 的代码，但运行在子进程中。除重定向外，还可以接入管道、改变工作目录或准备环境。若在父 Shell 中重定向，它自身的输出也会受影响，需要另行保存与恢复。</p><p><code>posix_spawn()</code> 等接口可以组合创建与装载，并通过文件动作、属性等配置提供准备能力。fork／exec 的价值是可组合性，不是唯一设计；现代系统也关注 fork 在多线程与性能上的限制。</p></details>
         <details class="api-reference"><summary>创建、装载与 CPU 调度有什么区别？</summary><p>fork 产生新的进程身份，exec 决定当前进程运行哪个程序，调度器决定何时给它 CPU。<a href="limited-direct-execution.html" class="inline-link">受限直接执行</a>涉及进入内核与恢复执行的机制。单独调用 exec 也有用途，例如启动包装程序把自己替换成最终程序。</p></details>
       </section>
-      <section class="lde-entry-section" id="practice" aria-labelledby="api-practice-title"><div class="section-heading"><div><p class="section-index">04 / 参考实践</p><h2 id="api-practice-title">用父子进程的输出检查接口行为</h2></div></div><p class="process-homework-link"><a class="inline-link" href="process-api-homework.html">进程 API 作业：进程树与接口编程</a></p></section>
+      <section class="lde-entry-section" id="practice" aria-labelledby="api-practice-title"><div class="section-heading"><div><h2 id="api-practice-title">用父子进程的输出检查接口行为</h2></div></div><p class="process-homework-link"><a class="inline-link" href="process-api-homework.html">进程 API 作业：进程树与接口编程</a></p></section>
       ${wikiRelated('processApi')}
     </main><footer class="site-footer"><span>OSLab / CPU 虚拟化</span><a href="#top">回到页首 ↑</a></footer>
   </div>`;
@@ -54,10 +54,11 @@ function renderProcessApiPage(root) {
   const laneFrames = lane => frames.filter(frame => frame.actor === lane || frame.actor === 'both');
   const visibleLanes = () => scenario === 'exec' ? ['parent'] : ['parent', 'child'];
   const prepare = () => {
-    root.querySelector(scenario === 'shell' ? '#api-shell-mount' : '#api-basic-mount').append(root.querySelector('#api-example'));
-    root.querySelector('#api-shell-start').hidden = scenario === 'shell';
+    // The same workbench stays in place when the selected scenario changes.
+    root.querySelector('#api-basic-mount').append(root.querySelector('#api-example'));
+    root.querySelector('#api-shell-start').hidden = false;
     root.querySelector('#api-scenario').value = scenario;
-    root.querySelectorAll('[data-api-scenario]').forEach(button => { button.hidden = button.dataset.apiScenario === scenario; });
+    root.querySelectorAll('[data-api-scenario]').forEach(button => { button.hidden = button.dataset.apiScenario === scenario && button.dataset.apiScenario !== 'shell'; });
     root.querySelector('#api-conditions').textContent = scenario === 'exec'
       ? '本例假设 exec 成功。阶段表示这个进程的事件顺序，不表示调度时长；“可执行”不表示正在占用 CPU。'
       : '本例假设调用成功。父子执行顺序不固定，阶段不表示调度时长；“可执行”不表示正在占用 CPU。';
@@ -112,7 +113,7 @@ function renderProcessApiPage(root) {
     diagram.querySelectorAll('[data-stage]').forEach(button => button.setAttribute('aria-pressed', String(Number(button.dataset.stage) === stage)));
     const current = syncPaths();
     const scroll = root.querySelector('.api-diagram-scroll');
-    if (current < scroll.scrollLeft + 96 || current > scroll.scrollLeft + scroll.clientWidth - 55) scroll.scrollLeft = Math.max(0, current - scroll.clientWidth / 2);
+    if (current < scroll.scrollLeft + 96 + 55 || current > scroll.scrollLeft + scroll.clientWidth - 55) scroll.scrollLeft = Math.max(0, current - (scroll.clientWidth + 96) / 2);
     if (stage === 0) scroll.scrollLeft = 0;
     position.value = stage;
     position.setAttribute('aria-valuetext', `阶段 ${stage + 1}，${snapshot.label}`);
@@ -148,11 +149,10 @@ function renderProcessApiPage(root) {
   };
   root.querySelector('#api-scenario').addEventListener('change', event => {
     selectScenario(event.target.value);
-    root.querySelector(scenario === 'shell' ? '#separation' : '#demo').scrollIntoView({block: 'start'});
   });
   root.querySelectorAll('[data-api-scenario]').forEach(button => button.addEventListener('click', () => {
     selectScenario(button.dataset.apiScenario);
-    root.querySelector(scenario === 'shell' ? '#separation' : '#demo').scrollIntoView({block: 'start'});
+    root.querySelector('#demo').scrollIntoView({block: 'start'});
     playButton.focus({preventScroll: true});
   }));
   root.querySelectorAll('a[href="#demo"], a[href="#separation"]').forEach(link => link.addEventListener('click', () => {

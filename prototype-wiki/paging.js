@@ -1,214 +1,140 @@
-const PAGING_TABLE = [{page: 0, frame: 5}, {page: 1, frame: 3}, {page: 2, frame: 6}, {page: 3, frame: 1}];
-const PAGING_SIZE = OSLabSimulation.PAGE_SIZE;
-const PAGING_ALLOCATION = {
-  pageTables: new Map([['A', PAGING_TABLE]]),
-  frameTable: Array.from({length: OSLabSimulation.FRAME_COUNT}, (_, frame) => {
-    const entry = PAGING_TABLE.find(row => row.frame === frame);
-    return {frame, processId: entry ? 'A' : null, page: entry?.page ?? null};
-  }),
-};
-const PAGING_MAX = PAGING_TABLE.length * PAGING_SIZE - 1;
-const pagingBits = (value, width) => value.toString(2).padStart(width, '0');
-
-function pagingAllocationDiagram() {
-  const free = [0, 2, 4, 7];
-  const frames = allocated => Array.from({length: 8}, (_, frame) => {
-    const chosen = allocated && (frame === 0 || frame === 2);
-    const state = chosen ? 'pg-allocated' : free.includes(frame) ? 'pg-free' : 'pg-occupied';
-    return `<div class="pg-alloc-frame ${state}"><span>框 ${frame}</span><strong>${chosen ? `页 ${frame === 0 ? 0 : 1}` : free.includes(frame) ? '空闲' : '已占用'}</strong><div class="pg-four">${Array.from({length: 4}, (_, offset) => `<span${chosen && frame === 2 && offset >= 2 ? ' class="pg-waste"' : ''}></span>`).join('')}</div><small>${chosen ? frame === 0 ? '使用 4 单位' : '使用 2 · 余 2' : '4 单位'}</small></div>`;
-  }).join('');
-  return `<p class="pt-copy">先看一个长度为 6 单位、需要单独存放的区域。下面的物理内存总共 32 单位，空闲位置彼此分开。每个大格是一个 4 单位页框，内部四个小格表示容量。</p>
-    <figure class="pg-allocation"><figcaption><strong>连续分配：没有足够大的连续空闲块</strong><span>空闲框 0、2、4、7，共 16 单位；最大连续空闲块只有 4。</span></figcaption><div class="pg-alloc-band">${frames(false)}</div><p class="pg-allocation-result pg-cannot">需要连续 6 单位 &gt; 最大连续块 4 单位 · 无法满足这次连续分配</p></figure>
-    <div class="pg-region"><span>把区域分成两页</span><div><strong>页 0</strong><span>4 单位内容</span></div><div><strong>页 1</strong><span>2 单位内容 + 2 单位空余</span></div></div>
-    <figure class="pg-allocation"><figcaption><strong>按页分配：分别使用框 0 和框 2</strong><span>页 0 → 框 0，页 1 → 框 2；页在虚拟空间中相邻，物理页框不必相邻。</span></figcaption><div class="pg-alloc-band">${frames(true)}</div><p class="pg-allocation-result">分配 2 × 4 = 8 单位；内容使用 6，末页内部空余 <strong>2 单位</strong>。</p></figure>
-    <p class="pt-caption">绿色为本区域占用，斜纹为末页内部空余；空余仍属于已分配的页框，不是空闲页框。这是一个独立的 6 单位区域；A 的四页映射采用另一组布局。实际堆布局可以在同页放多个对象，不能对每个 malloc 都单独取整。</p>`;
+/* Paging: a spatial map, one access, then the two costs of that mapping. */
+(function(){
+'use strict';
+const M=OSLabPaging,root=document.getElementById('root');
+const icon=name=>`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${({prev:'<path d="M16 5 9 12l7 7M5 5v14"/>',next:'<path d="m8 5 7 7-7 7M19 5v14"/>',play:'<path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"/>',pause:'<path d="M8 5v14M16 5v14" stroke-width="3"/>',reset:'<path d="M4 10a8 8 0 1 1 2 8M4 4v6h6"/>'})[name]}</svg>`;
+const transport=id=>`<div class="pg-controls" id="${id}-controls" role="group" aria-label="${id==='tr'?'地址访问':'访存序列'}播放控制"><button type="button" data-control="prev" aria-label="上一步">${icon('prev')}</button><button type="button" class="pg-primary" data-control="play" aria-label="播放" aria-pressed="false">${icon('play')}</button><button type="button" data-control="next" aria-label="下一步">${icon('next')}</button><button type="button" data-control="reset" aria-label="重置">${icon('reset')}</button><select data-control="speed" aria-label="播放速度"><option value="2200">慢速</option><option value="1300" selected>正常</option><option value="650">快速</option></select></div>`;
+root.innerHTML=`<div class="page pg-page" id="top"><a class="pg-skip" href="#pg-main">跳到正文</a>${wikiHeader('paging',[])}<main id="pg-main" tabindex="-1">
+<header class="pg-intro"><h1>分页基础 <span>Paging</span></h1><p>把分配与映射的单位从变长的段改为等大的<strong>页</strong>，物理内存也划成同样大小的<strong>页框</strong>。每页独立选择物理位置，程序仍使用连续的虚拟地址。</p></header>
+<div class="pg-view-nav" role="tablist" aria-label="分页机制"><button type="button" id="pg-tab-allocation" data-view="allocation" role="tab" aria-controls="allocation" aria-selected="true">页的放置</button><button type="button" id="pg-tab-translation" data-view="translation" role="tab" aria-controls="translation" aria-selected="false" tabindex="-1">一次地址访问</button></div>
+<section id="allocation" class="pg-view" role="tabpanel" aria-labelledby="pg-tab-allocation">
+<div class="pg-section-head"><div><h2 id="pg-map-title"></h2><p id="pg-map-text"></p></div><button type="button" id="pg-allocate" aria-pressed="true">回看分配前</button></div>
+<figure class="pg-map" id="object"><figcaption class="pg-map-caption"><span>每个格子都是 16 B；页与页框采用相同大小。</span><button type="button" id="pg-object-toggle" aria-pressed="false" aria-controls="pg-object-context">标出一个跨页对象</button></figcaption><div id="pg-object-context" class="pg-object-context" hidden><strong>堆对象：24 B · VA 16–39</strong><span><code>unsigned char *p</code> 指向 VA 16，每个元素 1 B；对象已申请并初始化。</span><small>色条标出同一对象在各页、页框中占用的字节；其余字节不属于这个对象。</small></div><div class="pg-map-label"><h3>进程 A 的虚拟地址空间</h3><span>64 B · 4 页</span></div><div id="pg-pages" class="pg-memory-grid"></div>
+<div id="pg-map-link" class="pg-map-link" aria-live="polite"></div>
+<div class="pg-map-label"><h3>物理内存</h3><span>128 B · 8 框</span></div><div id="pg-frames" class="pg-memory-grid"></div>
+<div class="pg-legend"><span><i class="pg-key-virtual"></i>虚拟页</span><span><i class="pg-key-physical"></i>A 的页框</span><span><i class="pg-key-free"></i>空闲</span><span><i class="pg-key-used"></i>已有占用</span></div></figure>
+<div class="pg-takeaway"><p id="pg-map-takeaway"></p><button type="button" id="pg-follow">追踪 VA 21 的读取 →</button></div>
+</section>
+<section id="translation" class="pg-view" role="tabpanel" aria-labelledby="pg-tab-translation" hidden>
+<div class="pg-section-head"><div><h2>查到页框号，保留页内偏移</h2><p>沿用 A 的四个映射。硬件读取页表、检查访问条件，再访问目标位置。</p></div></div>
+<div class="pg-request"><label for="paging-address">虚拟地址 <b>VA</b></label><input id="paging-address" name="virtual-address" type="number" inputmode="numeric" autocomplete="off" min="0" max="63" step="1" value="21" aria-describedby="pg-address-note paging-error"><select id="pg-operation" aria-label="访问操作"><option value="read">读取 1 B</option><option value="write">写入 99</option></select><div class="pg-boundaries" role="group" aria-label="跨页的相邻地址"><button type="button" data-address="31">31 · 页末</button><button type="button" data-address="32">32 · 下一页</button></div></div>
+<p class="pg-note" id="pg-address-note">VA 0–63 · 页大小 16 B · 页表起点 PTBR = 0 · 每项 4 B</p><p class="pg-object-access" id="pg-object-access" hidden></p><p id="paging-error" class="pg-error" role="alert" hidden></p><button type="button" id="pg-recover" hidden>恢复 VA 21</button>
+<div id="pg-access-content"><div class="pg-playbar">${transport('tr')}<div class="pg-steps" id="pg-stages" role="group" aria-label="访问阶段"></div></div>
+<div class="pg-execution" id="pg-access-log" aria-live="polite"><h3 id="pg-access-title"></h3><p id="pg-access-text"></p></div>
+<div class="pg-access-grid"><section class="pg-table-panel"><h3>A 的线性页表 <small>保存在物理内存</small></h3><div class="pg-table-labels"><span>虚拟页 VPN</span><span>页框 PFN</span><span>权限 / 状态</span></div><div id="pg-table" role="group" aria-label="选择虚拟页"></div><p class="pg-note" id="pg-pte-address"></p><div id="pg-entry-flags" class="pg-entry-flags"></div></section>
+<section class="pg-address-panel"><div class="pg-address-line"><span>虚拟地址 <b id="pg-va-number"></b></span><div class="pg-address-bits"><div class="pg-vpn"><small>VPN · 2 位</small><strong id="pg-vpn-bits"></strong></div><div class="pg-offset"><small>偏移 · 4 位</small><strong id="pg-va-offset"></strong></div></div></div>
+<div class="pg-address-link" id="pg-equation"></div><div class="pg-address-line"><span>物理地址 <b id="pg-pa-number"></b></span><div class="pg-address-bits"><div class="pg-pfn"><small>PFN · 3 位</small><strong id="pg-pfn-bits"></strong></div><div class="pg-offset"><small>偏移保持不变</small><strong id="pg-pa-offset"></strong></div></div></div>
+<div id="pg-target" class="pg-target"></div></section></div>
+<div class="pg-access-bottom"><dl id="pg-access-counts" class="pg-counts"></dl><p id="pg-access-result"></p></div></div>
+<details class="pg-detail" id="rules"><summary>页表项也决定访问是否允许</summary><p>下面改变页 1 的状态，访问地址恢复为 VA 21。有效性、驻留与权限分别判断。</p><div class="pg-profile-options" role="group" aria-label="页 1 的映射状态">${[['normal','读写 · 驻留'],['readonly','只读 · 驻留'],['absent','有效 · 未驻留'],['invalid','无效地址']].map(([id,label])=>`<button type="button" data-profile="${id}" aria-pressed="${id==='normal'}">${label}</button>`).join('')}</div><div class="pg-flags-note"><p><b>V / P</b>有效性与驻留在此分别表示；具体硬件可能合并编码，由 OS 进一步区分。</p><p><b>A / D</b>访问位记录是否访问过；脏位记录内容是否被修改。图中在目标访问完成时更新。</p></div><a href="page-fault.html">有效但未驻留时的处理：缺页与按需分页 →</a></details>
+<p class="pg-note pg-assumptions">每次访问从相同的初始数据、A = 0 和 D = 0 开始。采用硬件查询单级页表，不经过 TLB 或数据缓存；OS 建立映射、分配页框，并在切换进程时设置页表基址。</p></section>
+<section id="cost" class="pg-cost-section"><h2>分散存放的代价</h2><p class="pg-cost-intro">先按不使用 TLB 或缓存的单级页表分析：保存映射占内存，读取映射又增加访存。</p><div class="pg-cost-choices" role="group" aria-label="分页的时间与空间开销"><div class="pg-cost-choice"><button type="button" data-cost="trace" aria-expanded="false" aria-controls="trace"><span>查表的时间开销</span><strong>一次目标访问，先读一次表项</strong><span class="pg-choice-more">观察一段程序的访存 <b aria-hidden="true">＋</b></span></button><a href="tlb.html">TLB：缓存映射，减少重复查表 →</a></div><div class="pg-cost-choice"><button type="button" data-cost="space" aria-expanded="false" aria-controls="space"><span>保存映射的空间开销 · 每项 4 B</span><strong>32 位地址、4 KiB 页：每表 4 MiB</strong><span class="pg-choice-more">改变页大小，比较占用 <b aria-hidden="true">＋</b></span></button><a href="small-page-tables.html">多级页表：省去整张未使用的下级表 →</a></div></div><p class="pg-cost-pair">TLB 缓存常用映射，多级页表组织完整映射；两者可以配合使用。</p>
+<section id="trace" class="pg-cost-panel" hidden aria-label="查表的时间开销"><div class="pg-section-head"><div><h3>写一个数组元素，还要取指与查表</h3><p>一轮循环有 4 条指令：写入、递增、比较、分支。4 次取指加 1 次数组写入，都要先读取页表。</p></div></div><div class="pg-trace-setup"><div role="group" aria-label="数组访问起点"><button type="button" data-start="0" aria-pressed="true">从 i = 0 开始</button><button type="button" data-start="239" aria-pressed="false">跨页：i = 239 起</button></div><label>循环轮数 <select id="pg-iterations"><option value="1">1</option><option value="2" selected>2</option><option value="5">5</option></select></label></div>
+<div class="pg-playbar">${transport('mt')}<span id="pg-trace-progress" class="pg-note"></span></div><div class="pg-execution" id="pg-trace-log" aria-live="polite"><h3 id="pg-trace-title"></h3><p id="pg-trace-text"></p></div>
+<div class="pg-trace-layout"><div><div class="pg-iteration-nav" id="pg-iteration-nav" role="group" aria-label="选择循环轮次"></div><div class="pg-trace-table"><div class="pg-trace-table-head"><span>程序要访问的对象</span><span>先读页表</span><span>再访问目标</span></div><div id="pg-trace-grid"></div></div></div><aside class="pg-trace-stats"><h4>已经完成</h4><dl id="pg-trace-counts" class="pg-counts"></dl><p id="pg-trace-total"></p><p class="pg-note" id="pg-trace-result"></p></aside></div><label class="pg-position-label" for="pg-trace-position">物理访问进度</label><input id="pg-trace-position" type="range" min="0" value="0" aria-label="已完成的物理访问次数">
+<details class="pg-detail" id="pg-trace-context"><summary>本段程序的地址与计数条件</summary><p>这是另一组地址：页大小 1 KiB，虚拟空间 64 KiB。页表在 PA 1024，每项 4 B。代码页 1 → 框 4；数组页 39–42 → 框 7–10。</p><p>4 条指令的 VA 依次为 1024、1028、1032、1036，各按 4 B 计。数组起点 VA 40000，每个元素 4 B；递增、比较与分支只操作寄存器。</p><p>相关页均已驻留且权限允许。每次取指或数据访问都查询内存中的单级页表，不使用 TLB 或缓存；PTBR 直接给出物理地址，读取表项不再查本进程页表。计数不含状态位更新的额外流量，不能直接换算为实际耗时。</p></details></section>
+<section id="space" class="pg-cost-panel" hidden aria-label="保存映射的空间开销"><div class="pg-section-head"><div><h3>线性页表为每个虚拟页保留一个表项</h3><p>表项按页号排列。即使只用到很少的页，无效项仍占数组中的位置。</p></div></div><div class="pg-space-parameters"><label>地址位数 <select id="pg-address-bits"><option value="24">24 位</option><option value="32" selected>32 位</option><option value="36">36 位</option></select></label><label>进程数量 <input id="pg-processes" name="process-count" type="number" inputmode="numeric" min="1" max="100" step="1" value="1" autocomplete="off" aria-describedby="pg-space-error"></label></div><p id="pg-space-error" class="pg-error" role="alert" hidden></p><div id="pg-space-content"><div class="pg-size-options" role="group" aria-label="页大小">${[1024,4096,16384,65536].map(n=>`<button type="button" data-size="${n}" aria-pressed="${n===4096}">${n/1024} KiB</button>`).join('')}</div><div id="pg-space-calculation" class="pg-space-calculation" aria-live="polite"></div><div class="pg-size-comparison" id="pg-size-comparison"></div><p class="pg-note">四条长度使用同一刻度，均为单个进程的完整线性页表。表项大小固定为 4 B。</p>
+<details class="pg-detail" id="pg-sparse"><summary>只映射少数页，线性页表仍然同样大</summary><div role="group" class="pg-usage" aria-label="有效映射数量"><button type="button" data-usage="sparse" aria-pressed="true">仅 3 页</button><button type="button" data-usage="quarter" aria-pressed="false">四分之一</button><button type="button" data-usage="full" aria-pressed="false">全部</button></div><dl id="pg-sparse-counts" class="pg-counts"></dl><p id="pg-sparse-result"></p></details>
+<div class="pg-rounding"><h4>页变大，最后一页可能留下更多空余</h4><p>独立分配 6000 B 内容；比较两种页大小，物理空间都按完整页框占用。</p><div id="pg-rounding-bars"></div><p class="pg-note">两条使用同一字节刻度，竖线分隔各页。斜纹为空余字节，仍属于已分配页框，是内部碎片；同一页也可以放置多个对象。</p></div><p class="pg-note">上述空间统计只计页表，不含数据页。KiB = 1024 B，MiB = 1024 KiB。</p></div></section></section>
+<footer class="pg-footer"><a href="#top">回到页首 ↑</a></footer></main></div>`;
+root.querySelector('.site-header nav')?.remove();
+const $=s=>root.querySelector(s),$$=s=>[...root.querySelectorAll(s)],text=(s,v)=>$(s).textContent=v;
+const fmt=n=>n.toLocaleString('en-US'),bytes=n=>n>=2**20?`${+(n/2**20).toFixed(3)} MiB`:n>=1024?`${+(n/1024).toFixed(3)} KiB`:`${n} B`;
+const metric=(name,value)=>`<div><dt>${name}</dt><dd>${value}</dd></div>`;
+const pressed=(selector,value,key)=>$$(selector).forEach(b=>b.setAttribute('aria-pressed',String(b.dataset[key]===String(value))));
+let view='allocation',allocated=true,selected=1,run=M.translation(),stage=0,address=21,profile='normal',operation='read',valid=true,objectMode=false;
+let cost=null,start=0,trace=M.memoryTrace(),position=0,pageBytes=4096,usage='sparse';
+const controllers=[];
+const pauseAll=()=>controllers.forEach(c=>c.pause());
+function controller(id,max,get,set){
+ let timer=null;const host=$('#'+id+'-controls'),button=a=>host.querySelector('[data-control="'+a+'"]'),live=$('#pg-'+(id==='tr'?'access':'trace')+'-log');
+ function update(){const playing=timer!==null;button('play').setAttribute('aria-pressed',String(playing));button('play').setAttribute('aria-label',playing?'暂停':get()===max()?'重新播放':'播放');button('play').innerHTML=icon(playing?'pause':get()===max()?'reset':'play');button('prev').disabled=get()===0;button('next').disabled=get()===max();live.setAttribute('aria-live',playing?'off':'polite');}
+ function pause(){clearInterval(timer);timer=null;update();}
+ function seek(n){pauseAll();set(Math.max(0,Math.min(max(),n)));update();}
+ function play(){pauseAll();if(get()===max())set(0);timer=setInterval(()=>{set(Math.min(max(),get()+1));if(get()===max())pause();update();},Number(button('speed').value));update();}
+ button('play').addEventListener('click',()=>timer===null?play():pause());button('prev').addEventListener('click',()=>seek(get()-1));button('next').addEventListener('click',()=>seek(get()+1));button('reset').addEventListener('click',()=>seek(0));button('speed').addEventListener('change',()=>{if(timer!==null)play();});const c={pause,seek,update};controllers.push(c);return c;
 }
-
-function renderPagingPage(root) {
-  root.innerHTML = `<div class="page paging-page" id="top">
-    ${wikiHeader('paging', [{href: '#why', title: '固定大小'}, {href: '#demo', title: '地址转换'}, {href: '#rules', title: '分页规则'}, {href: '#cost', title: '页表成本'}])}
-    <main>
-      <section class="intro" aria-labelledby="page-title">
-        <p class="eyebrow">${WIKI_PAGES.paging.theme} / 地址空间</p>
-        <h1 id="page-title">分页基础与地址转换 <span>Paging</span></h1>
-        <p class="lead">页表记录虚拟页与物理页框的映射；地址转换保留页内偏移。</p>
-        <p class="definition">页是虚拟地址空间中固定大小的区域，页框是物理内存中相同大小的区域。页表记录<a class="inline-link" href="${WIKI_PAGES.process.href}">进程</a>的虚拟页号与物理页框号之间的映射。页内偏移表示地址在这一页中的位置；转换只改变页号对应的区域，不改变这个位置。</p>
-        <p class="model-note">进程 A 使用固定的单级页表，拥有 4 个虚拟页，物理内存有 8 个页框。页大小为 4 个示意地址单位，不对应真实字节；所有页均已驻留，映射与访问权限有效。</p>
-      </section>
-      <section class="rr-rules" id="why"><p class="section-index">01 / FIXED-SIZE UNITS</p><h2>连续物理内存分配与按页分配的空间需求</h2>${pagingAllocationDiagram()}<div class="pt-notes"><article><h3>页和页框，大小相同但位置不同</h3><p>页是虚拟空间中的单位，页框是物理内存中的单位。分页让每个页独立映射，不要求相邻虚拟页占据相邻物理页框。</p></article><article><h3>固定大小页框对物理内存分配的影响</h3><p>普通固定大小的页可使用任意空闲页框，不必把分散的框拼成一整段。大页或需要连续物理区域的特殊请求仍需满足相应的连续性要求。</p></article><article><h3>页级映射不替代对象分配</h3><p>一个页内可包含多个对象。malloc 仍需管理不同大小的对象；虚拟堆中的空闲区间仍可能被活对象隔开，因此页框分配不能替代对象分配。</p></article></div></section>
-      <section class="paging-demo pt-section" id="demo" aria-labelledby="demo-title">
-        <div class="section-heading"><div><p class="section-index">02 / ADDRESS TRANSLATION</p><h2 id="demo-title">页号映射与页内偏移共同确定物理地址</h2></div><p>页大小 ${PAGING_SIZE} / 示意单位</p></div>
-        <div class="paging-toolbar">
-          <div class="rr-transport" role="group" aria-label="转换演示控制">
-            <button type="button" class="icon-button primary" id="paging-play" aria-label="播放" title="播放" aria-pressed="false"><span aria-hidden="true">▶</span></button>
-            <button type="button" class="icon-button" id="paging-step" aria-label="下一步" title="下一步"><span aria-hidden="true">↦</span></button>
-            <button type="button" class="icon-button" id="paging-reset" aria-label="重新演示" title="重新演示"><span aria-hidden="true">↺</span></button>
-          </div>
-          <label class="address-control" for="paging-address">虚拟地址<input id="paging-address" type="number" min="0" max="${PAGING_MAX}" step="1" value="6" aria-describedby="paging-error"><span>0–${PAGING_MAX}</span></label>
-          <input id="paging-address-range" type="range" min="0" max="${PAGING_MAX}" step="1" value="6" aria-label="虚拟地址滑块">
-        </div>
-        <p class="paging-error" id="paging-error" aria-live="polite"></p>
-        <div class="paging-stages" role="group" aria-label="转换阶段">${['虚拟地址', '拆分页号与偏移', '查页表', '得到物理地址'].map((title, index) => `<button type="button" data-stage="${index}" aria-pressed="${index === 0}"><span>${String(index).padStart(2, '0')}</span>${title}</button>`).join('')}</div>
-        <div class="paging-visual">
-          <div class="paging-addresses">
-            <div class="address-block"><p class="address-label">虚拟地址 <span>Virtual address</span></p><div class="address-value" id="paging-virtual"></div><div class="address-bits" id="paging-virtual-bits"></div></div>
-            <span class="address-arrow" aria-hidden="true">→</span>
-            <div class="address-block"><p class="address-label">物理地址 <span>Physical address</span></p><div class="address-value" id="paging-physical"></div><div class="address-bits" id="paging-physical-bits"></div></div>
-          </div>
-          <dl class="pg-calculation" id="paging-calculation"></dl>
-          <div class="paging-map">
-            <svg class="pg-route" aria-hidden="true"></svg>
-            <div class="virtual-pages"><h3>A 的虚拟页</h3><p class="map-subtitle">每页四个位置 · 虚拟地址连续</p>${PAGING_TABLE.map(entry => `<div class="virtual-page" data-page="${entry.page}"><strong>页 ${entry.page}</strong><span>VA ${entry.page * PAGING_SIZE}–${(entry.page + 1) * PAGING_SIZE - 1}</span><div class="pg-virtual-units">${Array.from({length: PAGING_SIZE}, (_, offset) => `<span data-virtual-address="${entry.page * PAGING_SIZE + offset}">${entry.page * PAGING_SIZE + offset}</span>`).join('')}</div></div>`).join('')}</div>
-            <div class="page-table-block"><h3>A 的页表</h3><p class="map-subtitle">固定预设映射</p><table class="paging-table"><thead><tr><th scope="col">页号</th><th scope="col">页框号</th></tr></thead><tbody>${PAGING_TABLE.map(entry => `<tr data-table-page="${entry.page}"><th scope="row">${entry.page}</th><td>${entry.frame}</td></tr>`).join('')}</tbody></table></div>
-            <div class="physical-frames"><h3>物理页框</h3><p class="map-subtitle">每框四个位置 · 显示物理地址</p>${PAGING_ALLOCATION.frameTable.map(slot => `<div class="physical-frame" data-frame="${slot.frame}"><span>框 ${slot.frame}<small>${slot.page === null ? '未使用' : `A · 页 ${slot.page}`}</small></span>${Array.from({length: PAGING_SIZE}, (_, offset) => `<span class="frame-unit" data-address="${slot.frame * PAGING_SIZE + offset}">${slot.frame * PAGING_SIZE + offset}</span>`).join('')}</div>`).join('')}</div>
-          </div>
-          <p class="pt-caption">连线表示本次查到的映射：页号定位表项，表项给出页框号。橙色位置保留同一偏移；移动标记不表示搬动页面，也不表示实际延迟。</p>
-        </div>
-        <div class="paging-event" aria-live="polite" aria-atomic="true"><p class="detail-kicker" id="paging-event-stage"></p><h3 id="paging-event-title"></h3><p id="paging-event-text"></p></div>
-      </section>
-      <section class="paging-rules" id="rules" aria-labelledby="rules-title">
-        <div class="section-heading"><div><p class="section-index">03 / THE RULE</p><h2 id="rules-title">虚拟页映射到物理页框，页内偏移保持不变</h2></div></div>
-        <p class="paging-formula">物理地址 = 页框号 × 页大小 + 页内偏移</p>
-        <dl class="concepts rr-concepts">
-          <div><dt>先拆成页号与偏移</dt><dd>页号是虚拟地址除以页大小的整数商，偏移是余数。本例页大小为 4，二进制地址的低 2 位表示偏移。</dd></div>
-          <div><dt>虚拟连续，物理可不连续</dt><dd>页 0、1、2、3 分别映射到框 5、3、6、1。连续的虚拟页不必占据连续的物理页框。</dd></div>
-          <div><dt>页表属于地址空间</dt><dd>不同进程的相同虚拟地址可以映射到不同的物理地址。地址转换必须使用所属地址空间的页表，而不是把虚拟地址数字视为全局物理位置。</dd></div>
-        </dl>
-      </section>
-      <section class="rr-rules pt-section" id="cost"><p class="section-index">04 / TWO NEW COSTS</p><h2>页表映射的属性、存储空间与查表开销</h2><div class="pt-notes"><article><h3>页表不仅有页框号</h3><p>页表项通常还包含有效性、权限、驻留或其他状态信息，具体格式随架构变化。页框号说明数据在哪里，其他属性决定映射能否用于本次访问。</p></article><article><h3>每次查表的访问成本</h3><p>页表通常位于内存。无 TLB、无其他缓存的单级路径，先读一次表项，再访问一次目标数据。<a class="inline-link" href="tlb.html">TLB</a> 缓存转换，减少重复查表；次数减少不等于耗时按同样比例减少。</p></article><article><h3>大地址空间的页表存储</h3><p>若采用 32 位地址、4 KiB 页，就有 2²⁰ 个虚拟页；每项 4 字节时，线性页表需要 4 MiB，即使许多地址未使用。<a class="inline-link" href="small-page-tables.html">多级页表</a>可省去部分下级表。这组计算使用实际字节单位，页大小为 4 KiB。</p></article></div><p class="pt-copy">转换缓存、页表组织与页面驻留，分别处理地址转换开销、页表存储空间和目标页面是否在物理内存中的问题，不能相互替代。</p></section>
-      ${wikiRelated('paging')}
-    </main><footer><span>OSLab / 内存虚拟化</span><a href="#top">回到页首 ↑</a></footer>
-  </div>`;
-
-  let address = 6;
-  let stage = 0;
-  let valid = true;
-  let timer = null;
-  const input = root.querySelector('#paging-address');
-  const range = root.querySelector('#paging-address-range');
-  const playButton = root.querySelector('#paging-play');
-  const stepButton = root.querySelector('#paging-step');
-  const motion = matchMedia('(prefers-reduced-motion: reduce)');
-  root.querySelector('.paging-stages').after(root.querySelector('.paging-event'));
-  const bitGroup = (value, width, type, label) => `<div class="bit-group ${type}"><div>${pagingBits(value, width).split('').map(bit => `<span class="bit">${bit}</span>`).join('')}</div><span>${label}</span></div>`;
-
-  const cancel = () => root.querySelector('.paging-map').getAnimations({subtree: true}).forEach(animation => animation.cancel());
-  const drawMapping = (animate = false) => {
-    const diagram = root.querySelector('.paging-map');
-    const svg = diagram.querySelector('.pg-route');
-    svg.replaceChildren();
-    if (!valid || stage < 2) return;
-    const bounds = diagram.getBoundingClientRect();
-    const vertical = getComputedStyle(diagram).gridTemplateColumns.split(' ').length === 1;
-    const connections = [];
-    const connect = (source, target, name, color) => {
-      const start = source.getBoundingClientRect();
-      const end = target.getBoundingClientRect();
-      const sourceX = start.right - bounds.left + 3;
-      const sourceY = start.top - bounds.top + start.height / 2;
-      const targetX = (vertical ? end.right + 3 : end.left - 5) - bounds.left;
-      const targetY = end.top - bounds.top + end.height / 2;
-      const middleX = vertical ? bounds.width - 5 : (sourceX + targetX) / 2;
-      connections.push({name, color, path: `M ${sourceX} ${sourceY} L ${middleX} ${sourceY} L ${middleX} ${targetY} L ${targetX} ${targetY}`});
-    };
-    connect(diagram.querySelector('.virtual-page.active'), diagram.querySelector('.paging-table tr.active'), 'page', '#126756');
-    connect(diagram.querySelector('.paging-table tr.active'), diagram.querySelector('.physical-frame.active'), 'frame', '#385974');
-    svg.setAttribute('viewBox', `0 0 ${bounds.width} ${bounds.height}`);
-    svg.innerHTML = connections.map(connection => `<defs><marker id="pg-arrow-${connection.name}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 8 4 L 0 8 Z" fill="${connection.color}"/></marker></defs><path data-pg-path="${connection.name}" d="${connection.path}" fill="none" stroke="${connection.color}" stroke-width="2" marker-end="url(#pg-arrow-${connection.name})"/>`).join('');
-    if (animate && stage === 2 && !motion.matches) connections.forEach((connection, index) => {
-      const token = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      token.setAttribute('r', '4');
-      token.setAttribute('fill', connection.color);
-      token.style.offsetPath = `path('${connection.path}')`;
-      svg.append(token);
-      const animation = token.animate([{offsetDistance: '0%'}, {offsetDistance: '100%'}], {duration: 350, delay: index * 350, fill: 'backwards', easing: 'ease-in-out'});
-      animation.onfinish = animation.oncancel = () => token.remove();
-    });
-  };
-  const paint = () => {
-    cancel();
-    const visual = root.querySelector('.paging-visual');
-    visual.classList.toggle('invalid', !valid);
-    visual.setAttribute('aria-hidden', String(!valid));
-    playButton.disabled = !valid || stage === 3;
-    stepButton.disabled = !valid || stage === 3;
-    root.querySelectorAll('[data-stage]').forEach(button => {
-      button.setAttribute('aria-pressed', String(valid && Number(button.dataset.stage) === stage));
-      button.disabled = !valid;
-    });
-    if (!valid) {
-      drawMapping();
-      root.querySelector('#paging-event-stage').textContent = '虚拟地址 / 输入无效';
-      root.querySelector('#paging-event-title').textContent = '地址尚未转换';
-      root.querySelector('#paging-event-text').textContent = `有效输入为 0–${PAGING_MAX} 的整数地址。越过地址空间边界不等同于合法页面尚未驻留，不能通过载入页面自动修复。`;
-      return;
-    }
-    const result = OSLabSimulation.translateAddress('A', address, PAGING_ALLOCATION, PAGING_SIZE);
-    const descriptions = [
-      {title: `进程请求访问虚拟地址 ${address}`, text: `这个地址位于 A 的虚拟地址空间，不是物理内存位置。页表决定它最终映射到哪里。`},
-      {title: `页号 ${result.pageNumber}，页内偏移 ${result.offset}`, text: `${address} ÷ ${PAGING_SIZE} 的整数商为 ${result.pageNumber}，余数为 ${result.offset}。高 2 位选择虚拟页，低 2 位选择页内位置。`},
-      {title: `页 ${result.pageNumber} 映射到框 ${result.frameNumber}`, text: `查 A 的页表，找到页号 ${result.pageNumber} 对应的页框号 ${result.frameNumber}。位置换了，但偏移 ${result.offset} 不需要改变。`},
-      {title: `物理地址是 ${result.physicalAddress}`, text: `${result.frameNumber} × ${PAGING_SIZE} + ${result.offset} = ${result.physicalAddress}。从框 ${result.frameNumber} 的起始地址 ${result.frameNumber * PAGING_SIZE} 前进 ${result.offset} 个单位，得到最终位置。地址转换已完成，目标数据尚未读取。`},
-    ];
-    root.querySelector('#paging-virtual').textContent = address;
-    root.querySelector('#paging-physical').textContent = stage === 3 ? result.physicalAddress : '—';
-    root.querySelector('#paging-virtual-bits').innerHTML = bitGroup(result.pageNumber, 2, stage >= 1 ? 'page-bits' : '', stage >= 1 ? `页号 ${result.pageNumber}` : '高 2 位') + bitGroup(result.offset, 2, stage >= 1 ? 'offset-bits' : '', stage >= 1 ? `偏移 ${result.offset}` : '低 2 位');
-    root.querySelector('#paging-physical-bits').innerHTML = stage >= 2 ? bitGroup(result.frameNumber, 3, 'page-bits', `页框 ${result.frameNumber}`) + bitGroup(result.offset, 2, stage === 3 ? 'offset-bits' : '', stage === 3 ? `偏移 ${result.offset}` : '偏移不变') : '<p class="pending-address">等待页表映射</p>';
-    root.querySelectorAll('[data-page]').forEach(node => node.classList.toggle('active', stage >= 1 && Number(node.dataset.page) === result.pageNumber));
-    root.querySelectorAll('[data-virtual-address]').forEach(node => node.classList.toggle('pg-offset-selected', stage >= 1 && Number(node.dataset.virtualAddress) === address));
-    root.querySelectorAll('[data-table-page]').forEach(node => node.classList.toggle('active', stage >= 2 && Number(node.dataset.tablePage) === result.pageNumber));
-    root.querySelectorAll('[data-frame]').forEach(node => node.classList.toggle('active', stage >= 2 && Number(node.dataset.frame) === result.frameNumber));
-    root.querySelectorAll('[data-address]').forEach(node => node.classList.toggle('active', stage === 3 && Number(node.dataset.address) === result.physicalAddress));
-    root.querySelector('#paging-calculation').innerHTML = `<div><dt>① 用页大小拆开</dt><dd>${stage >= 1 ? `${address} = ${result.pageNumber} × ${PAGING_SIZE} + ${result.offset}` : '页号与偏移尚未拆分'}</dd></div><div><dt>② 用页号查表</dt><dd>${stage >= 2 ? `页 ${result.pageNumber} → 框 ${result.frameNumber}` : '页框号尚未取得'}</dd></div><div><dt>③ 保留偏移合成</dt><dd>${stage === 3 ? `${result.frameNumber * PAGING_SIZE} + ${result.offset} = ${result.physicalAddress}` : stage === 2 ? `框起点 ${result.frameNumber * PAGING_SIZE} · 偏移 ${result.offset}` : '物理地址尚未生成'}</dd></div>`;
-    root.querySelector('#paging-event-stage').textContent = `${String(stage).padStart(2, '0')} / ${['虚拟地址', '拆分地址', '页表映射', '物理地址'][stage]}`;
-    root.querySelector('#paging-event-title').textContent = descriptions[stage].title;
-    root.querySelector('#paging-event-text').textContent = descriptions[stage].text;
-    drawMapping(true);
-  };
-  const pause = () => {
-    clearInterval(timer);
-    timer = null;
-    playButton.setAttribute('aria-pressed', 'false');
-    playButton.setAttribute('aria-label', '播放');
-    playButton.title = '播放';
-    playButton.firstElementChild.textContent = '▶';
-  };
-  const next = () => {
-    stage = Math.min(3, stage + 1);
-    if (stage === 3) pause();
-    paint();
-  };
-  playButton.addEventListener('click', () => {
-    if (timer !== null) { pause(); return; }
-    playButton.setAttribute('aria-pressed', 'true');
-    playButton.setAttribute('aria-label', '暂停');
-    playButton.title = '暂停';
-    playButton.firstElementChild.textContent = 'Ⅱ';
-    timer = setInterval(next, 1400);
-  });
-  stepButton.addEventListener('click', () => { pause(); next(); });
-  root.querySelectorAll('[data-stage]').forEach(button => button.addEventListener('click', () => { pause(); stage = Number(button.dataset.stage); paint(); }));
-  const changeAddress = value => {
-    pause();
-    stage = 0;
-    valid = value !== '' && Number.isInteger(Number(value)) && Number(value) >= 0 && Number(value) <= PAGING_MAX;
-    root.querySelector('#paging-error').textContent = valid ? '' : `请输入 0–${PAGING_MAX} 的整数地址。`;
-    input.setAttribute('aria-invalid', String(!valid));
-    if (valid) {
-      address = Number(value);
-      input.value = address;
-      range.value = address;
-    }
-    paint();
-  };
-  input.addEventListener('input', event => changeAddress(event.target.value));
-  range.addEventListener('input', event => changeAddress(event.target.value));
-  root.querySelector('#paging-reset').addEventListener('click', () => changeAddress(valid ? String(address) : '6'));
-  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
-  window.addEventListener('pagehide', pause);
-  window.addEventListener('resize', () => drawMapping());
-  motion.addEventListener('change', event => { if (event.matches) cancel(); });
-  paint();
+function renderMap(){
+ const showObject=objectMode&&allocated;
+ $('#pg-object-context').hidden=!showObject;$('#pg-object-toggle').disabled=!allocated;$('#pg-object-toggle').setAttribute('aria-pressed',String(showObject));text('#pg-object-toggle',showObject?'隐藏对象标注':'标出一个跨页对象');
+ const objectSlice=(vpn,physical=false)=>{if(!showObject)return '';const size=vpn===1?16:vpn===2?8:0;return `<span class="pg-object-track" aria-label="${size?'对象占 '+size+' B':'此处不含该对象'}"><i style="width:${size/16*100}%" data-object-bytes="${size}" data-object-page="${vpn}" data-object-space="${physical?'physical':'virtual'}">${size?size+' B':''}</i></span>`;};
+ $('#pg-map-takeaway').innerHTML=showObject?'<strong>一个对象可以跨页，一个页也可以容纳多个对象。</strong>p[5] 的虚拟地址是 16 + 5 = 21：先按地址找到页 1，再由页表找到页框。':'<strong>页框可以分散，程序中的连续地址仍然连续。</strong>跨页后的物理位置由页表决定；堆内对象之间的空闲块，仍需由 <a href="free-space.html">分配器管理</a>。';
+ text('#pg-follow',showObject?'追踪 p[5] · VA 21 的读取 →':'追踪 VA 21 的读取 →');
+ const a=M.allocation(64);text('#pg-map-title',allocated?'四个页框不必连在一起':'空闲共 64 B，最大连续区域只有 32 B');text('#pg-map-text',allocated?'64 B 的虚拟空间分为 4 页，各占一个页框。页表记下每一页的位置。':'已有占用把空闲区隔开，形成外部碎片。连续放入 64 B 会失败；分页可分别使用四个空闲页框。');
+ text('#pg-allocate',allocated?'回看分配前':'分配 4 页');$('#pg-allocate').setAttribute('aria-pressed',String(allocated));
+ $('#pg-pages').innerHTML=a.pages.map(p=>`<button type="button" class="pg-memory-cell pg-virtual ${selected===p.vpn?'is-selected':''}" data-page-map="${p.vpn}" aria-pressed="${selected===p.vpn}"><span>页 ${p.vpn}</span><strong>${p.vpn*16}–${p.vpn*16+15}</strong><small>VA</small>${objectSlice(p.vpn)}</button>`).join('');
+ $('#pg-frames').innerHTML=Array.from({length:8},(_,pfn)=>{const vpn=M.mapping.indexOf(pfn),assigned=allocated&&vpn>=0,free=!allocated&&vpn>=0;return `<${assigned?'button type="button"':'div'} class="pg-memory-cell ${assigned?'pg-physical':free?'pg-free':'pg-used'} ${assigned&&vpn===selected?'is-selected':''}" data-frame="${pfn}" ${assigned?`data-page-map="${vpn}" aria-pressed="${vpn===selected}"`:''}><span>框 ${pfn}</span><strong>${assigned?'A · 页 '+vpn:free?'空闲':pfn===0?'页表':'已占用'}</strong><small>${pfn*16}–${pfn*16+15}</small>${objectSlice(assigned?vpn:-1,true)}</${assigned?'button':'div'}>`;}).join('');
+ renderMapSelection();
 }
+function renderMapSelection(){
+ $$('[data-page-map]').forEach(b=>{const active=Number(b.dataset.pageMap)===selected;b.classList.toggle('is-selected',active);b.setAttribute('aria-pressed',String(active));});
+ $('#pg-map-link').innerHTML=allocated?`<div><span>虚拟页</span><strong>页 ${selected}</strong></div><span class="pg-line-arrow" aria-hidden="true">→</span><div><span>页表项 PTE[${selected}]</span><strong>页框号 ${M.mapping[selected]}</strong></div><span class="pg-line-arrow" aria-hidden="true">→</span><div><span>物理页框</span><strong>框 ${M.mapping[selected]}</strong></div>`:`<div><span>需要的空间</span><strong>64 B</strong></div><span aria-hidden="true">&gt;</span><div><span>最大连续空闲</span><strong>32 B</strong></div><span aria-hidden="true">·</span><div><span>空闲总量</span><strong>64 B</strong></div>`;
+}
+const faultCopy={invalid:['该虚拟页无效，访问转入异常处理','V = 0。OS 根据进程地址空间判断这次非法访问的处置；调入页面不能使无效地址变为合法。'],absent:['目标页未驻留，触发缺页处理','P = 0。OS 需要先准备目标页，随后才能重试原访问；目标数据尚未读取或写入。'],protection:['写入被拒绝，目标内容未修改','该页只允许读取，当前写权限 W = 0。硬件触发保护异常，由 OS 处理。']};
+function renderAccess(){
+ if(!valid)return;const s=run.snapshots[stage],e=s.entries[run.vpn],ready=stage>=3&&!s.fault,done=s.targetAccesses===1;
+ $('#pg-object-access').hidden=!objectMode||profile!=='normal'||address<16||address>39;
+ text('#pg-object-access',`对象中的 p[${address-16}] → VA ${address} → 页 ${run.vpn}，偏移 ${run.offset}。页表按页记录映射，不记录 C 对象的边界。`);
+ if(!$('#pg-stages').childElementCount)$('#pg-stages').innerHTML=['请求','拆分','读表','检查','访存'].map((label,i)=>`<button type="button" data-stage="${i}">${label}</button>`).join('');
+ $$('[data-stage]').forEach(b=>{const i=Number(b.dataset.stage);b.setAttribute('aria-pressed',String(i===stage));b.disabled=i>=run.snapshots.length;b.classList.toggle('is-done',i<stage);});
+ $('#pg-access-content').dataset.fault=s.fault||'';
+ const titles=[`程序请求${operation==='write'?'写入':'读取'} VA ${address}`,`页号 ${run.vpn} 选表项，偏移 ${run.offset} 选页内字节`,`已读取 PTE[${run.vpn}]，目标尚未访问`,s.fault?faultCopy[s.fault][0]:`得到 PA ${s.physicalAddress}，目标尚未访问`,operation==='write'?`PA ${s.physicalAddress} 已写入 99`:`已从 PA ${s.physicalAddress} 读到 ${s.value}`];
+ text('#pg-access-title',titles[stage]);text('#pg-access-text',s.fault?faultCopy[s.fault][1]:['地址属于进程 A；本次请求尚未读取页表。','16 B 的页需要 4 位页内偏移；剩余高 2 位是虚拟页号。',`表项位于 PA 0 + ${run.vpn} × 4 = ${run.pteAddress}。读取的内容是映射与访问条件。`,'访问条件通过。用页框号替换虚拟页号，保留偏移；查表不会搬动页面。',operation==='write'?'目标写入完成，访问位 A = 1、脏位 D = 1。':'目标读取完成，访问位 A = 1；读取没有修改内容，D 仍为 0。'][stage]);
+ if(!$('#pg-table').childElementCount)$('#pg-table').innerHTML=s.entries.map(p=>`<button type="button" class="pg-table-row" data-page="${p.vpn}"><span>页 ${p.vpn}<small>${p.vpn*16}–${p.vpn*16+15}</small></span><strong></strong><span data-entry-state></span></button>`).join('');
+ $$('#pg-table [data-page]').forEach(row=>{const p=s.entries[Number(row.dataset.page)],active=p.vpn===run.vpn;row.classList.toggle('is-selected',active);row.classList.toggle('is-read',active&&stage>=2);row.setAttribute('aria-pressed',String(active));row.querySelector('strong').textContent=p.frame===null?'—':p.frame;row.querySelector('[data-entry-state]').textContent=!p.valid?'无效':!p.present?'未驻留':p.write?'读 / 写':'只读';});
+ text('#pg-pte-address',stage>=2?`PTE[${run.vpn}] 已从 PA ${run.pteAddress} 读取`:`当前表项：PTE[${run.vpn}] · 尚未读取`);
+ $('#pg-entry-flags').innerHTML=[['A',+e.accessed],['D',+e.dirty]].map(([k,v])=>`<span title="${({V:'有效',P:'驻留',W:'可写',A:'已访问',D:'已修改'})[k]}">${k==="A"?"访问":"修改"} ${k} <b>${v}</b></span>`).join('');
+ text('#pg-va-number',address);text('#pg-vpn-bits',stage>=1?run.vpn.toString(2).padStart(2,'0'):'··');text('#pg-va-offset',stage>=1?run.offset.toString(2).padStart(4,'0'):'····');
+ text('#pg-pa-number',ready?s.physicalAddress:'—');text('#pg-pfn-bits',ready?e.frame.toString(2).padStart(3,'0'):'···');text('#pg-pa-offset',ready?run.offset.toString(2).padStart(4,'0'):'····');
+ text('#pg-equation',s.fault?'访问条件未通过':ready?`PA = ${e.frame} × 16 + ${run.offset} = ${s.physicalAddress}`:stage===2?`查表：PTE[${run.vpn}]${e.frame===null?' 未给出驻留页框':' → 框 '+e.frame}`:stage===1?`${address} = ${run.vpn} × 16 + ${run.offset}`:'先拆出页号，再查表');
+ $('#pg-target').innerHTML=ready?`<div class="pg-target-caption"><span>框 ${e.frame} · 每格 1 B</span><strong>${done?(operation==='write'?'已写入 99':'读到 '+s.value):'尚未访问'}</strong></div><div class="pg-byte-grid">${Array.from({length:16},(_,i)=>`<button type="button" data-offset="${i}" aria-label="选择页内偏移 ${i}，虚拟地址 ${run.vpn*16+i}" aria-pressed="${i===run.offset}" class="${i===run.offset?'is-selected':''}">${i}</button>`).join('')}</div><p class="pg-note">格内标注页内偏移 0–15。</p>`:s.fault?`<div class="pg-target-wait pg-fault"><strong>${s.fault==='absent'?'等待 OS 准备页面':'目标访问停止'}</strong><span>页表读取 1 次 · 目标访问 0 次</span></div>`:'<div class="pg-target-wait"><strong>目标页框内的位置</strong><span>检查通过并生成物理地址后确定。</span></div>';
+ $('#pg-access-counts').innerHTML=metric('页表读取',s.tableReads)+metric('目标访问',s.targetAccesses)+metric('合计',s.tableReads+s.targetAccesses);
+ text('#pg-access-result',s.fault?'读取了页表，不代表能够访问目标。':done?'一次目标访问，实际先后访问了页表和目标。':'VA 31 → PA 127；紧接的 VA 32 → PA 80。跨页后，物理地址可以不相邻。');pressed('[data-profile]',profile,'profile');pressed('[data-address]',address,'address');
+}
+const tr=controller('tr',()=>run.snapshots.length-1,()=>stage,n=>{stage=n;renderAccess();});
+function changeAccess(raw,initial=0){
+ pauseAll();valid=String(raw).trim()!==''&&Number.isInteger(Number(raw))&&Number(raw)>=0&&Number(raw)<=63;$('#paging-address').setAttribute('aria-invalid',String(!valid));$('#paging-error').hidden=valid;$('#pg-recover').hidden=valid;$('#pg-access-content').hidden=!valid;text('#paging-error',valid?'':'请输入 0–63 的整数虚拟地址。');if(!valid){$('#pg-object-access').hidden=true;return;}
+ address=Number(raw);$('#paging-address').value=address;run=M.translation(address,{profile,operation});stage=Math.min(initial,run.snapshots.length-1);renderAccess();tr.update();
+}
+function renderTrace(){
+ const event=position?trace.events[position-1]:null,iteration=event?event.iteration:start,base=(iteration-start)*10,events=trace.events.slice(base,base+10),done=trace.events.slice(0,position),table=done.filter(e=>e.kind==='table').length,fetch=done.filter(e=>e.kind==='instruction').length,writes=done.filter(e=>e.kind==='write').length;
+ text('#pg-trace-progress',`${position} / ${trace.events.length} 次物理访问`);$('#pg-trace-position').max=trace.events.length;$('#pg-trace-position').value=position;
+ $('#pg-iteration-nav').innerHTML=Array.from({length:trace.iterations},(_,i)=>`<button type="button" data-iteration="${i}" aria-pressed="${start+i===iteration}">i = ${start+i}</button>`).join('');
+ $('#pg-trace-grid').innerHTML=Array.from({length:5},(_,i)=>{const pair=events.slice(i*2,i*2+2),target=pair[1],name=target.kind==='write'?`写 array[${iteration}]`:'取指：'+['写入','递增','比较','分支'][[1024,1028,1032,1036].indexOf(target.va)];return `<div class="pg-trace-row ${position>base+i*2&&position<=base+i*2+2?'is-current':''}"><div><b>${name}</b><small>VA ${target.va}</small></div>${pair.map((e,j)=>{const index=base+i*2+j;return `<button type="button" data-event="${index}" data-kind="${e.kind}" class="${position===index+1?'is-current':''} ${position>index?'is-done':''}" aria-pressed="${position===index+1}"><small>${e.kind==='table'?'PTE['+e.vpn+']':e.kind==='write'?'写数据':'取指令'}</small><strong>${e.physicalAddress}</strong><span>${position>index?'已完成':'待访问'}</span></button>`;}).join('')}</div>`;}).join('');
+ text('#pg-trace-title',event?event.kind==='table'?`第 ${position} 次：读到页 ${event.vpn} 的表项`:event.kind==='instruction'?`第 ${position} 次：取到“${['写入','递增','比较','分支'][[1024,1028,1032,1036].indexOf(event.va)]}”指令`:`第 ${position} 次：array[${event.iteration}] 写入完成`:'每轮 5 次目标访问，另外查表 5 次');
+ text('#pg-trace-text',event?event.kind==='table'?`PTE 地址 = 1024 + ${event.vpn} × 4 = ${event.pteAddress}；对应目标尚未访问。`:`目标 PA = ${event.pfn} × 1024 + ${event.offset} = ${event.pa}；${event.kind==='instruction'?'本次完成取指。':'本次完成数据写入。'}`:'按执行顺序，每一行都先读取表项，再取出指令或写入数据。图中数字均为物理地址。');
+ $('#pg-trace-counts').innerHTML=metric('页表读取',table)+metric('取指',fetch)+metric('数据写入',writes);text('#pg-trace-total',`${table} 次查表 + ${fetch+writes} 次目标访问 = ${position} 次物理访问`);
+ text('#pg-trace-result',start===239?'array[239]：页 39，偏移 1020。下一元素 array[240]：页 40，偏移 0；跨页后读取另一表项。':'代码一直在页 1；没有缓存映射时，四次取指仍分别读取 PTE[1]。');
+}
+const mt=controller('mt',()=>trace.events.length,()=>position,n=>{position=n;renderTrace();});
+function resetTrace(){pauseAll();trace=M.memoryTrace(start,Number($('#pg-iterations').value));position=0;pressed('[data-start]',start,'start');renderTrace();mt.update();}
+function renderSpace(){
+ const raw=$('#pg-processes').value,n=Number(raw),ok=raw.trim()!==''&&Number.isInteger(n)&&n>=1&&n<=100;$('#pg-processes').setAttribute('aria-invalid',String(!ok));$('#pg-space-error').hidden=ok;$('#pg-space-content').hidden=!ok;text('#pg-space-error',ok?'':'进程数量取 1–100 的整数。');if(!ok)return;
+ const bits=Number($('#pg-address-bits').value),s=M.space(bits,pageBytes,n,usage),sizes=[1024,4096,16384,65536],max=M.space(bits,1024).tableBytes;pressed('[data-size]',pageBytes,'size');
+ $('#pg-space-calculation').innerHTML=`<p>2<sup>${bits}</sup> B ÷ ${bytes(pageBytes)} = <b>${fmt(s.entries)} 项</b></p><strong>${fmt(s.entries)} × 4 B = <em>${bytes(s.tableBytes)}</em></strong><p>${n} 个进程各保存一张表，共 <b>${bytes(s.totalBytes)}</b>。</p>`;
+ $('#pg-size-comparison').innerHTML=sizes.map(size=>{const x=M.space(bits,size);return `<div class="pg-table-size-row ${size===pageBytes?'is-selected':''}" data-table-size="${size}"><span>${size/1024} KiB 页</span><div class="pg-table-size-track"><i style="width:${x.tableBytes/max*100}%"></i></div><strong>${bytes(x.tableBytes)}</strong></div>`;}).join('');
+ $('#pg-sparse-counts').innerHTML=metric('有效表项',fmt(s.mapped))+metric('无效表项',fmt(s.invalid))+metric('整张页表',bytes(s.tableBytes));text('#pg-sparse-result',`${fmt(s.mapped)} 页有效，${fmt(s.invalid)} 页无效。${s.invalid?'无效项仍有固定位置；':''}表项总数仍是 ${fmt(s.entries)}。`);pressed('[data-usage]',usage,'usage');
+ const other=pageBytes===4096?16384:4096,comp=[M.space(bits,4096),M.space(bits,pageBytes===4096?other:pageBytes)],scale=Math.max(...comp.map(x=>x.regionAllocated));
+ $('#pg-rounding-bars').innerHTML=comp.map(x=>`<div class="pg-rounding-row"><div><b>${bytes(x.pageBytes)} 页</b><span>${x.regionPages} 页 · ${fmt(x.regionAllocated)} B</span></div><div class="pg-rounding-track"><div class="pg-rounding-allocation" data-allocated="${x.regionAllocated}" style="width:${x.regionAllocated/scale*100}%"><i style="width:${6000/x.regionAllocated*100}%"></i>${Array.from({length:x.regionPages-1},(_,j)=>`<span class="pg-page-cut" style="left:${(j+1)/x.regionPages*100}%" aria-hidden="true"></span>`).join('')}</div></div><p>内容 6000 B + 空余 <b>${fmt(x.regionPadding)} B</b></p></div>`).join('');
+}
+function switchView(next){if(!['allocation','translation'].includes(next))return;pauseAll();view=next;$$('[data-view]').forEach(b=>{const active=b.dataset.view===view;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;});$$('.pg-view').forEach(s=>s.hidden=s.id!==view);}
+function switchCost(next){pauseAll();cost=cost===next?null:next;$$('[data-cost]').forEach(b=>{const active=b.dataset.cost===cost;b.setAttribute('aria-expanded',String(active));b.querySelector('.pg-choice-more b').textContent=active?'−':'＋';});$$('.pg-cost-panel').forEach(p=>p.hidden=p.id!==cost);}
+$$('[data-view]').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));$('.pg-view-nav').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();switchView(e.key==='Home'?'allocation':e.key==='End'?'translation':view==='allocation'?'translation':'allocation');$('[data-view="'+view+'"]').focus();});
+$('#pg-allocate').addEventListener('click',()=>{allocated=!allocated;renderMap();});$('.pg-map').addEventListener('click',e=>{const b=e.target.closest('[data-page-map]');if(!b)return;selected=Number(b.dataset.pageMap);renderMapSelection();b.focus({preventScroll:true});});
+$('#pg-object-toggle').addEventListener('click',()=>{objectMode=!objectMode;renderMap();renderAccess();});
+$('#pg-follow').addEventListener('click',()=>{profile='normal';operation='read';$('#pg-operation').value='read';changeAccess(21);switchView('translation');$('#pg-tab-translation').focus({preventScroll:true});$('#translation').scrollIntoView({block:'start'});});
+$('#paging-address').addEventListener('input',()=>changeAccess($('#paging-address').value));$('#pg-recover').addEventListener('click',()=>{changeAccess(21);$('#paging-address').focus();});$('#pg-operation').addEventListener('change',()=>{operation=$('#pg-operation').value;changeAccess($('#paging-address').value);});$$('[data-address]').forEach(b=>b.addEventListener('click',()=>changeAccess(b.dataset.address)));
+$('#pg-table').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(!b)return;const vpn=Number(b.dataset.page);changeAccess(vpn*16+address%16,1);$('[data-page="'+vpn+'"]').focus({preventScroll:true});});
+$('#pg-target').addEventListener('click',e=>{const b=e.target.closest('[data-offset]');if(!b)return;changeAccess(run.vpn*16+Number(b.dataset.offset),3);$('#pg-target [data-offset="'+run.offset+'"]').focus({preventScroll:true});});
+$('#pg-stages').addEventListener('click',e=>{const b=e.target.closest('[data-stage]');if(!b||b.disabled)return;tr.seek(Number(b.dataset.stage));$('[data-stage="'+stage+'"]').focus({preventScroll:true});});$('#pg-stages').addEventListener('keydown',e=>{if(!e.target.matches('[data-stage]')||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();tr.seek(e.key==='Home'?0:e.key==='End'?run.snapshots.length-1:stage+(e.key==='ArrowRight'?1:-1));$('[data-stage="'+stage+'"]').focus({preventScroll:true});});
+$$('[data-profile]').forEach(b=>b.addEventListener('click',()=>{profile=b.dataset.profile;changeAccess(21);}));$$('[data-cost]').forEach(b=>b.addEventListener('click',()=>switchCost(b.dataset.cost)));
+$$('[data-start]').forEach(b=>b.addEventListener('click',()=>{start=Number(b.dataset.start);resetTrace();}));$('#pg-iterations').addEventListener('change',resetTrace);$('#pg-trace-position').addEventListener('input',()=>mt.seek(Number($('#pg-trace-position').value)));
+$('#pg-trace-grid').addEventListener('click',e=>{const b=e.target.closest('[data-event]');if(!b)return;const i=Number(b.dataset.event);mt.seek(i+1);$('[data-event="'+i+'"]').focus({preventScroll:true});});$('#pg-iteration-nav').addEventListener('click',e=>{const b=e.target.closest('[data-iteration]');if(!b)return;const i=Number(b.dataset.iteration);mt.seek(i*10+1);$('[data-iteration="'+i+'"]').focus({preventScroll:true});});
+$('#pg-address-bits').addEventListener('change',renderSpace);$('#pg-processes').addEventListener('input',renderSpace);$$('[data-size]').forEach(b=>b.addEventListener('click',()=>{pageBytes=Number(b.dataset.size);renderSpace();}));$$('[data-usage]').forEach(b=>b.addEventListener('click',()=>{usage=b.dataset.usage;renderSpace();}));
+$$('details').forEach(d=>d.addEventListener('toggle',pauseAll));document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseAll();});window.addEventListener('pagehide',pauseAll);
+function anchor(){const hash=location.hash.slice(1);if(['demo','translation','rules'].includes(hash)){switchView('translation');if(hash==='rules')$('#rules').open=true;}else if(['trace','space'].includes(hash)){if(cost!==hash)switchCost(hash);}else if(hash==='object'){allocated=true;objectMode=true;switchView('allocation');renderMap();renderAccess();}else if(['why','allocation'].includes(hash))switchView('allocation');}
+window.addEventListener('hashchange',anchor);renderMap();renderAccess();renderTrace();renderSpace();controllers.forEach(c=>c.update());anchor();setupWikiNavigation();
+})();
 
-renderPagingPage(document.getElementById('root'));
+
+
