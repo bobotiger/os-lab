@@ -22,6 +22,7 @@ header{padding:26px 0 22px}h1{font-size:32px;line-height:1.4;margin:8px 0 14px}h
 .reference-answer{border-left:2px solid #9bbcb0;padding-left:16px;margin:18px 0 0}
 .reference-answer h4{color:var(--green);margin-top:0}
 .output-guide th{white-space:nowrap}.output-guide td:first-child{font-family:Consolas,monospace;white-space:nowrap}
+.table-scroll td:first-child code,.state-guide th:first-child,.condition-guide th:first-child,.condition-guide td:first-child{white-space:nowrap;overflow-wrap:normal}
 section{padding:28px 0;border-bottom:1px solid var(--line)}.compare,.facts{display:grid;grid-template-columns:1fr 1fr;gap:32px}.compare>article,.facts>article{min-width:0}.scenario{font-size:13px;color:#596a63}
 .state{font:38px/1.4 Consolas,monospace;margin:12px 0 8px}.green{color:var(--green)}.blue{color:var(--blue)}.rust{color:var(--rust)}.caption{font-size:13px;color:#596a63}.question{margin-top:18px;border-left:3px solid var(--rust);padding-left:16px}
 .stages{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--line);margin:18px 0 24px}.stages button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:12px 16px;font:inherit;font-size:14px;line-height:1.7;color:#596a63;cursor:pointer}.stages button[aria-selected="true"]{border-bottom-color:var(--green);color:var(--green);font-weight:500}
@@ -39,6 +40,11 @@ button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var
 .meanings{margin:14px 0 20px}.meanings dt{font-size:14px;font-weight:500;margin-top:12px}.meanings dd{font-size:14px;margin:4px 0 0}code{font-family:Consolas,monospace;overflow-wrap:anywhere}
 details{margin:16px 0}summary{cursor:pointer;color:var(--green)}details>div{padding-top:14px}.raw{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.8 Consolas,monospace;background:#eff4f3;padding:14px}.table-scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px;margin:14px 0}td,th{border-bottom:1px solid var(--line);padding:10px 8px;text-align:left;vertical-align:top}th{font-weight:500}footer{font-size:13px;padding-top:24px}
 @media(max-width:700px){main{padding:18px 18px 40px}h1{font-size:26px}h2{font-size:21px}.compare,.facts,.objects{grid-template-columns:1fr;gap:20px}.compare>article+article{border-top:1px solid var(--line);padding-top:18px}.state{font-size:32px}.steps{grid-template-columns:28px 1fr;gap:12px}.stages{display:grid;grid-template-columns:1fr 1fr}.stages button{padding:12px 6px;font-size:13px}.current{min-height:120px}.object .action{min-height:0}}
+
+/* Keep the end of a paragraph readable at different screen widths. */
+main :is(p, figcaption, dt, dd, summary) { text-wrap: pretty; }
+main :is(h1, h2, h3, h4) { text-wrap: balance; }
+.read-keep { white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -46,7 +52,7 @@ details{margin:16px 0}summary{cursor:pointer;color:var(--green)}details>div{padd
 <nav aria-label="CPU 虚拟化实验导航"><a href="cpu-virtualization-experiments.html">CPU 虚拟化实验</a><a href="index.html">进程知识</a></nav>
 <header>
 <div class="eyebrow">CPU 虚拟化实验 · 任务二 · 进程状态</div>
-<h1>计算、等待与暂停：观察进程状态</h1>
+<h1>计算、等待与<span class="read-keep">暂停</span>：观察进程状态</h1>
 <p class="lead">本实验在 Ubuntu 中观察进程的三种状态：可以执行计算、等待数据、被信号暂停。每次只改变一个条件，再比较改变前后的状态记录。</p>
 <p class="lead">运行参考程序后，终端中的控制程序会创建两个进程 A、B：</p>
 <dl class="intro-processes">
@@ -79,7 +85,7 @@ state&gt;</pre>
 </section>
 
 <section aria-labelledby="reading-heading">
-<h2 id="reading-heading">先了解输出中的状态和时间</h2>
+<h2 id="reading-heading">输出中的进程状态与时间统计</h2>
 <p><code>observe</code> 观察约一秒，再分别输出 A、B 的记录。每次输出中，一个进程对应一行。</p>
 <div class="table-scroll"><table class="output-guide"><thead><tr><th>输出字段</th><th>含义</th></tr></thead><tbody>
 <tr><td>NAME</td><td>进程名称 A 或 B。</td></tr>
@@ -90,7 +96,7 @@ state&gt;</pre>
 <tr><td>elapsed</td><td>本次观察实际经过的秒数，通常略大于一秒。</td></tr>
 </tbody></table></div>
 <p>CPU 时间不包含进程等待数据或等待分配 CPU 的时间。它与实际经过的时间不是同一个数值。</p>
-<div class="table-scroll"><table><thead><tr><th>状态</th><th>Linux 中的含义</th><th>本实验中的条件</th></tr></thead><tbody>
+<div class="table-scroll"><table class="state-guide"><thead><tr><th>状态</th><th>Linux 含义</th><th>本实验中的条件</th></tr></thead><tbody>
 <tr><td><code>R</code></td><td>正在运行，或已经就绪、等待 CPU。</td><td>进程有计算可做，并且没有被暂停。</td></tr>
 <tr><td><code>S</code></td><td>可被信号中断的睡眠。</td><td>B 的管道中没有数据，读取操作正在等待。</td></tr>
 <tr><td><code>T</code></td><td>被暂停。</td><td>A 收到了 SIGSTOP 暂停信号。</td></tr>
@@ -211,10 +217,10 @@ DONE: A and B terminated and reaped.</pre>
 </section>
 
 <section aria-labelledby="meaning-heading">
-<h2 id="meaning-heading">状态变化取决于什么条件</h2>
-<div class="table-scroll"><table><thead><tr><th>本实验中的状态</th><th>为什么不能继续计算</th><th>如何继续</th></tr></thead><tbody>
-<tr><td>B 等待数据：S</td><td>管道中没有数据，读取操作不能完成。</td><td>向管道写入数据，使读取操作能够完成。</td></tr>
-<tr><td>A 被暂停：T</td><td>暂停信号阻止了执行，即使 A 有计算可做。</td><td>发送 SIGCONT 继续信号，解除暂停。</td></tr>
+<h2 id="meaning-heading">进程状态变化的触发条件</h2>
+<div class="table-scroll"><table class="condition-guide"><thead><tr><th>状态</th><th>原因</th><th>如何继续</th></tr></thead><tbody>
+<tr><td>B：S</td><td>管道中没有数据，读取操作不能完成。</td><td>向管道写入数据，使读取操作能够完成。</td></tr>
+<tr><td>A：T</td><td>暂停信号阻止了执行，即使 A 有计算可做。</td><td>发送 SIGCONT 继续信号，解除暂停。</td></tr>
 </tbody></table></div>
 <p>这两个状态下都可能得到零 CPU 时间，但继续执行所需的条件不同。给 B 发送数据不会恢复 A；恢复 A 也不会给 B 的管道添加数据。</p>
 <p>条件满足后，进程可以重新参与 CPU 调度。是否马上执行、先执行 A 还是 B，由调度决定。</p>
@@ -251,5 +257,6 @@ quit</pre></div>
 <footer><a href="cpu-virtualization-experiments.html">返回 CPU 虚拟化实验目录</a><br>上一项：<a href="cpu-sharing.html">任务一：一个 CPU，两个计算进程</a> · 下一项：<a href="fork-private.html">任务三：fork 创建子进程后的变量变化</a><br>相关实践：<a href="process-api-homework.html">进程 API 实践</a></footer>
 </main>
 <script src="process-states.js"></script>
+  <script src="heading-typography.js?v=20261028-titles-1"></script>
 </body>
 </html>

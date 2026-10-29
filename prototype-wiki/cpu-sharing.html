@@ -18,10 +18,15 @@
 .exercise ul{padding-left:22px;margin:0 0 14px}.exercise li+li{margin-top:8px}
 .reference-answer{border-left:2px solid #9bbcb0;padding-left:16px;margin:18px 0 0}
 .reference-answer h4{color:var(--green);margin-top:0}
-.table-scroll{overflow-x:auto}.measure-axis{position:relative;height:28px;font:12px/1.5 Consolas,monospace;color:#596a63;margin-bottom:14px}
+.table-scroll{overflow-x:auto}.table-scroll th:first-child,.table-scroll td:first-child{white-space:nowrap}.table-scroll td:first-child code{overflow-wrap:normal}.measure-axis{position:relative;height:28px;font:12px/1.5 Consolas,monospace;color:#596a63;margin-bottom:14px}
 .measure-axis span{position:absolute;top:0;white-space:nowrap}.measure-axis span:first-child{left:0}.measure-axis span:nth-child(2){left:50%;transform:translateX(-50%)}.measure-axis span:last-child{right:0}
 .parameters dt{font-weight:500;margin-top:16px}.parameters dd{margin:4px 0 0}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+@media(max-width:700px){.chart text{font-size:28px}.chart text:last-of-type{transform:translateY(7px)}}
+
+/* Keep the end of a paragraph readable at different screen widths. */
+main :is(p, figcaption, dt, dd, summary) { text-wrap: pretty; }
+main :is(h1, h2, h3, h4) { text-wrap: balance; }
 </style>
 </head>
 <body>
@@ -45,7 +50,7 @@ printf 'Selected CPU: %s\n' "$CPU"</pre></div>
 <dl class="command-meanings"><dt>编译</dt><dd>第一行把源码编译成可运行的 cpu-sharing-work 程序。</dd><dt>选择 CPU</dt><dd>第二行把一个允许使用的逻辑 CPU 编号保存到变量 CPU 中，第三行显示这个编号。后续的 <code>taskset -c "$CPU"</code> 将各次运行限制在同一个逻辑 CPU 上；它不会排除其他系统进程使用这个 CPU。</dd></dl>
 </section>
 <section aria-labelledby="reading-heading">
-<h2 id="reading-heading">先了解进度记录</h2>
+<h2 id="reading-heading">进度记录的字段与含义</h2>
 <p>程序连续执行 24 段计算，不主动休眠。启动时输出一条记录，每完成一段再输出一条，共 25 条。每一行都是一条 JSON 格式的记录，保存这些记录的文件使用 .jsonl 后缀。</p>
 <div class="table-scroll"><table><thead><tr><th>字段</th><th>含义</th></tr></thead><tbody>
 <tr><td><code>name</code></td><td>本次运行的名称 A 或 B。名称不影响计算量。</td></tr>
@@ -110,7 +115,7 @@ PY</pre></div>
 <div class="legend"><span class="green">单独运行 A</span><span class="blue">并发运行 A</span><span class="rust">并发运行 B</span></div>
 <details><summary>查看测量条件与完整进度记录</summary><div><p>Ubuntu 22.04.5 LTS，WSL2；内核 6.6.87.2-microsoft-standard-WSL2，CPU 0，GCC 使用 -O2。记录采集于 2026-10-08。各次运行的最终校验值均为 <code>5470079412014018561</code>。</p><p>后台负载、处理器频率和宿主机活动会影响完成耗时。重复实验应核对进度、结果和耗时变化，不要求复现相同小数或固定倍数。</p><pre id="reference" class="raw"></pre></div></details>
 </section>
-<section aria-labelledby="why-heading"><h2 id="why-heading">这些对照说明了什么</h2>
+<section aria-labelledby="why-heading"><h2 id="why-heading">CPU 时间共享与任务完成时间</h2>
 <div class="facts"><article><h3>两个进程轮流使用 CPU</h3><p>并发记录中，A、B 都在另一方完成之前推进了计算。一个进程尚未完成全部计算时，另一个进程就可以通过调度获得 CPU。</p><p>进程切换时，操作系统保存恢复执行所需的状态。进程再次获得 CPU 后，可以继续原来的计算。这是两个进程最终都能完成计算的机制基础。</p></article><article><h3>共享 CPU 不会减少计算量</h3><p>每个进程仍执行 24 段相同计算，最终校验值一致。加入第二个进程后，各自的经过时间还包含等待 CPU 的时间，因此通常更晚完成。</p><p>CPU 虚拟化中的时间共享，就是通过调度让多个进程各自继续执行，共用有限的 CPU 执行时间。并发不意味着单个 CPU 能在同一时刻执行两个线程。</p></article></div>
 <details><summary>进一步比较：等 A 完成再启动 B</summary><div>
 <p>在同一个 Bash 终端中执行以下两条命令。第一条结束后，第二条才会启动 B：</p>
@@ -130,5 +135,6 @@ taskset -c "$CPU" ./cpu-sharing-work B > sequential-b.jsonl</pre></div>
 <footer><a href="cpu-virtualization-experiments.html">返回 CPU 虚拟化实验目录</a> · 下一项：<a href="process-states.html">任务二：计算、等待与暂停</a><br>相关知识：<a href="limited-direct-execution.html">受限直接执行</a> · <a href="cpu-scheduling.html">CPU 调度基础</a> · <a href="process-api-homework.html">进程 API 实践</a></footer>
 </main>
 <script src="cpu-sharing.js"></script>
+  <script src="heading-typography.js?v=20261028-titles-1"></script>
 </body>
 </html>

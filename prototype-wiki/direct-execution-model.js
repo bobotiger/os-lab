@@ -12,7 +12,7 @@ function buildDirectExecutionScenario(scenario = 'timer', decision = 'switch') {
     kernelA: '尚无切换保存', kernelB: '预存内核上下文', switches: 0,
     states: {A: '运行', B: '就绪'}, ...fields,
   });
-  const ordinary = frame('用户执行', 'A 的普通指令直接在 CPU 上运行', '内核没有逐条解释这些普通指令。CPU 仍受用户态权限、地址空间与受控入口约束；B 就绪，但此刻未获得 CPU。');
+  const ordinary = frame('用户执行', 'A 的普通指令直接在 CPU 上运行', '内核没有逐条解释这些普通指令。硬件仍会检查程序的访问权限；程序请求内核服务时，需要通过受控入口。B 已就绪，但此刻未获得 CPU。');
   let frames;
   if (scenario === 'syscall') {
     const entry = {owner: 'kernel', entry: 'syscall', userA: '入口现场已保存', actor: '硬件'};

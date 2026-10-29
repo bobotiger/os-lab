@@ -12,12 +12,12 @@ const MLFQ_SCENARIOS = Object.freeze({
   },
   io: {
     title: 'I/O 不清空本层累计 CPU 用量', boost: false,
-    description: 'A 连续需要 16；B 有 5 段各为 1 的 CPU 工作，段间等待 I/O 2 个单位。B 虽然多次提前让出 CPU，本层使用量仍然累计。',
+    description: 'A 需要 16 个 CPU 时间单位完成计算；B 有 5 段 CPU 工作，每段需要 1 个单位，相邻两段之间等待 I/O 2 个单位。B 虽然多次因 I/O 让出 CPU，本层使用量仍然累计。',
     processes: [{id: 'A', arrival: 0, bursts: [16]}, {id: 'B', arrival: 0, bursts: [1, 1, 1, 1, 1], io: 2}],
   },
   boost: {
     title: '短任务陆续到达', boost: true,
-    description: 'A 在 t=0 到达，需要 16；B 至 H 每隔 2 个单位到达一个，均需 2，从 t=4 开始。是否每 12 个单位整体提升，会影响低层 A 再次获得 CPU 的时刻。有限任务下的长等待不等于无限饥饿。',
+    description: 'A 在 t=0 到达，需要 16 个 CPU 时间单位；B 至 H 从 t=4 开始，每隔 2 个时间单位到达一个，每个需要 2 个 CPU 时间单位。是否每 12 个单位整体提升，会影响低层 A 再次获得 CPU 的时刻。有限任务下的长等待不等于无限饥饿。',
     processes: [{id: 'A', arrival: 0, bursts: [16]}, ...Array.from({length: 7}, (_, index) => ({id: String.fromCharCode(66 + index), arrival: 4 + index * 2, bursts: [2]}))],
   },
 });

@@ -16,7 +16,12 @@ header{padding:26px 0 22px}h1{font-size:32px;line-height:1.4;margin:8px 0 14px}h
 .observations{padding-left:22px}.observations li+li{margin-top:12px}.observations code{color:var(--blue)}.comparison{display:grid;grid-template-columns:1fr 1fr;gap:0 32px;margin:18px 0}.comparison>div{padding:14px 0;border-top:1px solid var(--line)}.comparison dt{color:var(--blue)}.comparison dd{margin-top:6px}
 .controls{margin:18px 0 24px}.mode-label{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:18px}select{font:inherit;width:240px;max-width:100%;padding:6px 30px 6px 8px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--ink)}fieldset{border:0;padding:0;margin:0;min-width:0}legend{font-size:14px;margin-bottom:10px}.stage-options{display:flex;flex-wrap:wrap;gap:12px 24px}.stage-options label{display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer}.stage-options input{accent-color:var(--green);width:17px;height:17px;flex-shrink:0}
 .flow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:20px 0;list-style:none;padding:0}.flow li{min-width:0;border-top:3px solid var(--line);padding:16px 12px;min-height:176px;background:#f1f4f2}.flow li:nth-child(2){background:#eef3f6}.flow li[aria-current="step"]{border-color:var(--green)}.flow li:nth-child(2)[aria-current="step"]{border-color:var(--blue)}.flow li:nth-child(3)[aria-current="step"]{border-color:var(--rust)}.flow h3{font-size:16px}.flow p{font-size:14px;margin:0;overflow-wrap:anywhere}.stage-summary{min-height:132px}.parameters dt{margin-top:16px}.parameters dd{margin:4px 0 0}details{margin:16px 0}summary{cursor:pointer;color:var(--green)}details>div{padding-top:14px}footer{font-size:13px;padding-top:24px}button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--green);outline-offset:4px}
-@media(max-width:700px){main{padding:18px 18px 40px}h1{font-size:26px}h2{font-size:21px}.pair,.comparison,.flow{grid-template-columns:1fr}.pair{gap:22px}.pair>article+article{border-top:1px solid var(--line);padding-top:22px}.conditions{grid-template-columns:76px minmax(0,1fr);gap:12px}.flow li{min-height:104px}.stage-summary{min-height:210px}}
+@media(max-width:700px){main{padding:18px 18px 40px}h1{font-size:26px}h2{font-size:21px}.pair,.comparison,.flow{grid-template-columns:1fr}.pair{gap:22px}.pair>article+article{border-top:1px solid var(--line);padding-top:22px}.conditions{grid-template-columns:max-content minmax(0,1fr);gap:12px}.flow li{min-height:104px}.stage-summary{min-height:210px}}
+
+/* Keep the end of a paragraph readable at different screen widths. */
+main :is(p, figcaption, dt, dd, summary) { text-wrap: pretty; }
+main :is(h1, h2, h3, h4) { text-wrap: balance; }
+.read-keep { white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -106,7 +111,7 @@ cat missing.trace</pre></div>
 <p>相同 PID 能说明这些请求属于同一进程，不能证明它在两行记录之间一直占用 CPU。既不能把每一行系统调用数成一次进程切换，也不能据此认定期间完全没有切换。exec 成功的情形则是同一进程开始执行新程序，而不是返回原程序继续。</p>
 </section>
 <section id="transfer" aria-labelledby="transfer-heading">
-<h2 id="transfer-heading">文件变成 9 字节，第二次 read 还会返回 0 吗？</h2>
+<h2 id="transfer-heading">文件变成 9 字节，<span class="read-keep">第二次</span> read 还会返回 0 吗？</h2>
 <p>不改变程序和每次最多读取 8 字节的条件，另建一个含 OS123456 和换行的文件，共 9 字节。先判断两次 read 应各返回多少，再按新文件路径找到记录核对。</p>
 <div class="command"><button class="copy" aria-label="复制九字节文件对照命令" title="复制对照命令"><span></span></button><pre>printf 'OS123456\n' > syscall-long.txt
 strace -f -y -e trace=openat,read,write,close -o long.trace ./syscall-work syscall-long.txt
@@ -125,5 +130,6 @@ cat long.trace</pre></div>
 <footer><a href="cpu-virtualization-experiments.html">返回 CPU 虚拟化实验目录</a> · 上一项：<a href="exec-reap.html">任务四：程序替换与进程回收</a><br><a href="syscalls.md">实验说明文档</a> · <a href="limited-direct-execution.html">受限直接执行知识</a></footer>
 </main>
 <script src="syscalls.js"></script>
+  <script src="heading-typography.js?v=20261028-titles-1"></script>
 </body>
 </html>

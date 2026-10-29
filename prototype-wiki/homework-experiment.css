@@ -1,0 +1,307 @@
+.hw-experiment-page #homework-session {margin:20px 0 28px;padding:0;border:0}
+.hw-experiment-page .hw-page-tabs {display:flex;gap:24px;border-bottom:1px solid #cbd8d0;margin:20px 0}
+.hw-experiment-page .hw-page-tabs button {font:inherit;font-size:16px;border:0;border-bottom:3px solid transparent;background:transparent;color:#496157;padding:12px 0;cursor:pointer}
+.hw-experiment-page .hw-page-tabs [aria-selected=true] {border-bottom-color:#126756;color:#234733;font-weight:600}
+.hw-experiment-page .hw-student-bar {display:flex;align-items:center;justify-content:space-between;gap:16px}
+.hw-experiment-page .hw-student-meta {display:flex;gap:28px;margin:0;flex-wrap:wrap}
+.hw-experiment-page .hw-student-meta>div {display:flex;gap:8px;align-items:baseline}
+.hw-experiment-page .hw-student-meta dt {font-weight:600}
+.hw-experiment-page .hw-student-meta dd {margin:0;overflow-wrap:anywhere}
+.hw-experiment-page .hw-report-choice {margin-top:14px}
+.hw-experiment-page .hw-report-choice>summary {cursor:pointer;font-size:14px;line-height:1.8}
+.hw-experiment-page .hw-report-choice summary span {color:#496157;margin-left:8px}
+.hw-experiment-page .hw-visually-hidden {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.hw-experiment-page .hw-identity, .hw-experiment-page .hw-field-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.hw-experiment-page label {display:flex;flex-direction:column;gap:7px;font-size:14px}
+.hw-experiment-page .hw-field-title {font-weight:600}
+.hw-experiment-page .hw-field-help {font-size:13px;line-height:1.8;color:#496157;overflow-wrap:anywhere}
+.hw-experiment-page .hw-experiment-fields :is(input,textarea) {margin-top:auto}
+.hw-experiment-page input, .hw-experiment-page textarea {box-sizing:border-box;width:100%;min-width:0;border:1px solid #b5c7bd;border-radius:4px;padding:10px;background:#fff;color:#20352b;font:inherit;line-height:1.6}
+.hw-experiment-page textarea {resize:vertical;min-height:100px}
+.hw-experiment-page .hw-long-field {grid-column:1/-1}
+.hw-experiment-page .hw-export-selection {border:0;border-top:1px solid #cbd8d0;padding:16px 0;margin:20px 0}
+.hw-experiment-page .hw-session-block {border-top:1px solid #cbd8d0;margin:24px 0;padding-top:18px}
+.hw-experiment-page .hw-session-block:first-of-type {border-top:0;padding-top:0}
+.hw-experiment-page .hw-session-block h3, .hw-experiment-page .hw-common-conditions h3 {font-size:18px;line-height:1.6;margin:0 0 12px}
+.hw-experiment-page .hw-record-details {margin-top:16px;font-size:13px}
+.hw-experiment-page .hw-record-details summary {cursor:pointer}
+.hw-experiment-page .hw-common-conditions {border-top:1px solid #cbd8d0;border-bottom:1px solid #cbd8d0;margin:24px 0;padding:18px 0}
+.hw-experiment-page .hw-common-conditions dl {margin:0;display:grid;gap:14px}
+.hw-experiment-page .hw-common-conditions dt {font-weight:600;font-size:14px;margin-bottom:4px}
+.hw-experiment-page .hw-common-conditions dd {margin:0;font-size:14px;line-height:1.8;overflow-wrap:anywhere}
+.hw-experiment-page .hw-export-selection legend {font-size:15px;font-weight:600}
+.hw-experiment-page .hw-export-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px}
+.hw-experiment-page .hw-export-choice {flex-direction:row;align-items:flex-start;gap:10px;line-height:1.6;cursor:pointer}
+.hw-experiment-page .hw-export-choice input {width:18px;height:18px;flex:0 0 18px;margin:3px 0 0;padding:0;accent-color:#126756}
+.hw-experiment-page .hw-session-actions {display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
+.hw-experiment-page #hw-start-form>button {margin-top:16px}
+.hw-experiment-page #homework-session button {border:1px solid #477560;border-radius:4px;padding:10px 14px;max-width:100%;white-space:normal;color:#234733;background:#f4f9f6;font:inherit;cursor:pointer}
+.hw-experiment-page #homework-session button:disabled {opacity:.5;cursor:default}
+.hw-experiment-page #homework-session button:hover:not(:disabled) {background:#e4efe8}
+.hw-experiment-page :is(input,textarea,select,button,summary):focus-visible {outline:3px solid #397dba;outline-offset:3px}
+.hw-experiment-page .hw-session-meta {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.hw-experiment-page .hw-session-meta dd {margin:4px 0;overflow-wrap:anywhere}
+.hw-experiment-page .hw-session-meta dt {font-weight:600}
+.hw-experiment-page .hw-save-error {color:#9b2d25}
+.hw-experiment-page .hw-privacy, .hw-experiment-page .hw-report-note {font-size:13px;line-height:1.8}
+.hw-experiment-page .hw-core-question {font-weight:600;color:#214a38}
+.hw-experiment-page .hw-task-requirements h4 {font-size:16px;margin:18px 0 10px}
+.hw-experiment-page .hw-task-requirements p {margin:10px 0;line-height:1.9;font-size:14px}
+.hw-experiment-page .hw-task-requirements ol {margin:0;padding-left:24px;list-style:decimal}
+.hw-experiment-page .hw-task-requirements li {display:list-item;margin:10px 0;line-height:1.9;font-size:14px}
+.hw-experiment-page .hw-fixed-example {margin:16px 0}
+.hw-experiment-page .hw-fixed-example summary {cursor:pointer;font-size:14px;padding:8px 0}
+.hw-experiment-page .hw-actual-input {border-top:1px solid #cbd8d0;margin-top:20px;padding-top:16px}
+.hw-experiment-page .hw-actual-input h4 {font-size:17px;margin:0 0 12px}
+.hw-experiment-page .hw-run {margin:20px 0}
+.hw-experiment-page .hw-run h5 {font-size:14px;margin:12px 0;overflow-wrap:anywhere}
+.hw-experiment-page .hw-command {display:grid;grid-template-columns:1fr 36px;gap:8px;align-items:center;margin:12px 0}
+.hw-experiment-page .hw-command>span {font-size:13px}
+.hw-experiment-page .hw-command .icon-button {width:36px;height:36px;min-width:36px}
+.hw-experiment-page .hw-command pre {grid-column:1/-1;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.hw-experiment-page .hw-experiment-fields fieldset {border:0;border-top:1px solid #cbd8d0;padding:20px 0;margin:16px 0}
+.hw-experiment-page .hw-experiment-fields legend {font-size:14px;font-weight:600;padding-right:14px}
+.hw-experiment-page .api-hw-coding-tasks>li {display:block}
+.hw-experiment-page [hidden] {display:none!important}
+.hw-experiment-page .hw-task-summary {display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:12px;align-items:center;padding:18px 0;cursor:pointer;list-style:none}
+.hw-experiment-page .hw-task-summary::-webkit-details-marker {display:none}
+.hw-experiment-page .hw-task-summary h3 {margin:0;font-size:18px;line-height:1.6}
+.hw-experiment-page #tree-tasks .hw-task-summary h3::before, .hw-experiment-page #generator-tasks .hw-task-summary h3::before {content:none}
+.hw-experiment-page .hw-task-summary::after {content:'+';grid-column:3;font-size:22px;color:#477560}
+.hw-experiment-page .hw-task[open]>.hw-task-summary::after {content:'-'}
+.hw-experiment-page .hw-task-count {grid-column:2;grid-row:2;font-size:12px;color:#496157}
+.hw-experiment-page .hw-task-count:empty {display:none}
+.hw-experiment-page .hw-task-content {padding-bottom:20px}
+.hw-experiment-page .hw-task-tabs {display:flex;border-bottom:1px solid #cbd8d0;gap:18px;margin-bottom:20px}
+.hw-experiment-page .hw-task-tabs button {border:0;border-bottom:3px solid transparent;background:transparent;padding:12px 0;color:#496157;font:inherit;font-size:14px;cursor:pointer}
+.hw-experiment-page .hw-task-tabs button[aria-selected="true"] {border-bottom-color:#126756;color:#234733;font-weight:600}
+.hw-experiment-page .hw-run-selector {max-width:100%;margin:12px 0 20px}
+.hw-experiment-page .hw-run-selector select {max-width:100%;width:100%;box-sizing:border-box;padding:10px;border:1px solid #b5c7bd;border-radius:4px;background:#fff;color:#20352b;font:inherit;font-size:14px}
+.hw-experiment-page .hw-optional-field {grid-column:1/-1;border-top:1px solid #cbd8d0;padding:12px 0}
+.hw-experiment-page .hw-optional-field summary {font-size:14px;color:#496157;cursor:pointer}
+.hw-experiment-page .hw-optional-field[open]>label {margin-top:14px}
+.hw-compare-page .hw-work-panel {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 24px;margin-top:20px}
+.hw-compare-page .hw-work-panel>.hw-run {margin:0;min-width:0;display:grid;grid-template-rows:auto 1fr auto}
+.hw-compare-page .hw-work-panel>.hw-field-grid, .hw-compare-page .hw-work-panel>.hw-run-selector, .hw-compare-page .hw-compile-step {grid-column:1/-1}
+.hw-compare-page .hw-work-panel:has(>.hw-run-selector)>.hw-run {grid-column:1/-1}
+.hw-compare-page .hw-work-panel:not(:has(>.hw-run~.hw-run))>.hw-run {grid-column:1/-1}
+.hw-compare-page .hw-run h4, .hw-compare-page .hw-compile-step h4 {font-size:15px;line-height:1.6;margin:0 0 8px;overflow-wrap:anywhere}
+.hw-compare-page .hw-command {grid-template-columns:minmax(0,1fr) 32px;align-items:start;margin:0 0 12px}
+.hw-compare-page .hw-command>span {display:none}
+.hw-compare-page .hw-command pre {grid-column:1;grid-row:1;min-width:0}
+.hw-compare-page .hw-command .icon-button {grid-column:2;grid-row:1;width:32px;height:32px;min-width:32px}
+.hw-compare-page .hw-work-panel>.hw-field-grid {border-top:1px solid #cbd8d0;padding-top:16px}
+.hw-compare-page .hw-work-panel>.hw-shared-source {border:0;padding-top:0}
+.hw-compare-page .hw-shared-source textarea {font-family:Consolas,monospace;min-height:160px;tab-size:4}
+.hw-compare-page .hw-work-panel>.hw-field-grid>label:has([data-hw-field="extra-command"]), .hw-compare-page .hw-work-panel>.hw-field-grid>label:has([data-hw-field="extra-output"]) {grid-column:auto}
+.process-workspace .site-header {padding-top:12px;padding-bottom:12px;gap:8px}
+.process-workspace .intro {max-width:none;padding:10px 0 6px}
+.process-workspace .intro .eyebrow {display:none}
+.process-workspace h1 {font-size:28px;line-height:1.4;margin:0 0 6px}
+.process-workspace h1 span {font-size:14px;font-family:inherit;margin-left:12px}
+.process-workspace .lead {font-size:15px;line-height:1.7;margin:0}
+.process-workspace .hw-entry-context {display:block;font-size:13px;color:#496157;margin-top:4px}
+.process-workspace:has(.hw-student-bar) .hw-entry-context {display:none}
+.process-workspace:has(.hw-student-bar) .intro .lead {display:none}
+.process-workspace .hw-page-tabs {margin:4px 0;gap:24px}
+.process-workspace .hw-page-tabs button {padding:8px 0;font-size:14px}
+.process-workspace #homework-session {margin:0 0 8px}
+.process-workspace .hw-student-bar {display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center}
+.process-workspace .hw-student-meta {gap:4px 12px;font-size:14px;min-width:0}
+.process-workspace .hw-student-meta>div {min-width:0}
+.process-workspace .hw-student-meta dt {flex-shrink:0}
+.process-workspace #hw-start-form {display:flex;align-items:flex-end;gap:12px}
+.process-workspace .hw-identity {flex:1;max-width:520px;gap:12px}
+.process-workspace #hw-start-form>button {margin:0}
+.process-workspace .hw-report-choice {margin-top:6px}
+.process-workspace #questions {padding:8px 0 20px}
+.process-workspace #questions>.hw-task-overview {margin:0 0 10px;font-size:13px;color:#496157}
+.process-workspace .hw-common-conditions {margin:0 0 12px;padding:10px 0}
+.process-workspace .hw-common-conditions h3 {font-size:14px;margin:0 0 6px}
+.process-workspace .hw-common-conditions dl {grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.process-workspace .hw-common-conditions dt {font-size:13px;margin-bottom:2px}
+.process-workspace .hw-common-conditions dd {font-size:13px;line-height:1.6}
+.process-workspace .api-hw-coding-tasks {margin:0}
+.process-workspace .api-hw-coding-tasks>li {padding:0}
+.process-workspace .hw-task-summary {padding:8px 0;gap:4px 10px;grid-template-columns:26px minmax(0,1fr) auto 20px}
+.process-workspace .api-hw-task-number {font:14px/1.6 Consolas,monospace;color:#496157}
+.process-workspace .hw-task-summary h3 {font-size:17px;margin:0}
+.process-workspace .hw-task-summary::after {grid-column:4;grid-row:1;justify-self:center;font-size:18px;line-height:1}
+.process-workspace .hw-task-count {grid-column:3;grid-row:1;margin:0;font-size:12px;white-space:nowrap;justify-self:end}
+.process-workspace .hw-task-content {padding:0 0 18px}
+.process-workspace .hw-task-requirements h4 {font-size:13px;margin:8px 0 3px;color:#496157}
+.process-workspace .hw-task-requirements p {font-size:14px;line-height:1.7;margin:0 0 8px;max-width:86ch}
+.process-workspace .hw-work-panel {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:12px}
+.process-workspace .hw-work-panel>.hw-run {margin:0;min-width:0;display:flex;flex-direction:column}
+.process-workspace .hw-run h4 {font-size:14px;margin:0 0 6px;line-height:1.6}
+.process-workspace .hw-command {grid-template-columns:minmax(0,1fr) 32px;align-items:start;margin:0 0 8px;gap:6px}
+.process-workspace .hw-command>span {display:none}
+.process-workspace .hw-command pre {grid-column:1;grid-row:1;min-width:0;padding:10px;font-size:13px;line-height:1.7;border-left:1px solid #dce2df}
+.process-workspace .hw-command code {font-size:inherit}
+.process-workspace .hw-command .icon-button {grid-column:2;grid-row:1;width:32px;height:32px;min-width:32px;font:16px/1 Consolas,monospace;border-color:transparent;background:transparent;padding:0;color:#746b60;cursor:pointer}
+.process-workspace .hw-command .icon-button:hover {background:#edf3f1;color:#26463e;border-color:transparent}
+.process-workspace .hw-run>.hw-field-grid {margin-top:auto}
+.process-workspace .hw-run textarea,.process-workspace .hw-run>.api-hw-terminal {font-family:Consolas,"Liberation Mono",monospace;font-size:13px;line-height:1.7}
+.process-workspace .hw-run>.api-hw-terminal {margin:0;min-height:100px;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;background:#f7f8fa;color:#20352b;border:1px solid #dce2df;flex:1}
+.process-workspace .hw-reference-label {font-size:13px;color:#496157;margin:0 0 6px}
+.process-workspace .hw-reference-meta {font-size:13px;line-height:1.6;margin:0 0 8px}
+.process-workspace .hw-reference-meta summary {cursor:pointer}
+.process-workspace .hw-reference-meta p {margin:4px 0;font-size:13px;overflow-wrap:anywhere}
+.process-workspace .hw-work-panel>.hw-field-grid,.process-workspace .hw-work-panel>.hw-run-selector {grid-column:1/-1}
+.process-workspace .hw-work-panel>.hw-field-grid {border-top:1px solid #cbd8d0;padding-top:12px}
+.process-workspace .hw-reasoning-prompt {grid-column:1/-1}
+.process-workspace .hw-task-requirements .hw-core-question {font-size:15px;line-height:1.7;margin:0 0 6px}
+.process-workspace .hw-control-variables {display:grid;gap:4px;margin:0 0 8px;font-size:14px;line-height:1.6}
+.process-workspace .hw-control-variables>div {display:flex;gap:10px}
+.process-workspace .hw-control-variables dt {font-weight:600;color:#496157;flex-shrink:0}
+.process-workspace .hw-control-variables dd {margin:0}
+.process-workspace .hw-result-comparison {grid-column:1/-1;min-width:0}
+.process-workspace .hw-result-comparison table {width:100%;max-width:640px;table-layout:fixed;border-collapse:collapse;font-size:13px}
+.process-workspace .hw-result-comparison caption {text-align:left;font-size:14px;font-weight:600;margin-bottom:6px}
+.process-workspace .hw-result-comparison th {text-align:left;font-weight:500;padding:6px 8px;border-bottom:1px solid #cbd8d0;overflow-wrap:anywhere}
+.process-workspace .hw-result-comparison th:first-child {width:38%}
+.process-workspace .hw-result-comparison th span {display:block;font-size:12px;color:#496157}
+.process-workspace .hw-result-comparison td {padding:6px 8px;border-bottom:1px solid #cbd8d0}
+.process-workspace .hw-result-comparison input {max-width:14ch;padding:6px 8px;font-size:14px}
+.process-workspace .hw-result-comparison .hw-field-title {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.process-workspace [data-hw-field="overlap-evidence"],.process-workspace #hw-process-01-analysis {min-height:88px}
+.process-workspace [data-homework-task] {--investigation-ink:#273a34;--investigation-line:#d8dcd2;--investigation-accent:#246b60;--investigation-other:#a84e36}
+.process-workspace [data-homework-task] .hw-core-question {font-size:20px;line-height:1.5;color:var(--investigation-ink);max-width:74ch;margin-bottom:8px}
+.process-workspace [data-homework-task] .hw-control-variables {grid-template-columns:1fr 2fr;border-bottom:1px solid var(--investigation-line);padding-bottom:10px;gap:12px;font-size:13px}
+.process-workspace .hw-investigation {margin-top:8px}
+.process-workspace .hw-investigation>.hw-run {border-top:3px solid var(--investigation-accent);padding-top:6px}
+.process-workspace .hw-investigation>.hw-run:nth-of-type(2) {border-top-color:var(--investigation-other)}
+.process-workspace .hw-investigation .hw-run h4 {font-size:15px;color:var(--investigation-ink);margin-bottom:2px}
+.process-workspace .hw-investigation .hw-run-workload {font-size:12px;color:#496157;line-height:1.6;margin:0 0 8px}
+.process-workspace .hw-investigation .hw-run .hw-command pre {background:transparent;border:0;padding:4px 0}
+.process-workspace .hw-investigation .hw-run textarea {background:#f6f8f7;border:1px solid #c3d0cb;border-radius:0;min-height:150px}
+.process-workspace .hw-investigation-findings {gap:16px}
+.process-workspace .hw-investigation-comparison {grid-column:1/-1;min-width:0}
+.process-workspace .hw-investigation-section-title {display:flex;align-items:baseline;gap:10px}
+.process-workspace .hw-investigation-section-title>span {font:12px Consolas,monospace;color:#496157}
+.process-workspace .hw-investigation-section-title h4 {margin:0;font-size:15px;color:var(--investigation-ink)}
+.process-workspace .hw-investigation-section-title small {font-size:12px;color:#496157}
+.process-workspace .hw-difference-summary {display:flex;flex-wrap:wrap;gap:4px 24px;margin:8px 0}
+.process-workspace .hw-difference-summary p {font-size:14px;margin:0;line-height:1.7}
+.process-workspace .hw-duration-comparison {max-width:640px;display:grid;gap:6px}
+.process-workspace [data-hw-duration] {display:grid;grid-template-columns:140px minmax(0,1fr) 120px;gap:12px;align-items:center;font-size:12px}
+.process-workspace [data-hw-duration] output {text-align:right;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.process-workspace .hw-duration-track {height:8px;background:#e5ebe8}
+.process-workspace .hw-duration-fill {display:block;height:100%;background:var(--investigation-accent);width:0}
+.process-workspace [data-hw-duration]:nth-child(2) .hw-duration-fill {background:var(--investigation-other)}
+.process-workspace .hw-investigation .hw-result-comparison {padding-top:2px}
+.process-workspace .hw-investigation .hw-result-comparison caption {font-size:12px;font-weight:400;color:#496157}
+.process-workspace .hw-investigation .hw-result-comparison input {border:0;border-bottom:1px solid #9bafa5;border-radius:0;background:#f6f8f7}
+.process-workspace .hw-investigation-evidence,.process-workspace .hw-investigation-cause {border-left:2px solid var(--investigation-line);padding-left:12px}
+.process-workspace h1 {font-family:var(--hw-font-text);font-weight:500}
+.process-workspace .hw-task-summary h3 {font-weight:500}
+.process-workspace .hw-investigation .hw-reference-run {border-top-style:dashed}
+.process-workspace .hw-investigation .hw-reference-run>.api-hw-terminal {font-size:13px;background:#f6f8f7;max-height:340px;overflow:auto;min-height:150px;border-color:#c3d0cb}
+.process-workspace .hw-event-phases {grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--investigation-line);border-bottom:1px solid var(--investigation-line);padding:12px 0;gap:16px}
+.process-workspace .hw-event-phases>div {display:grid;gap:4px;min-width:0}
+.process-workspace .hw-event-phases span {font-size:12px;color:#496157}
+.process-workspace .hw-event-phases strong {font-size:14px;font-weight:500}
+.process-workspace .hw-event-phases code {font-size:12px;overflow-wrap:anywhere}
+.process-workspace .hw-investigation .hw-strategy-matrix {grid-column:1/-1;min-width:0;border:0;margin:0;padding:0}
+.process-workspace .hw-strategy-matrix legend {font-size:14px;font-weight:500;margin-bottom:6px}
+.process-workspace .hw-strategy-matrix table {width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px}
+.process-workspace .hw-strategy-matrix th {font-weight:500;text-align:left;color:#496157;padding:8px;border-bottom:1px solid var(--investigation-line);overflow-wrap:anywhere}
+.process-workspace .hw-strategy-matrix td {padding:8px;border-bottom:1px solid var(--investigation-line)}
+.process-workspace .hw-strategy-matrix label {flex-direction:row;align-items:center;gap:8px;cursor:pointer;font-size:13px}
+.process-workspace .hw-strategy-matrix input {width:16px;height:16px;margin:0;flex-shrink:0;accent-color:var(--investigation-accent)}
+.process-workspace .hw-strategy-matrix td:has(input:checked) {background:#edf3ef}
+.process-workspace .hw-investigation-matrix>.hw-run {grid-column:1/-1}
+.process-workspace .hw-investigation-matrix>.hw-run:nth-of-type(2n) {border-top-color:var(--investigation-other)}
+.process-workspace .hw-investigation .hw-reasoning-prompt h4 {font-size:14px;font-weight:500;color:var(--investigation-ink);margin:0 0 6px}
+.process-workspace .hw-investigation .hw-reasoning-prompt p {margin:0}
+.process-workspace .hw-investigation:not(:has(.hw-result-comparison)) .hw-investigation-cause textarea {min-height:110px}
+body:has(.process-workspace) {background:#faf8f4;color:#332f2a}
+.process-workspace {--line:#e1dbd2;--surface:#fffdf9;--ink:#332f2a;--muted:#786e63;--accent:#974c36;--hw-font-text:"Noto Sans SC","Source Han Sans SC","PingFang SC","Microsoft YaHei UI","Microsoft YaHei",sans-serif;font-family:var(--hw-font-text);font-synthesis:none;letter-spacing:0}
+.process-workspace h1 {font-size:30px;color:#332f2a}
+.process-workspace .hw-page-tabs [aria-selected=true] {border-bottom-color:#974c36;color:#683727}
+.process-workspace .hw-task-summary h3 {color:#332f2a;font-size:18px}
+.process-workspace .api-hw-task-number {color:#974c36}
+.process-workspace [data-homework-task] {--investigation-ink:#332f2a;--investigation-line:#e1dbd2;--investigation-accent:#396d63;--investigation-other:#b36945}
+.process-workspace [data-homework-task] .hw-core-question {font-weight:500;color:#332f2a}
+.process-workspace .hw-investigation>.hw-run {background:#fffdf9;border:1px solid #e1dbd2;border-top:2px solid var(--investigation-accent);border-radius:6px;padding:8px 12px}
+.process-workspace .hw-investigation>.hw-reference-run {border-top-style:solid;background:#f4f4ee}
+.process-workspace .hw-investigation .hw-run h4 {font-weight:500;font-size:16px}
+.process-workspace .hw-investigation .hw-run .hw-command {margin:0 0 10px;gap:6px}
+.process-workspace .hw-investigation .hw-run .hw-command pre {background:#edf3f1;border:0;border-left:2px solid #90aaa1;border-radius:3px;padding:5px 6px;color:#26463e;font-size:13px;line-height:1.7}
+.process-workspace .hw-investigation .hw-run .hw-command code {font-family:Consolas,"Liberation Mono",var(--hw-font-text);font-size:inherit}
+.process-workspace .hw-investigation .hw-run-workload {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));gap:8px 18px;margin:0 0 10px;font-family:var(--hw-font-text);font-size:13px;line-height:1.7;color:#746b60}
+.process-workspace .hw-run-workload>div {display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:baseline}
+.process-workspace .hw-run-workload dt {font-weight:600;color:#453d34;white-space:nowrap}
+.process-workspace .hw-run-workload dd {margin:0;overflow-wrap:anywhere}
+.process-workspace .hw-output-record {margin-top:4px;border-top:1px solid #e8e2d9;padding-top:8px}
+.process-workspace .hw-output-record summary {font-size:12px;color:#786e63;cursor:pointer;margin-bottom:6px}
+.process-workspace .hw-investigation .hw-output-record textarea {min-height:76px;height:92px;background:#fff;border-color:#ddd8d0;border-radius:4px}
+.process-workspace .hw-investigation .hw-output-record textarea:focus {min-height:150px}
+.process-workspace .hw-output-record .api-hw-terminal {font-family:Consolas,"Liberation Mono",var(--hw-font-text);font-size:13px;margin:0;min-height:76px;max-height:300px;overflow:auto;padding:10px;background:#fff;color:#4b4740;border:1px solid #ddd8d0;border-radius:4px;white-space:pre-wrap;overflow-wrap:anywhere}
+.process-workspace .hw-investigation-findings>.hw-result-comparison {grid-column:1/-1}
+.process-workspace .hw-result-comparison table {max-width:860px;background:#fffdf9}
+.process-workspace .hw-investigation .hw-result-comparison caption {font-size:17px;font-weight:500;color:#332f2a;margin:0 0 10px;text-align:left}
+.process-workspace .hw-result-comparison :is(th,td) {padding:9px 12px;border-color:#e1dbd2}
+.process-workspace .hw-investigation .hw-result-comparison input {background:#fff;border:1px solid #ddd8d0;border-radius:4px;max-width:18ch}
+.process-workspace .hw-investigation-evidence,.process-workspace .hw-investigation-cause {grid-column:auto;min-width:0;border:0;padding:0}
+.process-workspace .hw-investigation-evidence textarea,.process-workspace .hw-investigation-cause textarea {background:#fffdf9;border:1px solid #ddd8d0;border-radius:6px;min-height:110px}
+.process-workspace .hw-investigation-evidence .hw-field-title,.process-workspace .hw-investigation-cause .hw-field-title {font-size:15px;font-weight:500;color:#683727}
+.process-workspace .hw-event-phases {background:#f3efe7;border:0;border-radius:6px;padding:12px}
+.process-workspace .hw-investigation .hw-strategy-matrix {max-width:760px;background:#fffdf9;padding:12px;border:1px solid #e1dbd2;border-radius:6px}
+.process-workspace .hw-strategy-matrix td:has(input:checked) {background:#f4e8de}
+.process-workspace .hw-investigation .hw-run textarea {font-family:Consolas,"Liberation Mono",var(--hw-font-text)}
+.process-workspace :is(.hw-field-title,.hw-control-variables dt,.hw-run-workload dt,.hw-common-conditions dt,.hw-common-conditions h3,.hw-student-meta dt) {font-weight:400}
+.process-workspace .hw-field-help {line-height:1.75;color:#746b60}
+.api-workspace #coding {padding:8px 0 20px}
+.api-workspace #coding>.hw-task-overview {margin:0 0 10px;font-size:13px;color:#746b60}
+.api-workspace .hw-api-setup {margin:0 0 4px;font-size:13px;line-height:1.7}
+.api-workspace .hw-common-conditions {padding:8px 0}
+.api-workspace .hw-api-setup>summary {cursor:pointer;color:#746b60}
+.api-workspace .hw-api-setup p {font-size:13px;margin:6px 0}
+.api-workspace .hw-api-setup pre {font-size:13px;margin:6px 0;padding:10px}
+.api-workspace [data-homework-task] .hw-control-variables {grid-template-columns:minmax(0,1fr)}
+.api-workspace .hw-control-variables>div {display:grid;grid-template-columns:80px minmax(0,1fr);gap:12px}
+.api-workspace .hw-control-variables code,.api-workspace .hw-run-workload code {font-family:Consolas,"Liberation Mono",var(--hw-font-text);font-size:13px;overflow-wrap:anywhere}
+.api-workspace .hw-run-workload {grid-template-columns:1fr}
+.api-workspace .hw-result-comparison th:first-child {width:26%}
+.api-workspace .hw-investigation-findings>.hw-api-judgement {grid-column:1/-1;max-width:900px}
+.api-workspace .hw-api-judgement .hw-field-help {font-size:14px;line-height:1.8;max-width:80ch;white-space:pre-line}
+.api-workspace .hw-api-judgement textarea {min-height:120px}
+@media(max-width:800px) {
+  .process-workspace .hw-investigation-findings {grid-template-columns:1fr}
+  .process-workspace .hw-investigation-evidence,.process-workspace .hw-investigation-cause {grid-column:1/-1}
+}
+@media(max-width:600px) {
+  .process-workspace [data-homework-task] .hw-control-variables {grid-template-columns:1fr;gap:4px}
+  .process-workspace [data-homework-task] .hw-core-question {font-size:18px}
+  .process-workspace .hw-event-phases {grid-template-columns:1fr;gap:10px}
+  .process-workspace .hw-event-phases>div {grid-template-columns:130px minmax(0,1fr);gap:2px 8px}
+  .process-workspace .hw-event-phases code {grid-column:2}
+  .process-workspace [data-hw-duration] {grid-template-columns:120px minmax(0,1fr) 90px;gap:6px}
+}
+.process-workspace .hw-work-panel:has(>.hw-run-selector)>.hw-run,.process-workspace .hw-work-panel:not(:has(>.hw-run~.hw-run))>.hw-run {grid-column:1/-1}
+@media(max-width:1200px) {
+  .process-workspace .hw-work-panel {grid-template-columns:minmax(0,1fr)}
+  .process-workspace .hw-common-conditions dl {grid-template-columns:minmax(0,1fr);gap:6px}
+  .process-workspace .hw-common-conditions dl>div {display:grid;grid-template-columns:160px minmax(0,1fr);gap:10px}
+}
+@media(max-width:600px) {
+  .process-workspace #hw-start-form {flex-wrap:wrap}
+  .process-workspace .hw-identity {grid-template-columns:repeat(2,minmax(0,1fr));flex-basis:100%}
+  .process-workspace .hw-common-conditions dl>div {display:block}
+  .process-workspace .hw-common-conditions :is(dt,dd) {display:inline}
+  .process-workspace .hw-common-conditions dt {margin-right:6px}
+  .process-workspace h1 span {font-size:12px;margin-left:8px}
+}
+.hw-experiment-page .hw-reading-example {margin:20px 0;border-top:1px solid #cbd8d0;padding-top:16px}
+.hw-experiment-page .hw-reading-example>summary {cursor:pointer;font-size:16px;font-weight:600;line-height:1.7}
+@media(max-width:800px) {
+  .hw-compare-page .hw-work-panel, .hw-compare-page .hw-work-panel>.hw-field-grid {grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:600px) {
+  .hw-experiment-page .hw-student-bar {align-items:flex-start;flex-wrap:wrap}
+  .hw-experiment-page .hw-identity,.hw-experiment-page .hw-field-grid,.hw-experiment-page .hw-session-meta,.hw-experiment-page .hw-export-grid {grid-template-columns:1fr}
+  .hw-experiment-page .hw-session-actions {flex-direction:column;align-items:stretch}
+  .hw-experiment-page .hw-task-summary h3 {font-size:16px}
+  .hw-experiment-page .hw-task-tabs {gap:14px}
+}

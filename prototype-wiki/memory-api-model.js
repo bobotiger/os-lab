@@ -56,7 +56,8 @@ function buildMemoryApiScenario(scene = 'malloc') {
     add('检查结果', 'if (tmp != NULL) {\n    p = tmp;\n}', scene === 'resizeFailure' ? 'tmp 为 NULL，条件不成立：p 仍指向原来的 8 字节对象，可以继续使用或释放。不能把原对象当作已扩大。' : 'tmp 有效，p 改为使用返回的新指针。不能让其他指向旧对象的引用自动变成有效的新引用。', () => {
       if (scene !== 'resizeFailure') state.pointers.p = structuredClone(state.pointers.tmp);
     });
-    add('释放活对象', 'free(p);\np = NULL;\ntmp = NULL;', '释放当前仍有效的分配，再显式清空本例保存的引用。realloc 失败时，这一步释放的是原对象。', () => { release(); state.pointers.p = {status: 'null', address: null, object: null}; state.pointers.tmp = {status: 'null', address: null, object: null}; });
+    add('释放活对象', 'free(p);', '当前活对象的生命周期结束，指向它的引用失效，但指针变量不会自动变为 NULL。realloc 失败时，这一步释放的是原对象。', release);
+    add('清空引用', 'p = NULL;\ntmp = NULL;', '显式清空 p 和 tmp。这两次赋值不再释放对象，也不会自动清空其他指针变量。', () => { state.pointers.p = {status: 'null', address: null, object: null}; state.pointers.tmp = {status: 'null', address: null, object: null}; });
   } else if (scene === 'alias') {
     allocate();
     state.objects[0].values = [10, 20];

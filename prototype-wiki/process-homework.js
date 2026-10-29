@@ -94,7 +94,7 @@ document.querySelector('#root').innerHTML = `
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">CPU 虚拟化 / 进程 / 作业</p>
         <h1 id="page-title">进程作业 <span>Process Homework</span></h1>
-        <p class="lead">从纯计算到 I/O 调度，逐步推演进程状态、CPU 空闲与计算和 I/O 的重叠。</p>
+        <p class="lead">推演计算和 I/O 过程中进程状态与 CPU 的使用情况，观察计算与 I/O 如何重叠。</p>
         <dl class="hw-meta"><div><dt>运行环境</dt><dd>Ubuntu 22.04 · Python 3</dd></div><div><dt>依赖</dt><dd>Python 标准库</dd></div></dl>
         <p class="hw-back"><a class="inline-link" href="index.html">进程：状态转换与上下文切换</a></p>
       </section>

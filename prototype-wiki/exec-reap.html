@@ -16,7 +16,12 @@ header{padding:26px 0 22px}h1{font-size:32px;line-height:1.4;margin:8px 0 14px}h
 .answer{border-left:2px solid #9bbcb0;padding-left:16px;margin-top:18px}.answer h4{color:var(--green);margin-top:0}.observations{padding-left:22px}.observations li+li{margin-top:12px}.observations code{color:var(--blue)}
 .controls{margin:18px 0 24px}.mode-label{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:18px}select{font:inherit;max-width:100%;padding:6px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--ink)}fieldset{border:0;padding:0;margin:0;min-width:0}legend{font-size:14px;margin-bottom:10px}.stage-options{display:flex;flex-wrap:wrap;gap:10px 20px}.stage-options label{display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer}.stage-options input{accent-color:var(--green);width:17px;height:17px;flex-shrink:0}
 .stage-summary{min-height:110px}.process{border-top:3px solid var(--green);padding:18px;background:#eef4f1;min-height:290px}.process.child{border-color:var(--blue);background:#eef3f6}.process .fields{font-size:14px;margin:0;grid-template-columns:90px minmax(0,1fr);gap:10px 16px}.process dd{overflow-wrap:anywhere}.process.reaped{border-color:var(--line);background:transparent}.status{font-size:14px;min-height:52px;margin-bottom:14px}.evidence-label{font-size:14px;margin-top:20px}.parameters dt{margin-top:16px}.parameters dd{margin:4px 0 0}details{margin:16px 0}summary{cursor:pointer;color:var(--green)}details>div{padding-top:14px}footer{font-size:13px;padding-top:24px}button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--green);outline-offset:4px}
-@media(max-width:700px){main{padding:18px 18px 40px}h1{font-size:26px}h2{font-size:21px}.pair,.processes{grid-template-columns:1fr;gap:22px}.pair>article+article{border-top:1px solid var(--line);padding-top:22px}.conditions{grid-template-columns:76px minmax(0,1fr);gap:12px}.stage-summary{min-height:150px}.stage-options{display:grid;grid-template-columns:1fr 1fr;gap:12px}.process{min-height:280px}.status{min-height:0}}
+@media(max-width:700px){main{padding:18px 18px 40px}h1{font-size:26px}h2{font-size:21px}.pair,.processes{grid-template-columns:1fr;gap:22px}.pair>article+article{border-top:1px solid var(--line);padding-top:22px}.conditions{grid-template-columns:max-content minmax(0,1fr);gap:12px}.stage-summary{min-height:150px}.stage-options{display:grid;grid-template-columns:1fr 1fr;gap:12px}.process{min-height:280px}.status{min-height:0}}
+
+/* Keep the end of a paragraph readable at different screen widths. */
+main :is(p, figcaption, dt, dd, summary) { text-wrap: pretty; }
+main :is(h1, h2, h3, h4) { text-wrap: balance; }
+.read-keep { white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -39,7 +44,7 @@ gcc -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror exec-reap-target.c -o exec-rea
 <p>退出码是程序结束时返回的整数，用来说明结束结果。目标程序的 value 为 300，退出码为 7，二者含义不同。</p>
 </section>
 <section id="replacement" aria-labelledby="replacement-heading">
-<h2 id="replacement-heading">成功装入目标程序，与找不到目标程序有什么不同？</h2>
+<h2 id="replacement-heading">成功装入目标程序，与<span class="read-keep">找不到</span>目标程序有什么不同？</h2>
 <p>两次程序都自动完成。下面的参考记录来自 Ubuntu 实测，PID 每次可能不同；只比较同一次运行中的 PID，不要拿两次运行的编号判断是否发生替换。</p>
 <div class="pair">
 <article><div class="scenario">第一次运行 · 目标程序存在</div><h3>1. 成功装入目标程序</h3>
@@ -70,7 +75,7 @@ second waitpid: ECHILD</pre>
 </div>
 </section>
 <section id="reaping" aria-labelledby="reaping-heading">
-<h2 id="reaping-heading">子进程已退出，父进程还要回收什么？</h2>
+<h2 id="reaping-heading">子进程已退出，<span class="read-keep">父进程</span>还要回收什么？</h2>
 <p>继续看刚才两次运行的后四行。子进程退出与父进程收集退出状态是先后两个步骤：</p>
 <ol class="observations">
 <li><strong>回收前：</strong>before waitpid 中的 state 是 <code>Z</code>。Z 称为僵尸状态：程序已不再执行，内核仍保存退出状态等记录，等待父进程收集。</li>
@@ -82,7 +87,7 @@ second waitpid: ECHILD</pre>
 <p class="caption">PID 可以被后续新进程重新使用。这里的目录检查针对本次回收后的紧接观察，不表示该编号永远不会再次出现。</p>
 </section>
 <section id="mechanism" aria-labelledby="mechanism-heading">
-<h2 id="mechanism-heading">程序替换、退出和回收分别改变什么？</h2>
+<h2 id="mechanism-heading">程序替换、退出和<span class="read-keep">回收</span>分别改变什么？</h2>
 <p>成功替换后，进程使用目标程序的代码和内存，从目标程序的入口开始执行。失败时，原程序还在，调用处返回错误。无论替换是否成功，子进程随后都可以退出，而父进程仍需要收集它的退出状态。</p>
 <div class="controls"><label class="mode-label" for="demo-mode">运行条件<select id="demo-mode"><option value="replace">目标程序存在</option><option value="missing">目标路径不存在</option></select></label>
 <fieldset><legend>子进程与退出记录的变化</legend><div class="stage-options"><label><input type="radio" name="stage" value="0" checked>调用 exec 前</label><label><input type="radio" name="stage" value="1"><span id="attempt-label">成功替换后</span></label><label><input type="radio" name="stage" value="2">退出后，回收前</label><label><input type="radio" name="stage" value="3">回收后</label></div></fieldset></div>
@@ -110,5 +115,6 @@ second waitpid: ECHILD</pre>
 <footer><a href="cpu-virtualization-experiments.html">返回 CPU 虚拟化实验目录</a> · 上一项：<a href="fork-private.html">任务三：fork 创建子进程后的变量变化</a> · 下一项：<a href="syscalls.html">任务五：系统调用与内核控制</a><br><a href="exec-reap.md">实验说明文档</a> · <a href="process-api.html">进程 API 知识</a></footer>
 </main>
 <script src="exec-reap.js"></script>
+  <script src="heading-typography.js?v=20261028-titles-1"></script>
 </body>
 </html>
