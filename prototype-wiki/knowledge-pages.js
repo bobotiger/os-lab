@@ -22,6 +22,7 @@ const WIKI_PAGES = Object.freeze({
   smallTables: {title: '多级页表', navTitle: '多级页表', english: 'Multilevel Page Tables', theme: '内存虚拟化', href: 'small-page-tables.html', description: '映射分布与表页占用、逐级地址转换，以及继续分层的条件和访存代价。', related: [{id: 'paging', reason: '多级结构仍记录虚拟页到物理页框的映射。'}, {id: 'tlb', reason: '映射缓存命中时，可以省去逐级读取页表。'}, {id: 'addressSpaces', reason: '虚拟地址分布稀疏时，可以省去没有映射的下级表。'}, {id: 'pageFault', reason: '缺少映射与页面暂未驻留不是同一个条件。'}]},
   pageFault: {title: '缺页与按需分页', english: 'Page Fault', theme: '内存虚拟化', href: 'page-fault.html', description: '页面驻留与后备存储、缺页后的阻塞和原指令重试，以及空闲页框与后台回收。', related: [{id: 'paging', reason: '缺页处理完成后，页表映射用于重试原访问。'}, {id: 'process', reason: '等待页面 I/O 的进程先阻塞，完成后回到就绪。'}, {id: 'replacement', reason: '没有空闲页框时，需要先选择淘汰页面。'}, {id: 'tlb', reason: '转换缓存未命中可能只需查表，并不需要页面 I/O。'}]},
   replacement: {title: '页面置换策略', english: 'Page Replacement', theme: '内存虚拟化', href: 'replacement.html', description: '内存已满时如何选择淘汰页面：OPT、FIFO、LRU、Clock，及局部性、脏页写回与抖动。', related: [{id: 'pageFault', reason: '置换为尚未驻留的目标页提供可用页框。'}, {id: 'paging', reason: '淘汰与载入改变页框占用及对应的页表映射。'}, {id: 'tlb', reason: '物理页面置换与地址转换缓存替换需要区分。'}]},
+  cpuFoundations: {title: '现代 CPU 的工作原理', navTitle: '现代 CPU 的工作原理', english: 'How CPUs Work', theme: '并发', href: 'cpu-foundations.html', description: '从晶体管、指令与循环，到缓存、推测执行、多核以及 CPU 性能规格。', related: [{id: 'threads', reason: '硬件执行指令，线程组织程序的执行流；共享更新仍需要正确同步。'}, {id: 'multiprocessor', reason: '多个核心之间还需要任务放置、负载均衡与缓存亲和性。'}, {id: 'aiComputing', reason: '从通用 CPU 进一步比较 GPU、NPU 等专用计算设备。'}]},
   threads: {title: '线程与并发', english: 'Threads & Concurrency', theme: '并发', href: 'threads.html', description: '线程共享的资源、各自的执行上下文，以及执行交错造成的共享更新丢失。', related: [{id: 'locks', reason: '锁使相关线程互斥地执行共享数据的更新。'}, {id: 'process', reason: '线程在进程资源中执行，也会经历就绪、运行与阻塞。'}, {id: 'addressSpaces', reason: '同一进程的线程共享地址空间，各自使用的栈也位于其中。'}, {id: 'schedulingBasics', reason: '调度分配 CPU 时间，不自动保证共享操作的正确次序。'}]},
   locks: {title: '锁与互斥', english: 'Locks', theme: '并发', href: 'locks.html', description: '临界区、原子操作、自旋与阻塞，以及锁的正确性、公平性和性能。', related: [{id: 'threads', reason: '共享变量的读取、计算与写回可能发生冲突交错。'}, {id: 'schedulingBasics', reason: '自旋线程仍可参与调度，阻塞线程需要被唤醒后才重新就绪。'}, {id: 'multiprocessor', reason: '持锁线程能否在另一核心上继续运行，会影响自旋的代价。'}]},
   concurrentStructures: {title: '并发数据结构', english: 'Concurrent Data Structures', theme: '并发', href: 'concurrent-structures.html', description: '锁的保护范围、哈希桶的独立访问，以及近似计数的争用与精确性取舍。', related: [{id: 'locks', reason: '数据结构的临界区需要正确的互斥保护。'}, {id: 'conditionVariables', reason: '获得锁之后，也可能还需要等待队列非空或出现空位。'}, {id: 'multiprocessor', reason: '多个 CPU 可能同时访问集中维护的共享状态。'}]},
@@ -135,6 +136,7 @@ document.addEventListener('DOMContentLoaded', setupWikiNavigation);
 
 function wikiRelated(pageId) {
   const next = {
+    cpuFoundations: {id: 'threads', reason: '理解 CPU 怎样执行指令之后，继续看线程怎样共享资源，以及读取、计算与写回的交错为何可能出错。'},
     semaphores: {id: 'concurrencyBugs', reason: '掌握同步工具之后，检查它们是否保护了正确的逻辑范围，并建立了必要的先后关系。'},
     concurrencyBugs: {id: 'deadlock', reason: '数据操作正确还不够，资源的相互等待也可能使所有相关线程停住。'},
     deadlock: {id: 'events', reason: '在多线程协作之外，还可以用单个事件循环交错处理请求。下一页作为拓展，讨论这种组织方式的收益与限制。'},

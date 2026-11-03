@@ -41,6 +41,7 @@
     button.onclick = () => {
       if (timer) { stop(); return; }
       players.forEach(p => p.stop());
+      globalThis.OSLabConcurrencyMovies?.stopAll();
       next();
       if (!atEnd()) schedule();
       paint();
@@ -118,5 +119,22 @@
     render();
     return {setMode(value) { controls.stop(); mode = value; init(); render(); }};
   }
-  globalThis.OSLabConcurrencyUI = Object.freeze({transport, player, interleaver});
+  function references(page) {
+    const base = 'https://pages.cs.wisc.edu/~remzi/OSTEP/';
+    const chapters = {
+      threads: [['threads-intro.pdf','第 26 章：线程、共享状态与执行交错'],['threads-api.pdf','第 27 章：创建线程与等待结束']],
+      locks: [['threads-locks.pdf','第 28 章：临界区、原子获取与锁的等待']],
+      concurrentStructures: [['threads-locks-usage.pdf','第 29 章：锁的粒度与近似计数']],
+      conditionVariables: [['threads-cv.pdf','第 30 章：条件等待与有限缓冲区']],
+      semaphores: [['threads-sema.pdf','第 31 章：许可计数与生产者—消费者']],
+      concurrencyBugs: [['threads-bugs.pdf','第 32 章：原子性违反与顺序违反']],
+      deadlock: [['threads-bugs.pdf','第 32 章 §32.3：死锁的条件与处理']],
+      events: [['threads-events.pdf','第 33 章：事件循环、异步 I/O 与状态保存']],
+      concurrencyExperiments: [['threads-intro.pdf','第 26 章：共享更新'],['threads-bugs.pdf','第 32 章：同步范围与死锁']]
+    };
+    const links = (chapters[page] || []).map(([file,title]) => `<li><a href="${base + file}">OSTEP · ${title}</a></li>`).join('');
+    const posix = page === 'conditionVariables' ? '<li><a href="https://www.man7.org/linux/man-pages/man3/pthread_cond_broadcast.3p.html">POSIX · signal 与 broadcast 的语义（标准文本转载）</a></li>' : '';
+    return `<details class="cc-details cc-references"><summary>参考资料</summary><ul>${links}${posix}</ul></details>`;
+  }
+  globalThis.OSLabConcurrencyUI = Object.freeze({transport, player, interleaver, references, pauseAll: () => players.forEach(p => p.stop())});
 })();

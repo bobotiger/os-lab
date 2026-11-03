@@ -25,7 +25,7 @@
     return `<div class="c2-actors">${Object.entries(states).filter(([, state]) => state !== '未参与').map(([id, state]) => `<div class="c2-actor ${current === id ? 'c2-current' : ''}"><strong>${id === 'P' ? '生产者 P' : id.startsWith('C') ? `消费者 ${id}` : `线程 ${id}`}</strong><span>${state}</span></div>`).join('')}</div>`;
   }
   function shell(page, sections, content) {
-    document.getElementById('root').innerHTML = `<div class="page cc-page c2-page" id="top">${wikiHeader(page, sections)}<main>${content}${wikiRelated(page)}</main><footer><span>OSLab · 并发</span><a href="#top">返回顶部 ↑</a></footer></div>`;
+    document.getElementById('root').innerHTML = `<div class="page cc-page c2-page" id="top">${wikiHeader(page, sections)}<main>${content}${OSLabConcurrencyUI.references(page)}${wikiRelated(page)}</main><footer><span>OSLab · 并发</span><a href="#top">返回顶部 ↑</a></footer></div>`;
   }
   function focus(id, targets, keyStep = false) {
     const demo = document.getElementById(`${id}-demo`);

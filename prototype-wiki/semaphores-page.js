@@ -8,17 +8,20 @@
       <details class="cc-details"><summary>许可、等待者与信号量的表示</summary><p>图中分别显示非负的“可用许可数”和等待线程。某些教材用负数编码等待者数量，这是另一种抽象表示。本图不把负值直接画成资源数量，也不承诺对应某个系统的 sem_getvalue 输出。</p><p>本例在 post 后先显示唤醒，再显示等待线程恢复执行并完成 wait；调用返回前，线程不能使用资源。为使推演可重复，选择固定等待者，不表示实际信号量保证先进先出。</p><p>信号量本身不记录必须由哪个线程归还许可，也不会仅因初值为 1 就自动限制其永远不大于 1。用它实现互斥时，程序需要遵守正确的 wait/post 配对；通常优先使用表达所有权更明确的互斥锁。</p></details>
     </section>
     <section class="cc-section" id="buffer"><h2>空位许可与任务许可</h2><p class="cc-intro-text">沿用条件变量页的容量为 2 的任务队列。empty 记录还能获取多少个空位许可，full 记录还能获取多少个任务许可。生产者先取得空位许可，再加锁入队；消费者先取得任务许可，再加锁取出。队列锁仍负责保护实际的数据修改。</p>
-      <div class="cc-preset" role="group" aria-label="信号量队列初始状态"><span>初始队列</span><button data-buffer-scene="empty" aria-pressed="true">队列为空</button><button data-buffer-scene="full" aria-pressed="false">队列已满</button></div><div class="cc-preset" id="buffer-order" role="group" aria-label="资源许可与加锁次序" hidden><button data-buffer-variant="safe" aria-pressed="true">先取得空位许可，再加锁</button><button data-buffer-variant="unsafe" aria-pressed="false">先加锁，再等待空位</button></div>
-      <div id="buffer-demo"><div class="c2-simulation"><div class="c2-queue-diagram"><div class="c2-queue-heading"><strong>实际队列</strong><span id="buffer-count"></span></div><div id="buffer-slots" data-observe="queue"></div><div class="c2-permit-pair" data-observe="permits"><div><span>可用空位许可 · empty</span><strong id="buffer-empty"></strong></div><div><span>可用任务许可 · full</span><strong id="buffer-full"></strong></div></div><div class="c2-mutex" id="buffer-mutex" data-observe="lock"></div><div id="buffer-actors" data-observe="actors"></div><details class="cc-details c2-state-details"><summary>许可的取得与归还状态</summary><div class="c2-reservations" id="buffer-reservations"></div></details></div><aside class="c2-explanation"><div class="cc-log" role="status"><span id="buffer-action"></span><code class="c2-current-code" id="buffer-code"></code><p id="buffer-log"></p></div>${transport('buffer')}<p class="cc-caption">获取许可与修改队列是不同步骤。黄色任务表示已入队、尚未发布任务许可；虚线位置为空位。</p></aside></div><p class="cc-result" id="buffer-result"></p></div>
-      <details class="cc-details"><summary>正确操作顺序与数量关系</summary><div class="c2-code-pair"><div><h3>生产者</h3><pre><code>wait(empty);
-lock(mutex);
-put(item);
-unlock(mutex);
-post(full);</code></pre></div><div><h3>消费者</h3><pre><code>wait(full);
+      <div class="c2-code-pair cc-visible-code"><div><h3>消费者：先取得任务许可</h3><pre><code>sem_wait(full);
 lock(mutex);
 item = take();
 unlock(mutex);
-post(empty);</code></pre></div></div><p>空队列开始时，empty = 2、full = 0。wait 成功只代表已经取得许可，实际入队和出队仍需要互斥保护。</p><p>实际任务数 = 可用任务许可 + 已取得但未取走的任务许可 + 已入队但未发布的任务。实际空位数也需要计入已预留的空位，以及已取走任务但尚未归还的空位许可。因此只看 empty + full，不一定等于容量。</p><p>推演使用一个生产者与一个消费者，步骤之间可以切换线程；不模拟处理器内部时序。伪代码省略错误处理，实际调用需要成功取得许可后才继续。</p></details>
+sem_post(empty);</code></pre></div><div><h3>生产者：先取得空位许可</h3><pre><code>sem_wait(empty);
+lock(mutex);
+put(item);
+unlock(mutex);
+sem_post(full);</code></pre></div></div>
+      <p class="cc-caption">空队列开始时，empty = 2、full = 0。这里用伪代码表示每次调用成功后的流程，实际程序还需检查返回值。</p>
+      <p class="cc-takeaway"><strong>sem_wait 不会释放线程已经持有的互斥锁。</strong>先加锁再等待空位，可能使负责出队的消费者也拿不到锁。因此这两个流程都先取得许可，再加锁修改队列。</p>
+      <div class="cc-preset" role="group" aria-label="信号量队列初始状态"><span>初始队列</span><button data-buffer-scene="empty" aria-pressed="true">队列为空</button><button data-buffer-scene="full" aria-pressed="false">队列已满</button></div><div class="cc-preset" id="buffer-order" role="group" aria-label="资源许可与加锁次序" hidden><button data-buffer-variant="safe" aria-pressed="true">先取得空位许可，再加锁</button><button data-buffer-variant="unsafe" aria-pressed="false">先加锁，再等待空位</button></div>
+      <div id="buffer-demo"><div class="c2-simulation"><div class="c2-queue-diagram"><div class="c2-queue-heading"><strong>实际队列</strong><span id="buffer-count"></span></div><div id="buffer-slots" data-observe="queue"></div><div class="c2-permit-pair" data-observe="permits"><div><span>可用空位许可 · empty</span><strong id="buffer-empty"></strong></div><div><span>可用任务许可 · full</span><strong id="buffer-full"></strong></div></div><div class="c2-mutex" id="buffer-mutex" data-observe="lock"></div><div id="buffer-actors" data-observe="actors"></div><details class="cc-details c2-state-details"><summary>许可的取得与归还状态</summary><div class="c2-reservations" id="buffer-reservations"></div></details></div><aside class="c2-explanation"><div class="cc-log" role="status"><span id="buffer-action"></span><code class="c2-current-code" id="buffer-code"></code><p id="buffer-log"></p></div>${transport('buffer')}<p class="cc-caption">获取许可与修改队列是不同步骤。黄色任务表示已入队、尚未发布任务许可；虚线位置为空位。</p></aside></div><p class="cc-result" id="buffer-result"></p></div>
+      <details class="cc-details"><summary>许可预留与实际队列数量</summary><p>实际任务数 = 可用任务许可 + 已取得但未取走的任务许可 + 已入队但未发布的任务。实际空位数也需要计入已预留的空位，以及已取走任务但尚未归还的空位许可。因此只看 empty + full，不一定等于容量。</p><p>推演使用一个生产者与一个消费者，步骤之间可以切换线程；不模拟处理器内部时序。伪代码省略错误处理，实际调用需要成功取得许可后才继续。</p></details>
     </section>
     <section class="cc-section" id="comparison"><h2>条件变量与信号量</h2><div class="c2-editorial-pair"><div><h3>条件变量：等待共享状态</h3><p>消费者持锁检查 count。条件不成立时，<code>pthread_cond_wait</code> 释放锁并等待，返回前重新获得锁。通知只提醒状态可能改变，线程还要重新检查；无人等待时，通知不会积存。</p></div><div><h3>信号量：取得可用许可</h3><p><code>sem_wait</code> 成功后消耗一个许可；<code>sem_post</code> 增加的许可可以留给后来的调用者。sem_wait 等待时<strong>不会释放已经持有的互斥锁</strong>，所以队列示例先取得许可，再加锁修改数据。</p></div></div>
       <p class="cc-takeaway">两种方式都能实现生产者与消费者协作。选择时要明确程序需要维护的是<strong>什么条件</strong>或<strong>多少许可</strong>，并把等待、资源预留和实际数据修改的先后关系设计完整。</p>
@@ -50,7 +53,7 @@ sem_post(&amp;slots);      /* 归还一个许可 */</code></pre><p>示例展示�
     document.getElementById('buffer-actors').innerHTML=U.actors(s.states,s.actor);
     document.getElementById('buffer-reservations').innerHTML=`<p><b>P</b> ${s.reservedEmpty?'已预留 1 个空位，尚未入队':s.unpublished?'已入队 1 项，尚未发布任务许可':s.produced?'入队与许可发布已完成':'尚未取得空位许可'}</p><p><b>C1</b> ${s.reservedFull?'已取得 1 个任务许可，尚未取出':s.unpostedEmpty?'已取出 1 项，尚未归还空位许可':s.consumed?'出队与空位归还已完成':'尚未取得任务许可'}</p>`;
     const returning=s.op==='wait' && frames[index-1]?.states[s.actor]?.includes('已唤醒');
-    const names={start:'初始状态',wait:returning?'原来的 sem_wait 恢复并返回':'调用 sem_wait',post:`发布 ${s.channel} 许可`,lock:'获取队列锁',unlock:'释放队列锁',put:'实际入队',take:'实际出队'};
+    const names={start:'初始状态',wait:returning?'原来的 sem_wait 恢复并返回':'调用 sem_wait',post:s.channel==='full'?'发布任务许可（full）':'归还空位许可（empty）',lock:'获取队列锁',unlock:'释放队列锁',put:'实际入队',take:'实际出队'};
     document.getElementById('buffer-action').textContent=`${s.actor?s.actor+' · ':''}${names[s.op]}`;
     document.getElementById('buffer-log').textContent=s.log;
     const code = {wait:`sem_wait(${s.channel})${returning?' 返回':''}`,post:`sem_post(${s.channel})`,lock:'lock(mutex)',unlock:'unlock(mutex)',put:'put(item)',take:'item = take()'}[s.op];

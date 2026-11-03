@@ -1,20 +1,29 @@
 (() => {
   const U = OSLabConcurrencyUI, M = OSLabConcurrency;
   document.getElementById('root').innerHTML = `<div class="page cc-page cc-locks-page" id="top">
-    ${wikiHeader('locks', [{href: '#mutex', title: '互斥与原子操作'}, {href: '#waiting', title: '自旋与阻塞'}, {href: '#implementation', title: '实现与取舍'}])}
+    ${wikiHeader('locks', [{href: '#protection', title: '临界区'}, {href: '#mutex', title: '原子获取'}, {href: '#waiting', title: '自旋与阻塞'}, {href: '#implementation', title: '实现与取舍'}])}
     <main><section class="intro"><p class="eyebrow">并发 / 同步</p><h1>锁与互斥</h1><p class="lead">锁让访问同一份共享数据的<span class="read-keep">线程</span>，按互斥方式执行<span class="read-keep">临界区</span>。</p><p class="definition">线程进入临界区之前获取锁，离开时释放锁。锁被占用时，其他获取者需要等待。设计锁既要保证互斥，也要考虑等待的代价和获得锁的机会是否公平。</p></section>
-      <section class="cc-section" id="mutex" aria-labelledby="mutex-title"><h2 id="mutex-title">互斥与原子操作</h2>
+      <section class="cc-section" id="protection" aria-labelledby="protection-title"><h2 id="protection-title">临界区与锁的保护范围</h2>
+        <p class="cc-intro-text">两个线程各把 count 加 1 时，需要保护完整的“读取、计算、写回”。两者共用同一把锁：一个线程更新期间，另一个停在获取锁的位置，直到持锁者完成更新并释放锁。</p>
+        <div class="cc-code-explainer"><pre><code>pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+pthread_mutex_lock(&amp;mutex);
+count = count + 1;
+pthread_mutex_unlock(&amp;mutex);</code></pre><div><h3>两个线程遵守同一规则</h3><p><code>lock</code> 成功后进入临界区，<code>unlock</code> 结束保护范围。锁不会自动找到程序中的共享变量，所有相关访问都要遵守这套规则。</p><p>若只给读取和写回分别加锁，两个线程仍可能读到同一个旧值。保护范围必须覆盖这次更新的全过程。</p></div></div>
+        <p class="cc-caption">示例省略错误处理；实际调用需要检查返回值，并在持锁后的各条退出路径上正确释放锁。</p>
+      </section>
+      <section class="cc-section" id="mutex" aria-labelledby="mutex-title"><h2 id="mutex-title">锁标志的检查与原子获取</h2>
         <p class="cc-intro-text">用一个标志记录“空闲”或“已占用”还不够：若检查与设置是两个操作，两个线程可能先后检查到空闲，随后都进入临界区。原子读改写操作把读取旧值与写入新值合为不可分割的一步，避免这个间隙。</p>
         <div class="cc-mode-tabs" role="group" aria-label="共享更新的保护方式"><button type="button" data-lock-mode="none" aria-pressed="false">不加锁</button><button type="button" data-lock-mode="naive" aria-pressed="false">先检查后占用</button><button type="button" data-lock-mode="atomic" aria-pressed="true">原子操作获取锁</button></div>
         <p class="cc-mode-explanation" id="lock-mode-note"></p>
         <p class="cc-conditions">沿用上一页的共享计数器：两个线程各执行一次 count 加 1；选择加锁方案时，两者共用同一把锁。</p>
         <div id="counter-demo"></div>
-        <details class="cc-details"><summary>原子交换如何获取锁</summary><pre><code>while (atomic_exchange(&amp;flag, 1) == 1) {
+        <details class="cc-details"><summary>原子交换的获取规则</summary><pre><code>while (atomic_exchange(&amp;flag, 1) == 1) {
     /* 锁已被占用，继续尝试。 */
 }
 /* 临界区：读取、计算并写回 count。 */
-atomic_store(&amp;flag, 0);</code></pre><p>flag 初值为 0。原子交换写入 1 并返回旧值：只有读到旧值 0 的线程获取成功。这里用伪代码解释互斥；实际实现还需要正确的内存顺序，保证临界区中的数据对后续持锁者可见。</p><p>演示按简化的顺序执行模型推演。错误锁与无锁版本用于展示反例，不是可直接使用的 C 同步实现。</p></details>
-        <p class="cc-takeaway"><strong>锁保护的是共同遵守的访问规则。</strong>相关读写需要使用同一把锁，并覆盖完整的临界区。只锁住写回、遗漏读取和计算，仍可能丢失更新；一个线程绕过锁访问数据，也可能破坏保护。</p>
+atomic_store(&amp;flag, 0);</code></pre><p>flag 初值为 0。A 交换时写入 1、得到旧值 0，因此获取成功；B 随后交换，得到旧值 1，继续等待。只有 A 释放锁、把 flag 设回 0 后，其他线程才可能获取成功。这里用伪代码解释互斥；实际实现还需要正确的内存顺序，保证临界区中的数据对后续持锁者可见。</p><p>演示按简化的顺序执行模型推演。错误锁与无锁版本用于展示反例，不是可直接使用的 C 同步实现。</p></details>
+        <p class="cc-takeaway"><strong>获取锁的操作必须可靠，临界区的范围也必须完整。</strong>原子获取解决两个线程同时闯入的问题；前一节的整段保护解决更新被拆开的风险。</p>
       </section>
       <section class="cc-section" id="waiting" aria-labelledby="waiting-title"><h2 id="waiting-title">自旋与阻塞</h2>
         <p class="cc-intro-text">自旋等待会反复检查锁，在运行时持续消耗 CPU。阻塞等待使线程进入阻塞状态，等待期间不参与 CPU 调度；被唤醒后重新就绪，等待获得 CPU 并继续获取锁。登记等待、唤醒和调度也有成本，持锁时间与 CPU 数量会影响两种方式的取舍。</p>
@@ -28,12 +37,7 @@ atomic_store(&amp;flag, 0);</code></pre><p>flag 初值为 0。原子交换写入
       <section class="cc-section" id="implementation" aria-labelledby="implementation-title"><h2 id="implementation-title">锁的实现与评价</h2>
         <div class="cc-responsibilities"><div><h3>硬件</h3><p>提供原子读改写等指令，以及相应的内存顺序支持。它们是实现锁的基础，不会自动把一段程序变成正确的临界区。</p></div><div><h3>线程库</h3><p>封装锁的状态、获取与释放规则。没有竞争时，互斥锁可能在用户态完成操作；竞争时可以自旋、请求阻塞，或结合两者。</p></div><div><h3>操作系统</h3><p>在需要时阻塞与唤醒线程，并决定就绪线程何时获得 CPU。被唤醒只是恢复运行资格，不保证立即运行或获得锁。</p></div></div>
         <div class="cc-evaluation"><h3>正确性、公平性与性能</h3><p>互斥是基本要求，但能保证互斥的锁仍可能让某个线程长期得不到机会。简单的原子交换自旋锁不保证按等待先后获得锁。评价性能时，还要区分没有竞争、有竞争，以及线程数超过 CPU 数量的情况。</p><p>实际锁常结合多种办法：短暂自旋有机会避开阻塞开销；等待较长时再阻塞，可以减少无效的 CPU 占用。具体效果取决于工作负载和实现，不能只根据“自旋”或“阻塞”的名称判断。</p></div>
-        <details class="cc-details"><summary>使用 pthread 互斥锁</summary><pre><code>pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-pthread_mutex_lock(&amp;mutex);
-count = count + 1;
-pthread_mutex_unlock(&amp;mutex);</code></pre><p>线程库提供 <code>pthread_mutex_lock</code> 和 <code>pthread_mutex_unlock</code>。调用者需要在获取成功后访问受保护数据，并在所有相应路径上正确释放锁。这里省略错误处理。</p></details>
-      </section>${wikiRelated('locks')}
+      </section>${U.references('locks')}${wikiRelated('locks')}
     </main><footer><span>OSLab · 并发</span><a href="#top">返回顶部 ↑</a></footer></div>`;
   const counter = U.interleaver(document.getElementById('counter-demo'), 'atomic');
   const notes = {none: '两个线程可以在读取、计算和写回之间交错，结果依赖执行次序。', naive: '检查标志和设置标志分为两步。交替执行时，两个线程会先后检查到空闲；到第 4 步，它们都已进入临界区。', atomic: '原子操作读取锁的旧值并设置占用标志。获取失败的线程留在入口处，持锁线程完成更新并释放后，其他线程才能进入。'};

@@ -2,14 +2,19 @@
   const U=OSLabConcurrencyStage2UI,M=OSLabDeadlock;
   U.shell('deadlock',[{href:'#dependencies',title:'资源依赖'},{href:'#conditions',title:'必要条件'},{href:'#responses',title:'处理思路'}],`
     <section class="intro"><p class="eyebrow">并发 / 资源等待</p><h1>死锁</h1><p class="lead">线程各自持有资源，又等待对方<span class="read-keep">释放资源</span>，程序就可能无法继续。</p><p class="definition">普通锁等待中，持锁线程仍能运行并释放锁。死锁中，负责释放所需资源的线程也被相互等待挡住；如果没有外部干预，这组线程无法继续。</p></section>
-    <section class="cc-section" id="dependencies"><h2>锁的次序与循环等待</h2><p class="cc-intro-text">A、B 都要同时取得 L1 和 L2 才能工作。先观察各取一把锁后为什么停住，再让两个线程统一按 L1 → L2 获取锁，比较资源依赖的变化。</p>
+    <section class="cc-section" id="dependencies"><h2>锁的次序与循环等待</h2><p class="cc-intro-text">A、B 都要持有 L1 和 L2 才能工作。先观察各取一把锁后为什么停住，再让两个线程统一按 L1 → L2 获取锁，比较资源依赖的变化。</p>
       <div class="cc-preset" role="group" aria-label="获取锁的规则"><button data-dead-policy="opposite" aria-pressed="true">相反次序</button><button data-dead-policy="ordered" aria-pressed="false">统一次序</button></div><p class="cc-conditions" id="dead-orders"></p>
       <div class="cc-preset" role="group" aria-label="调度次序"><span>线程执行次序</span><button data-dead-order="interleaved" aria-pressed="true">交替推进</button><button data-dead-order="serial" aria-pressed="false">A 完成后 B 执行</button></div>
       <div id="dead-demo"><div class="c3-lock-layout"><div class="c3-pair" id="dead-threads"></div><div class="c3-dependencies" id="dead-edges"></div></div><div class="c3-inline-stats"><span>已完成操作 <b id="dead-completed">0 / 2</b></span><span>等待关系 <b id="dead-edge-count">0</b></span></div><div class="cc-log" role="status"><span id="dead-action"></span><p id="dead-log"></p></div>${OSLabConcurrencyUI.transport('dead')}<p class="cc-result" id="dead-result"></p></div>
       <p class="cc-conditions">每把锁只有一份，只能由持有者正常释放；线程不主动撤销操作。箭头从等待线程指向锁的持有者，标明所等待的锁。步骤表示执行次序，不表示真实耗时。</p>
     </section>
     <section class="cc-section" id="conditions"><h2>死锁的四个必要条件</h2><div class="c3-conditions"><div><h3>互斥</h3><p>资源不能同时被多个线程占用。本例同一把锁只能有一个持有者。</p></div><div><h3>持有并等待</h3><p>等待新资源时，仍保留已经取得的资源。本例等待第二把锁时没有释放第一把。</p></div><div><h3>不可剥夺</h3><p>资源不能被外部强行取走。本例必须由持锁线程执行释放操作。</p></div><div><h3>循环等待</h3><p>等待关系形成环。本例 A 等待 B，B 又等待 A，环内没有能先释放资源的一方。</p></div></div><p class="cc-takeaway">破坏任一必要条件，都能排除相应的死锁。统一获取锁的次序，排除的是<strong>循环等待</strong>，不要求线程从此完全没有等待。</p><details class="cc-details"><summary>等待环的适用范围</summary><p>本例每种资源只有一个实例，形成这样的等待环足以判定死锁。如果一种资源有多个可替代实例，仅凭图上有环还不能判定，需要继续分析其他实例能否满足请求。</p></details></section>
-    <section class="cc-section" id="responses"><h2>预防与处理</h2><div class="c3-list"><div><h3>统一获取资源的次序</h3><p>给锁确定一致的顺序，并让所有调用路径遵守。顺序依据资源本身，不能只按函数参数的先后：调用者可能把同一对资源反过来传入。</p></div><div><h3>获取失败时释放并重试</h3><p>尝试获取第二把锁失败后，主动释放第一把，再重新尝试，可以避免占着资源阻塞。但两个线程可能反复互相干扰，形成活锁；退避可减少冲突，并不自动保证公平。</p></div><div><h3>检测等待关系并恢复</h3><p>某些系统允许死锁发生，再检测依赖环并撤销选定的操作。恢复必须释放资源、回滚修改或重新启动；不能任意替其他线程解锁，否则可能暴露尚未完成的数据修改。</p></div></div>
+    <section class="cc-section" id="responses"><h2>死锁的预防与恢复</h2>
+      <table class="cc-reference-table"><thead><tr><th scope="col">办法</th><th scope="col">对等待关系的影响</th></tr></thead><tbody>
+        <tr><th scope="row">统一次序</th><td>都先取 L1 再取 L2。B 等 L1 时没有占住 L2，A 可以继续完成，排除了<strong>循环等待</strong>。所有路径都要遵守资源本身的顺序，不能只依赖函数参数的排列。</td></tr>
+        <tr><th scope="row">释放重试</th><td>用非阻塞的尝试获取第二把锁；失败时释放第一把，再重试。线程不会持有第一把锁阻塞在第二把锁上，打断了本例的相互等待。不过反复冲突可能导致活锁，仍需安排退避和重试。</td></tr>
+        <tr><th scope="row">检测恢复</th><td>允许等待形成环，再选择可撤销的操作回滚并释放资源。这是在死锁发生后<strong>恢复</strong>，不是预防；不能任意替别的线程解锁，否则可能暴露未完成的数据修改。</td></tr>
+      </tbody></table>
       <details class="cc-details"><summary>避免死锁与减少并发</summary><p>若系统预先知道任务的资源需求，可以推迟某些资源分配，避免进入无法保证完成的状态。这类方法依赖准确的需求信息，也可能降低并发程度。线程内部的锁通常难以提前完整申报，因此需要结合实际系统选择方法。</p></details>
       <div class="c3-pair c3-editorial"><div><h3>活锁</h3><p>线程仍在运行，却反复重试、让步，没有完成有用工作。它与死锁中的相互阻塞不同。</p></div><div><h3>饥饿</h3><p>其他线程不断取得进展，某个线程却长期得不到资源。排除了死锁，也不代表每个线程都能及时完成。</p></div></div>
     </section>`);

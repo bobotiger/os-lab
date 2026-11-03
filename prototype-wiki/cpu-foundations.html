@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="从晶体管、逻辑门和寄存器理解 CPU，观察求和程序的循环，换算 5 GHz 下的等待时间，读懂主频、核心、线程、缓存与功耗。">
+<title>现代 CPU 的工作原理 · OSLab</title>
+<link rel="stylesheet" href="style.css?v=20261028-readability-1">
+<link rel="stylesheet" href="cpu-foundations.css?v=20261103-reading">
+<link rel="stylesheet" href="concurrency-movies.css?v=20261103-motion-final">
+</head>
+<body data-page="cpuFoundations">
+<div class="page cpu-foundations" id="top">
+<div id="cf-header"></div>
+<main>
+<section class="cf-hero">
+  <p class="eyebrow">并发 / 硬件基础</p>
+  <h1>现代 CPU 的工作原理</h1>
+  <p class="cf-lead">画面、声音与复杂的计算，都从电路中的 <strong>0 与 1</strong> 开始。</p>
+  <p class="cf-copy">逻辑电路负责运算，寄存器保存状态，程序指令组织执行。主频、数据等待与并行能力，共同影响最终性能。</p>
+</section>
+
+<div class="cf-reading-layout">
+<aside class="cf-reading-nav">
+  <details class="cf-page-contents" id="cf-page-contents" open>
+    <summary><span>本页目录</span><span class="cf-reading-position" id="cf-reading-position">电路与状态</span></summary>
+    <nav aria-label="本页内容">
+      <div class="cf-nav-groups">
+        <div class="cf-nav-group"><a class="cf-nav-part" href="#hardware" data-part="电路与状态"><span>01</span>电路与状态</a>
+          <a href="#circuits" data-part="电路与状态">二进制与逻辑</a>
+          <a href="#state" data-part="电路与状态">寄存器与时钟</a>
+        </div>
+        <div class="cf-nav-group"><a class="cf-nav-part" href="#execution" data-part="指令与程序"><span>02</span>指令与程序</a>
+          <a href="#program" data-part="指令与程序">基础指令</a>
+          <a href="#cf-program-animation" data-part="指令与程序">循环与结果保存</a>
+          <a href="#cf-instruction-set" data-part="指令与程序">RISC-V 指令</a>
+        </div>
+        <div class="cf-nav-group"><a class="cf-nav-part" href="#latency" data-part="速度与等待"><span>03</span>速度与等待</a>
+          <a href="#time" data-part="速度与等待">CPU 的时间尺度</a>
+          <a href="#prediction" data-part="速度与等待">分支预测</a>
+        </div>
+        <div class="cf-nav-group"><a class="cf-nav-part" href="#performance" data-part="并行与性能"><span>04</span>并行与性能</a>
+          <a href="#parallel" data-part="并行与性能">时间片与多核</a>
+          <a href="#specifications" data-part="并行与性能">CPU 性能规格</a>
+          <a href="#history" data-part="并行与性能">芯片规模的演进</a>
+        </div>
+      </div>
+      <a class="cf-nav-sources" href="#sources" data-part="参考资料">资料与进一步阅读</a>
+    </nav>
+  </details>
+</aside>
+<div class="cf-article">
+<section class="cf-part" id="hardware" aria-labelledby="hardware-title">
+  <header class="cf-part-heading"><span class="cf-part-number" aria-hidden="true">01</span><h2 id="hardware-title">电路与状态</h2></header>
+<section class="cf-section" id="circuits" aria-labelledby="circuits-title">
+  <h3 id="circuits-title">晶体管组成逻辑，逻辑处理二进制</h3>
+  <div class="cf-prose">
+    <p>文字可以编码为字符序列，颜色可以编码为红、绿、蓝的强度，声音可以编码为随时间变化的采样值，视频则包含连续画面与声音的数据。<strong>进入数字电路以后，它们都由比特表示；怎样解释这些比特，由编码格式与程序决定。</strong></p>
+  </div>
+  <div class="cf-byte-demo cf-demo" id="cf-byte-demo">
+    <div class="cf-demo-heading"><div><h4>同一组比特的整数、字符与灰度表示</h4><p>点击任意一位，把 0 与 1 对调。整数、字符和灰度都从下面这八位得到。</p></div><button type="button" class="cf-small-button" id="cf-byte-reset">恢复 01000001</button></div>
+    <div class="cf-byte-bits" role="group" aria-label="八位二进制输入">
+      <button type="button" data-byte-bit="7" aria-pressed="false"><span>位权 128</span><b>0</b></button>
+      <button type="button" data-byte-bit="6" aria-pressed="true"><span>位权 64</span><b>1</b></button>
+      <button type="button" data-byte-bit="5" aria-pressed="false"><span>位权 32</span><b>0</b></button>
+      <button type="button" data-byte-bit="4" aria-pressed="false"><span>位权 16</span><b>0</b></button>
+      <button type="button" data-byte-bit="3" aria-pressed="false"><span>位权 8</span><b>0</b></button>
+      <button type="button" data-byte-bit="2" aria-pressed="false"><span>位权 4</span><b>0</b></button>
+      <button type="button" data-byte-bit="1" aria-pressed="false"><span>位权 2</span><b>0</b></button>
+      <button type="button" data-byte-bit="0" aria-pressed="true"><span>位权 1</span><b>1</b></button>
+    </div>
+    <div class="cf-byte-results" aria-live="polite" aria-atomic="true">
+      <div><span>无符号整数</span><strong id="cf-byte-number">65</strong><small id="cf-byte-equation">64 + 1 = 65</small></div>
+      <div><span>ASCII 字符</span><strong id="cf-byte-character">A</strong><small id="cf-byte-char-note">编码 65 对应字母 A</small></div>
+      <div class="cf-gray-result"><span>8 位灰度值</span><div id="cf-byte-swatch" role="img" aria-label="灰度 65" style="background:rgb(65,65,65)"></div><small id="cf-byte-gray-note">65 / 255 · 0 为黑，255 为白</small></div>
+    </div>
+    <p class="cf-note">同一组比特由不同规则解释，就有了不同的含义。ASCII 使用 0–127；这里的灰度示例使用 0–255。</p>
+  </div>
+  <div class="cf-prose cf-circuit-copy">
+    <p>物理世界里没有悬浮在芯片中的“0”和“1”。电路用规定的低、高电压范围表示两种逻辑状态。晶体管像一个由电压控制的开关，改变导电路径；多个晶体管按串联、并联等结构连接，构成与、或、非等逻辑功能。</p>
+    <p>这里的“开关”没有机械活动部件。以 MOS 晶体管为例，栅极电压形成的电场控制沟道的导电能力；逻辑门再通过导电路径给输出节点充电或放电，使输出落入表示 0 或 1 的电压范围。<strong>所谓计算，就是这些电信号按电路结构传播，并在存储单元中留下结果。</strong></p>
+  </div>
+
+  <div class="cf-split">
+    <div class="cf-prose">
+      <h4>一位全加器：同时算出和与进位</h4>
+      <p>输入是两个二进制位 A、B，以及低一位传来的进位 C<sub>in</sub>。输出是本位的和 S，以及交给高一位的进位 C<sub>out</sub>。</p>
+      <p>例如 <code>1 + 1 + 0 = 10₂</code>：本位写 0，向高一位进 1。全加器是组合逻辑电路，<strong>负责产生进位，不负责记住进位</strong>；要保存计算结果，还需要寄存器。</p>
+      <p>把多个一位全加器按位连接，就能构成多位加法器。64 位加法器可以这样理解，但高性能实现常用更快的进位网络，减少逐位等待。</p>
+    </div>
+    <figure class="cf-adder cf-demo" aria-labelledby="adder-title">
+      <figcaption id="adder-title">改变输入，观察本位与进位</figcaption>
+      <div class="cf-bit-inputs">
+        <button type="button" data-bit="a" aria-pressed="true" aria-label="输入 A，当前为 1"><span>A</span><b>1</b></button>
+        <button type="button" data-bit="b" aria-pressed="true" aria-label="输入 B，当前为 1"><span>B</span><b>1</b></button>
+        <button type="button" data-bit="carry" aria-pressed="false" aria-label="输入进位，当前为 0"><span>C<sub>in</sub></span><b>0</b></button>
+      </div>
+      <div class="cf-adder-wire" aria-hidden="true"><span>↓</span><span>↓</span><span>↓</span></div>
+      <div class="cf-adder-unit"><strong>全加器</strong><span>逻辑门的组合</span></div>
+      <div class="cf-adder-wire cf-two-wires" aria-hidden="true"><span>↓</span><span>↓</span></div>
+      <div class="cf-adder-outputs" aria-live="polite" aria-atomic="true">
+        <div><span>进位 C<sub>out</sub></span><strong id="cf-carry">1</strong></div>
+        <div><span>本位 S</span><strong id="cf-sum-bit">0</strong></div>
+      </div>
+      <p id="cf-adder-equation" class="cf-equation">1 + 1 + 0 = 10₂</p>
+      <p class="cf-note">点击 0 / 1 切换。两个输出合起来，正好表示三个输入之和。</p>
+    </figure>
+  </div>
+  <details class="cf-details" id="cf-arithmetic">
+    <summary>减法、乘法与按位逻辑的计算过程</summary>
+    <div class="cf-expanded-content">
+      <article class="cf-worked-example" id="cf-subtraction-example">
+        <div class="cf-prose">
+          <h4>减法：改变输入，继续使用加法器</h4>
+          <p>以 4 位运算 <strong>5 − 3</strong> 为例。5 的二进制是 <code>0101</code>，3 是 <code>0011</code>。把 5 送入加法器的一端，将 3 的每一位取反后送入另一端，再把最低位的输入进位设为 1。</p>
+          <p>4 个 1 表示 15，因此把 3 取反相当于计算 <code>15 − 3 = 12</code>；再加 1，得到 <code>16 − 3 = 13</code>。加法器于是算出 <code>5 + 13 = 18</code>，也就是 <code>16 + 2</code>。</p>
+          <p><strong>4 位结果只能保留最低 4 位。</strong>多出的 16 表现为最高位向外的进位，留下的 <code>0010</code> 就是 2。“取反再加一”使加法结果与原减法结果相差 16，而低 4 位相同。</p>
+        </div>
+        <figure class="cf-subtraction-circuit cf-example-figure">
+          <figcaption>把 5 − 3 变成一次加法</figcaption>
+          <div class="cf-subtraction-inputs">
+            <div><span>5 保持原样</span><code>0101</code><small>输入 A</small></div>
+            <div><span>3 逐位取反</span><small><code>0011</code> 变为</small><code>1100</code><small>输入 B</small></div>
+            <div><span>再加 1</span><code>1</code><small>输入进位</small></div>
+          </div>
+          <div class="cf-example-arrows" aria-hidden="true"><span>↓</span><span>↓</span><span>↓</span></div>
+          <div class="cf-shared-adder"><strong>4 位加法器</strong><code>A + B + 输入进位</code></div>
+          <div class="cf-example-arrow" aria-hidden="true">↓</div>
+          <div class="cf-subtraction-result"><div><span>向外进位</span><code>1</code><small>对应 16</small></div><div><span>保留的 4 位结果</span><code>0010</code><strong>2</strong></div></div>
+          <p class="cf-example-equation"><code>0101 + 1100 + 1 = 1 0010</code></p>
+        </figure>
+      </article>
+      <article class="cf-worked-example" id="cf-multiplication-example">
+        <div class="cf-prose">
+          <h4>乘法：按位移位，再把结果相加</h4>
+          <p>计算 <strong>5 × 3</strong> 时，乘数 3 写成 <code>0011</code>，表示 <code>1 + 2</code>。因此，<code>5 × 3 = 5 × 1 + 5 × 2</code>。</p>
+          <p>从乘数最右边开始看：这一位为 1，就留下一个 5；为 0，就得到 0。每向左一位，位权翻倍，对应的数也左移一位。<code>00000101</code> 左移一位得到 <code>00001010</code>，即 5 变成 10。</p>
+          <p>这些对齐后待相加的数称为<strong>部分积</strong>。下图把它们相加，得到 <code>00001111</code>，即 15。两个 4 位无符号数相乘，结果最多需要 8 位保存。</p>
+        </div>
+        <figure class="cf-products cf-example-figure">
+          <figcaption>乘数 0011 的每一位决定一行</figcaption>
+          <div class="cf-product-row cf-product-head"><span>乘数位</span><span>对齐后的数</span><span>数值</span></div>
+          <div class="cf-product-row"><span>位权 1：<b>1</b></span><code>00000<b>101</b></code><span>5</span></div>
+          <div class="cf-product-row"><span>位权 2：<b>1</b></span><code>0000<b>101</b>0</code><span>10</span></div>
+          <div class="cf-product-row cf-zero-product"><span>位权 4：0</span><code>00000000</code><span>0</span></div>
+          <div class="cf-product-row cf-zero-product"><span>位权 8：0</span><code>00000000</code><span>0</span></div>
+          <div class="cf-product-row cf-product-sum"><strong>相加</strong><code>00001111</code><strong>15</strong></div>
+          <p class="cf-note">乘法电路可以并行生成各行部分积，再由加法电路合并。</p>
+        </figure>
+      </article>
+      <article class="cf-logic-example" id="cf-logic-example">
+        <h4>按位逻辑：每一对比特独立判断</h4>
+        <p>对同一组输入 <code>0101</code> 和 <code>0011</code>，与、或、异或门分别按自己的规则产生每一位结果：</p>
+        <div class="cf-logic-results">
+          <div><h5>与 AND</h5><p>两位都为 1 才输出 1</p><code>0101 AND 0011 = <strong>0001</strong></code></div>
+          <div><h5>或 OR</h5><p>至少一位为 1 就输出 1</p><code>0101 OR 0011 = <strong>0111</strong></code></div>
+          <div><h5>异或 XOR</h5><p>两位不同时输出 1</p><code>0101 XOR 0011 = <strong>0110</strong></code></div>
+        </div>
+      </article>
+    </div>
+  </details>
+</section>
+
+<section class="cf-section" id="state" aria-labelledby="state-title">
+  <h3 id="state-title">记住状态，按时钟接收下一步结果</h3>
+  <p class="cf-section-lead">加法器的输入一变，输出也会跟着变化。要持续计算，必须保留上一步结果，并规定什么时候接收下一步结果。</p>
+  <div class="cf-prose">
+    <p><strong>寄存器是核心内直接参与运算的少量高速存储。</strong>它由多个比特的存储单元组成，保存操作数、中间结果和执行位置。静态存储电路通过反馈维持状态，锁存器、触发器则控制何时接收新数据。</p>
+  </div>
+  <div class="cf-demo cf-register-demo" id="cf-register-demo">
+    <div class="cf-demo-heading"><div><h4>输入改变，保存的值可以保持不变</h4><p>用一个上升沿触发的存储单元，观察寄存器中一位的行为。D 是输入，Q 是已保存的值。</p></div></div>
+    <div class="cf-register-circuit">
+      <button type="button" class="cf-data-input" id="cf-data-input" aria-label="切换输入 D，当前为 0" aria-pressed="false"><span>输入 D</span><strong id="cf-data-value">0</strong><small>点击切换</small></button>
+      <div class="cf-sampling-wire"><span id="cf-sampling-label">等待上升沿</span><i aria-hidden="true"></i></div>
+      <div class="cf-held-bit"><span>保存的值 Q</span><strong id="cf-held-value">0</strong><small id="cf-held-status">保持 0</small></div>
+    </div>
+    <div class="cf-register-controls">
+      <button type="button" class="cf-small-button cf-clock-button" id="cf-clock-toggle">时钟 0 → 1 · 上升沿</button>
+      <span class="cf-clock-level">当前 CLK = <b id="cf-clock-value">0</b></span>
+      <button type="button" class="cf-small-button" id="cf-register-play" aria-pressed="false">自动演示</button>
+      <button type="button" class="cf-small-button" id="cf-register-reset">重置</button>
+    </div>
+    <p class="cf-live-explanation" id="cf-register-event" aria-live="polite">先把输入 D 改成 1：Q 会保持 0。再产生上升沿，观察 Q 接收新值。</p>
+    <figure class="cf-waveform" aria-label="输入、时钟与保存值的变化记录">
+      <figcaption>最近的操作记录 <span>高线为 1，低线为 0；横向按操作先后排列，间距不代表真实耗时。</span></figcaption>
+      <div class="cf-wave-row cf-wave-axis"><span>操作</span><div id="cf-wave-ticks"></div></div>
+      <div class="cf-wave-row"><span>D</span><svg viewBox="0 0 600 36" preserveAspectRatio="none" aria-label="输入 D 的波形"><path id="cf-wave-d" d="M 0 28 H 30"/></svg></div>
+      <div class="cf-wave-row"><span>CLK</span><svg viewBox="0 0 600 36" preserveAspectRatio="none" aria-label="时钟的波形"><path id="cf-wave-clock" d="M 0 28 H 30"/></svg></div>
+      <div class="cf-wave-row"><span>Q</span><svg viewBox="0 0 600 36" preserveAspectRatio="none" aria-label="保存值 Q 的波形"><path id="cf-wave-q" d="M 0 28 H 30"/></svg></div>
+    </figure>
+    <p class="cf-note">本例只在 CLK 从 0 变为 1 时接收 D。CLK 保持为 1、或从 1 降为 0 时，Q 都保持原值。初始值设为 0；假定输入满足采样时序要求，忽略传播延迟。</p>
+  </div>
+  <div class="cf-prose cf-circuit-copy">
+    <p>在一个周期内，输入信号要经过组合逻辑传播、计算并稳定，供寄存器在指定边沿采样。周期过短，采样时数据就可能还没准备好。<strong>时钟协调状态更新，并不让所有晶体管同时翻转。</strong></p>
+    <p>供电正常且没有新的有效写入时，静态存储电路可以保持状态；主存中的 DRAM 则需要刷新。芯片的不同区域还可以使用不同频率，或暂时关闭时钟以节能。</p>
+  </div>
+  <p class="cf-takeaway">有了逻辑与记忆，电路能反复计算；再把<strong>要做什么也编码成数据</strong>，同一套硬件就能执行不同程序。处理器再与存储器及输入输出设备配合，才能组成一台可与外界交换信息的电脑。</p>
+</section>
+</section>
+
+<section class="cf-part" id="execution" aria-labelledby="execution-title">
+  <header class="cf-part-heading"><span class="cf-part-number" aria-hidden="true">02</span><h2 id="execution-title">指令与程序</h2></header>
+<section class="cf-section" id="program" aria-labelledby="program-title">
+  <h3 id="program-title">基础指令与程序循环</h3>
+  <p class="cf-section-lead">程序的机器指令也以二进制形式保存在存储器里。程序计数器 PC 记录指令地址；取指与译码电路读取指令，控制数据通路完成操作，再确定接下来执行哪里。</p>
+  <div class="cf-operation-list">
+    <article><span class="cf-operation-glyph">加</span><div><h4>算术运算</h4><p>用运算电路把操作数变成结果。例如将本轮的 i 加入累计和；减法可借助补码与加法电路实现。</p></div><code>sum ← sum + i</code></article>
+    <article><span class="cf-operation-glyph">比</span><div><h4>比较数值</h4><p>判断相等、大小等关系，供条件选择使用。结果可以写入寄存器、写入状态标志，也可以直接被条件分支使用。</p></div><code>i &gt; N ?</code></article>
+    <article><span class="cf-operation-glyph">搬</span><div><h4>传送数据</h4><p>Load 把内存中的数据读入寄存器，Store 将寄存器中的数据写入内存。寄存器之间也能传送数据。</p></div><code>N ← 内存[输入]</code></article>
+    <article><span class="cf-operation-glyph">跳</span><div><h4>改变执行位置</h4><p>分支或跳转改变后续取指地址。跳回先前的指令，就能重复利用同一段程序；条件分支决定继续还是退出。</p></div><code>PC ← 循环开头</code></article>
+  </div>
+
+
+  <div class="cf-demo cf-program" id="cf-program-demo">
+    <div class="cf-demo-heading">
+      <div><h4>同一段程序，计算 1 + 2 + … + N</h4><p>高亮表示刚执行的指令，PC 指向下一条。跳回第 04 行时，数值已发生变化。</p></div>
+      <label for="cf-input-n" id="cf-program-animation">输入 N
+        <select id="cf-input-n"><option value="0">0</option><option value="1">1</option><option value="3" selected>3</option><option value="5">5</option></select>
+      </label>
+    </div>
+    <div class="cf-machine">
+      <details class="cf-program-list" id="cf-program-list" open><summary>完整程序 · 8 条伪指令</summary>
+      <ol class="cf-code" id="cf-program-code" aria-label="教学伪指令，编号表示执行位置">
+        <li data-pc="0"><code>N ← 内存[输入]</code><span>搬</span></li>
+        <li data-pc="1"><code>sum ← 0</code><span>置初值</span></li>
+        <li data-pc="2"><code>i ← 1</code><span>置初值</span></li>
+        <li data-pc="3"><code>若 i &gt; N，跳到 08</code><span>比 + 跳</span></li>
+        <li data-pc="4"><code>sum ← sum + i</code><span>加</span></li>
+        <li data-pc="5"><code>i ← i + 1</code><span>加</span></li>
+        <li data-pc="6"><code>跳到 04</code><span>跳</span></li>
+        <li data-pc="7"><code>内存[结果] ← sum</code><span>搬</span></li>
+      </ol>
+      </details>
+      <div class="cf-machine-state">
+        <h5>核心内的执行状态</h5>
+        <dl class="cf-registers">
+          <div><dt>下一条 PC</dt><dd id="cf-pc">01</dd></div>
+          <div><dt>N</dt><dd id="cf-reg-n">—</dd></div>
+          <div><dt>sum</dt><dd id="cf-reg-sum">—</dd></div>
+          <div><dt>i</dt><dd id="cf-reg-i">—</dd></div>
+        </dl>
+        <div class="cf-memory">
+          <h5>内存中的数据</h5>
+          <p><span>输入</span><strong id="cf-memory-input">3</strong></p>
+          <p><span>结果</span><strong id="cf-memory-result">尚未写入</strong></p>
+        </div>
+
+      </div>
+    </div>
+    <p class="cf-current" id="cf-current">待执行 · 01 N ← 内存[输入]</p>
+    <div class="cf-controls">
+      <button type="button" id="cf-prev" disabled>上一步</button>
+      <button type="button" id="cf-next" class="cf-primary">下一步</button>
+      <button type="button" id="cf-play">自动播放</button>
+      <button type="button" id="cf-reset">重置</button>
+      <span id="cf-step-count">已执行 0 条</span>
+    </div>
+    <p class="cf-event" id="cf-program-event" aria-live="polite">准备从内存读取输入 N。点击下一步，执行 PC 指向的指令。</p>
+    <p class="cf-takeaway">每次跳回第 04 行，<strong>i 与 sum 都保留更新后的值</strong>，继续用同一段指令累加。比较决定何时退出循环，最后再把结果写回内存。</p>
+    <p class="cf-note">这里用行号代替真实字节地址；一次“下一步”执行一条教学伪指令，不代表一个硬件时钟周期。</p>
+  </div>
+  <details class="cf-details" id="cf-instruction-set">
+    <summary>RISC-V 指令的编码与执行</summary>
+    <div class="cf-expanded-content">
+      <div class="cf-prose">
+        <p>指令集约定了指令的编码与含义。汇编器把人能读懂的指令写法转换成二进制；CPU 的译码电路按照同一套约定，识别要做的操作和要使用的寄存器。</p>
+        <p>例如，<code>add x5, x6, x7</code> 表示：读出寄存器 x6 和 x7 中的数，相加后写入 x5。这里的 5、6、7 是<strong>寄存器编号</strong>，不是参与相加的数。</p>
+      </div>
+      <figure class="cf-instruction-example cf-example-figure">
+        <figcaption>同一条加法指令的两种表示</figcaption>
+        <span class="cf-encoding-label">32 位机器指令编码 · 从高位到低位</span>
+        <code class="cf-instruction-word" id="cf-instruction-word"><span>00000000</span><span>01110011</span><span>00000010</span><span>10110011</span></code>
+        <span class="cf-encoding-label">便于人阅读的汇编写法</span>
+        <div class="cf-instruction-tokens" aria-label="add x5, x6, x7">
+          <div><code>add</code><span>做加法</span></div>
+          <div><code>x5,</code><span>结果写入</span></div>
+          <div><code>x6,</code><span>输入 1</span></div>
+          <div><code>x7</code><span>输入 2</span></div>
+        </div>
+        <div class="cf-instruction-action">
+          <div><span>读出 x6</span><strong>5</strong></div><span>+</span>
+          <div><span>读出 x7</span><strong>3</strong></div><span>→</span>
+          <div class="cf-instruction-destination"><span>写入 x5</span><strong>8</strong></div>
+        </div>
+        <p>执行时，控制电路选出两个输入寄存器，让运算单元完成加法，再把结果写回指定的寄存器。</p>
+      </figure>
+      <div class="cf-table-wrap cf-instruction-table-wrap">
+        <table class="cf-instruction-examples">
+          <thead><tr><th scope="col">指令写法</th><th scope="col">CPU 完成的动作</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>lw x5, 0(x10)</code></th><td><strong>搬：</strong>以 x10 保存的有效内存地址为起点，读取 32 位数据，放入 x5。括号前的 0 表示地址偏移量为 0。</td></tr>
+            <tr><th scope="row"><code>beq x5, x6, loop</code></th><td><strong>比 + 条件跳转：</strong>比较 x5 与 x6 中的数；相等就跳到标记为 loop 的指令，否则继续执行下一条。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="cf-isa-context">RISC-V 的 <strong>RV32I 基础整数指令集包含 40 条指令</strong>，提供算术、逻辑、访存和控制转移等操作。程序把这些指令排列起来，并通过分支与循环反复执行，完成更复杂的计算。</p>
+    </div>
+  </details>
+</section>
+</section>
+
+<section class="cf-part" id="latency" aria-labelledby="latency-title">
+  <header class="cf-part-heading"><span class="cf-part-number" aria-hidden="true">03</span><h2 id="latency-title">速度与等待</h2></header>
+<section class="cf-section" id="time" aria-labelledby="time-title">
+  <h3 id="time-title">把一个时钟周期放慢到一秒</h3>
+  <div class="cf-prose">
+    <p><strong>5 GHz = 每秒 50 亿个时钟周期</strong>，因此每个周期是 <code>1 ÷ (5 × 10⁹) 秒 = 0.2 ns</code>。在这段时间里，真空中的光约能传播 6 厘米；芯片内信号还受导线、电容与逻辑门延迟影响，不能用这个距离直接推算芯片速度。</p>
+    <p>计算常常在等数据。核心用寄存器保存眼前的操作数，用容量较小、距离较近的高速缓存保留近期可能再次使用的数据。缓存未命中时，才可能需要从更远的层次取回。L1 通常最靠近执行核心、容量较小；L2、L3 用更大的容量保留更多数据，具体延迟与共享范围因设计而异。</p>
+  </div>
+  <div class="cf-time-demo cf-demo">
+    <div class="cf-demo-heading">
+      <div><h4>主频与等待周期数</h4><p>设定：一个 CPU 周期 → 放慢后的 1 秒。</p></div>
+      <label for="cf-frequency">示例频率 <output id="cf-frequency-value" for="cf-frequency">5 GHz</output>
+        <input id="cf-frequency" type="range" min="2" max="6" step="0.5" value="5">
+      </label>
+    </div>
+    <div class="cf-time-key" aria-live="polite">
+      <div><span>一个周期</span><strong id="cf-period">0.2 ns</strong></div>
+      <div><span>现实中的 1 秒</span><strong id="cf-human-second">约 158.5 年</strong></div>
+      <div><span>一次眨眼 · 假定 0.1–0.4 秒</span><strong id="cf-blink">约 15.9–63.4 年</strong></div>
+    </div>
+    <p class="cf-note">下面是一组用来比较数量级的<strong>示例参数，不是本机实测或通用硬件常数</strong>。缓存暂按固定周期数，内存、SSD、网络暂按固定真实延迟计算；实际还取决于型号、缓存命中、访问模式、排队与系统负载。</p>
+    <div class="cf-table-wrap" tabindex="0" role="region" aria-label="等待时间换算表">
+      <table class="cf-time-table">
+        <thead><tr><th scope="col">访问对象</th><th scope="col">真实耗时</th><th scope="col">折合周期数</th><th scope="col">放慢后</th></tr></thead>
+        <tbody id="cf-time-rows"></tbody>
+      </table>
+    </div>
+    <p class="cf-formula">换算方法：真实耗时 × 时钟频率 = 等待期间经过的周期数；再把每个周期替换成 1 秒。年按 365 天折算。</p>
+    <p class="cf-takeaway">提高主频可以加快部分计算，但表中的内存读取仍需 100 ns。<strong>依赖这些数据的计算，要等数据到达才能继续。</strong>程序如果把大量时间花在等数据上，单纯提高主频带来的加速就会受限。</p>
+  </div>
+  <div class="cf-split cf-editorial">
+    <div class="cf-prose"><h4>延迟与带宽的区别</h4><p>延迟回答“一次请求多久返回”，带宽回答“单位时间能搬多少数据”。一次小数据访问很慢，不妨碍大量连续数据以较高吞吐率传输；高带宽也不保证每次随机读取很快。</p></div>
+    <div class="cf-prose"><h4>等待不一定让整个核心停下</h4><p>乱序执行可以先做不依赖该数据的工作；缓存与预取可以减少后续等待。普通缓存缺失通常由硬件处理，不会仅因为读 DRAM 就让 OS 切换线程。磁盘或网络 I/O 才常由 OS 配合阻塞、唤醒或异步处理。</p></div>
+  </div>
+</section>
+
+<section class="cf-section" id="prediction" aria-labelledby="prediction-title">
+  <h3 id="prediction-title">分支预测与推测执行</h3>
+  <p class="cf-section-lead">现代高性能核心把指令处理拆成流水线，并让多条指令重叠推进。遇到分支时，真正的去向可能尚未算出；如果总等到结果确定才取后续指令，流水线就容易断流。条件依赖慢速内存时，等待还会更长。</p>
+  <div class="cf-demo cf-branch-demo" id="cf-branch-demo" data-step="0">
+    <div class="cf-demo-heading">
+      <div><h4>同一个分支：等待，或提前计算</h4><p>r 初始为 0。flag 还在读取；预测器先猜 flag 为 1，后面的加法所需数据已经就绪。</p></div>
+      <label for="cf-branch-outcome">选择对照
+        <select id="cf-branch-outcome"><option value="hit">flag 最终为 1 · 猜对</option><option value="miss">flag 最终为 0 · 猜错</option></select>
+      </label>
+    </div>
+    <div class="cf-controls">
+      <button type="button" id="cf-branch-prev" disabled>上一步</button><button type="button" id="cf-branch-next" class="cf-primary">下一步</button><button type="button" id="cf-branch-play" aria-pressed="false">自动播放</button><button type="button" id="cf-branch-reset">重置</button>
+    </div>
+    <p class="cf-live-explanation" id="cf-branch-event" aria-live="polite">两种方案面对相同的条件等待。逐步播放，观察谁先计算，以及正式结果何时改变。</p>
+    <div class="cf-branch-stage">
+      <div class="cf-branch-paths">
+        <div class="cf-branch-condition"><code>if (flag == 1)</code><span id="cf-branch-condition">flag 尚未返回</span></div>
+        <svg class="cf-fork-lines" viewBox="0 0 400 32" preserveAspectRatio="none" aria-hidden="true"><path d="M200 0 L100 30 M200 0 L300 30"/></svg>
+        <div class="cf-branch-options">
+          <div id="cf-route-true"><span>成立</span><code>r ← 10 + 20</code><small id="cf-route-true-state">等待执行</small></div>
+          <div id="cf-route-false"><span>不成立</span><code>r ← 10 − 20</code><small id="cf-route-false-state">等待执行</small></div>
+        </div>
+      </div>
+      <div class="cf-branch-values">
+        <div class="cf-speculative-value"><span>预测方案 · 尚未提交</span><strong id="cf-branch-pending">—</strong><small id="cf-branch-pending-note">先算出的值暂存在这里</small></div>
+        <div class="cf-committed-value"><span>预测方案 · 正式结果 r</span><strong id="cf-branch-committed">0</strong><small>提交后成为程序可见的正式状态</small></div>
+      </div>
+    </div>
+    <div class="cf-branch-traces" aria-label="等待方案与预测方案的过程对照">
+      <div class="cf-branch-lane"><div><strong>等条件确定后再执行</strong><span>正式 r = <b id="cf-baseline-result">0</b></span></div><ol id="cf-baseline-trace"></ol></div>
+      <div class="cf-branch-lane"><div><strong>先猜条件成立，提前执行</strong><span id="cf-branch-progress">尚未开始</span></div><ol id="cf-predicted-trace"></ol></div>
+    </div>
+    <p class="cf-note">六个阶段用来区分预测、计算、确认、恢复与提交，不代表六个真实周期，也不表示固定的加速比。实际代价取决于核心与执行现场；推测执行只能使用已就绪的数据。</p>
+  </div>
+  <div class="cf-security">
+    <h4>Spectre：结果被丢弃，访问痕迹却可能留下</h4>
+    <p>2018 年公开的 Spectre 攻击揭示了这种差别：攻击者诱导受害程序在错误预测的路径上短暂访问敏感数据，再让该数据影响缓存访问。虽然错误路径没有提交为正式结果，<strong>缓存等内部状态仍可能改变后续访问时间</strong>，从而泄露信息。</p>
+    <p>这并非“CPU 会把所有秘密直接交出来”，攻击需要特定条件。防护要结合硬件、微码、编译器与系统软件，限制不安全的推测或隔离预测状态。推测执行很重要，但不能把性能收益理解为可以忽略安全边界。</p>
+  </div>
+</section>
+</section>
+
+<section class="cf-part" id="performance" aria-labelledby="performance-title">
+  <header class="cf-part-heading"><span class="cf-part-number" aria-hidden="true">04</span><h2 id="performance-title">并行与性能</h2></header>
+<section class="cf-section" id="parallel" aria-labelledby="parallel-title">
+  <h3 id="parallel-title">时间片调度与多核并行</h3>
+  <div class="cf-prose cf-multitasking-intro">
+    <p>后台正在压缩文件，你仍能在编辑器中输入文字。压缩计算需要持续占用 CPU，而编辑器只需一小段 CPU 时间处理输入。<strong>如果输入处理一直等到压缩结束，界面就会显得迟钝。</strong></p>
+    <p>压缩工具与编辑器各有自己的执行线程。线程是程序中的一条执行流程，操作系统负责安排它们何时使用 CPU。</p>
+  </div>
+  <figure class="cf-work-comparison" aria-labelledby="cf-work-title">
+    <figcaption id="cf-work-title"><strong>执行安排与响应速度</strong><span>假设两项工作在 0 ms 都已就绪：压缩需 30 ms 的 CPU 时间，处理输入需 5 ms。</span></figcaption>
+    <div class="cf-work-legend"><span><i class="cf-work-compression" aria-hidden="true"></i>压缩文件</span><span><i class="cf-work-input" aria-hidden="true"></i>编辑器处理输入</span></div>
+    <div class="cf-work-case" data-schedule="serial">
+      <h4>单核：先完成压缩</h4>
+      <div class="cf-work-axis" aria-hidden="true"><span style="left:0%">0</span><span style="left:14.2857%">5</span><span style="left:28.5714%">10</span><span style="left:42.8571%">15</span><span style="left:57.1429%">20</span><span style="left:71.4286%">25</span><span style="left:85.7143%">30</span><span style="left:100%">35</span></div>
+      <div class="cf-work-row"><span>核心 1</span><div class="cf-work-track"><span class="cf-work-bar cf-work-compression" data-work="compression" style="grid-column:1 / span 6" aria-label="压缩文件，从 0 到 30 毫秒">压缩文件 · 30 ms</span><span class="cf-work-bar cf-work-input" data-work="input" style="grid-column:7 / span 1" aria-label="处理输入，从 30 到 35 毫秒">输入</span></div></div>
+      <div class="cf-work-results"><p>输入处理完成：<strong>35 ms</strong></p><p>全部工作结束：<strong>35 ms</strong></p></div>
+    </div>
+    <div class="cf-work-case" data-schedule="sliced">
+      <h4>单核：中途处理输入</h4>
+      <div class="cf-work-axis" aria-hidden="true"><span style="left:0%">0</span><span style="left:14.2857%">5</span><span style="left:28.5714%">10</span><span style="left:42.8571%">15</span><span style="left:57.1429%">20</span><span style="left:71.4286%">25</span><span style="left:85.7143%">30</span><span style="left:100%">35</span></div>
+      <div class="cf-work-row"><span>核心 1</span><div class="cf-work-track"><span class="cf-work-bar cf-work-compression" data-work="compression" style="grid-column:1 / span 1" aria-label="压缩文件，从 0 到 5 毫秒">压缩</span><span class="cf-work-bar cf-work-input" data-work="input" style="grid-column:2 / span 1" aria-label="处理输入，从 5 到 10 毫秒">输入</span><span class="cf-work-bar cf-work-compression" data-work="compression" style="grid-column:3 / span 5" aria-label="继续压缩，从 10 到 35 毫秒">继续压缩 · 25 ms</span></div></div>
+      <div class="cf-work-results"><p>输入处理完成：<strong>10 ms</strong></p><p>全部工作结束：<strong>35 ms</strong></p></div>
+    </div>
+    <div class="cf-work-case" data-schedule="dual">
+      <h4>双核：两项工作同时执行</h4>
+      <div class="cf-work-axis" aria-hidden="true"><span style="left:0%">0</span><span style="left:14.2857%">5</span><span style="left:28.5714%">10</span><span style="left:42.8571%">15</span><span style="left:57.1429%">20</span><span style="left:71.4286%">25</span><span style="left:85.7143%">30</span><span style="left:100%">35</span></div>
+      <div class="cf-work-row"><span>核心 1</span><div class="cf-work-track"><span class="cf-work-bar cf-work-compression" data-work="compression" style="grid-column:1 / span 6" aria-label="压缩文件，从 0 到 30 毫秒">压缩文件 · 30 ms</span></div></div>
+      <div class="cf-work-row"><span>核心 2</span><div class="cf-work-track"><span class="cf-work-bar cf-work-input" data-work="input" style="grid-column:1 / span 1" aria-label="处理输入，从 0 到 5 毫秒">输入</span></div></div>
+      <div class="cf-work-results"><p>输入处理完成：<strong>5 ms</strong></p><p>全部工作结束：<strong>30 ms</strong></p></div>
+    </div>
+    <p class="cf-note">各核心性能相同，每核同一时刻运行一条线程；切换时刻为示例设定，不计切换及 I/O 开销。</p>
+  </figure>
+  <div class="cf-prose cf-multitasking-explanation">
+    <h4>时间片与多核的不同作用</h4>
+    <p>单核切换时，压缩暂停，编辑器获得 CPU；切回去时，操作系统恢复压缩线程的程序计数器和寄存器，压缩便从原处继续。<strong>切换没有减少计算量，却让输入更早得到处理。</strong>以 5 GHz 为例，短短 5 ms 也包含 2,500 万个时钟周期。</p>
+    <p>双核让两项工作真正同时执行，但压缩本身仍需 30 ms。<strong>要靠更多核心加速压缩计算，软件还需把可独立处理的工作分给多个线程。</strong>有前后依赖、必须逐步完成的部分，不能仅靠增加核心成倍提速。</p>
+  </div>
+</section>
+
+<section class="cf-section" id="specifications" aria-labelledby="specifications-title">
+  <h3 id="specifications-title">CPU 性能规格及其含义</h3>
+  <p class="cf-section-lead">主频描述节奏；微架构，即核心内部的组织方式，影响每个周期能完成的工作；核心数提供并行资源；存储系统决定能否及时供给数据。它们共同影响性能。</p>
+  <div class="cf-performance cf-speed-demo" id="cf-speed-demo">
+    <p class="cf-kicker">用同样的工作量比较</p>
+    <h4>主频、每周期指令数与执行时间</h4>
+    <p>假定 A、B 使用同一指令集，各执行 <strong>100 亿条指令</strong>。先看默认结果，再把 B 的平均 IPC 从 2 降到 1，观察先后顺序怎样改变。</p>
+    <div class="cf-speed-controls">
+      <label for="cf-speed-frequency"><span>处理器 A · 主频 <output id="cf-speed-frequency-value">5 GHz</output></span><input id="cf-speed-frequency" type="range" min="2" max="6" step="0.5" value="5"><small>平均 IPC 固定为 1</small></label>
+      <label for="cf-speed-ipc"><span>处理器 B · 平均 IPC <output id="cf-speed-ipc-value">2</output></span><input id="cf-speed-ipc" type="range" min="0.5" max="3" step="0.5" value="2"><small>主频固定为 4 GHz</small></label>
+    </div>
+    <figure class="cf-duration-chart" aria-label="完成同一工作量的时间比较">
+      <figcaption>完成时间 <span>共用 0–5 秒刻度；条越短，完成越早。</span></figcaption>
+      <div class="cf-duration-axis" aria-hidden="true"><span>0 秒</span><span>2.5 秒</span><span>5 秒</span></div>
+      <div class="cf-duration-row"><strong>A</strong><div class="cf-duration-track"><div id="cf-duration-a" style="width:40%"></div></div><output id="cf-time-a">2 秒</output></div>
+      <div class="cf-duration-row"><strong>B</strong><div class="cf-duration-track"><div id="cf-duration-b" style="width:25%"></div></div><output id="cf-time-b">1.25 秒</output></div>
+    </figure>
+    <p class="cf-speed-result" id="cf-speed-result" aria-live="polite">B 比 A 早 0.75 秒完成。</p>
+    <button type="button" class="cf-small-button" id="cf-speed-reset">恢复示例参数</button>
+    <p class="cf-speed-formula">CPU 执行时间 = 指令数 ÷（平均 IPC × 时钟频率）</p>
+    <p class="cf-note">这是参数关系演示，不是硬件测速。频率假定稳定，平均 IPC 已包含执行期间的停顿；实际 IPC 随程序和硬件而变，不能像此处的控件一样任意设定。</p>
+    <p class="cf-power-note">实际比较还需保持任务、输入、软件与功率条件可比。更高的频率常伴随更大的功耗与散热压力，缓存、预测和并行能力也会影响完成时间。</p>
+  </div>
+  <h4 class="cf-spec-heading">规格速查</h4>
+  <div class="cf-table-wrap" tabindex="0" role="region" aria-label="CPU 规格解释表">
+    <table class="cf-spec-table">
+      <thead><tr><th scope="col">参数</th><th scope="col">真正含义</th><th scope="col">不能直接推出的结论</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">主频 · GHz</th><td data-label="真正含义">每秒时钟周期数。最高加速频率通常有温度、功率、负载与活跃核心数等条件。</td><td data-label="理解时要注意">5 GHz 不等于每秒完成 50 亿条指令，也不保证所有核心长期维持 5 GHz。</td></tr>
+        <tr><th scope="row">IPC</th><td data-label="真正含义">在特定负载下，平均每周期完成的指令数；受指令组合、依赖关系、缓存与预测等影响。</td><td data-label="理解时要注意">IPC 不是每颗 CPU 对所有程序都固定不变的数值；不同指令集的一条指令也未必做同样多的工作。</td></tr>
+        <tr><th scope="row">核心数</th><td data-label="真正含义">物理执行核心的数量。不同类型核心的能力可能不同，收益取决于工作能否拆分。</td><td data-label="理解时要注意">8 核不代表任意程序都比 1 核快 8 倍；串行部分、通信与同步都会限制加速。</td></tr>
+        <tr><th scope="row">线程数</th><td data-label="真正含义">规格表指硬件线程（逻辑处理器）的数量。支持同时多线程（SMT）的核心保留多套执行状态，让多个硬件线程共享执行单元，利用单个线程暂时用不上的资源。</td><td data-label="理解时要注意">例如每核支持 2 个硬件线程的 4 核 CPU，可提供 8 个逻辑处理器，仍只有 4 个物理核心。程序可创建更多软件线程，由操作系统轮流调度。</td></tr>
+        <tr><th scope="row">缓存 · MB</th><td data-label="真正含义">片上缓存容量；还需区分 L1、L2、L3、访问延迟、共享范围与命中率。</td><td data-label="理解时要注意">容量翻倍不等于性能翻倍；总容量相同，也可能有不同的层级与分配方式。</td></tr>
+        <tr><th scope="row">64 位</th><td data-label="真正含义">通常指指令集的通用整数寄存器及相关运算宽度；实际地址宽度取决于实现。</td><td data-label="理解时要注意">不表示每周期只能或一定处理 64 bit；向量运算可以更宽，也不保证实现了 2⁶⁴ 字节的可寻址内存。</td></tr>
+        <tr><th scope="row">功耗 · W</th><td data-label="真正含义">TDP、基础功率、最大加速功率有各自的厂商定义，用于描述散热与供电条件。</td><td data-label="理解时要注意">这些数值不等于整机恒定耗电量；相同额定功率也不保证相同性能或能效。</td></tr>
+        <tr><th scope="row">制程与晶体管数</th><td data-label="真正含义">反映制造工艺及集成规模。晶体管用于逻辑、缓存、控制与各种片上单元。</td><td data-label="理解时要注意">工艺节点名称不是所有晶体管的某一统一物理尺寸；晶体管翻倍，也不等于 CPU 性能翻倍。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</section>
+
+<section class="cf-section" id="history" aria-labelledby="history-title">
+  <h3 id="history-title">从数千个晶体管到数百亿个</h3>
+  <div class="cf-history">
+    <div><span>1971 · Intel 4004</span><strong>2,300</strong><p>晶体管 · 早期 4 位微处理器</p></div>
+    <div><span>2023 · Apple M3</span><strong>250 亿</strong><p>晶体管 · 含 CPU、GPU 等单元的 SoC</p></div>
+  </div>
+  <div class="cf-prose">
+    <p>两个已发布芯片的集成规模相差约 <strong>1,087 万倍</strong>。这只是晶体管数量的比较：M3 的数字包含整颗片上系统，不能当作单个 CPU 核心的数量，更不能解释为性能提升倍数。</p>
+    <p>计算的物理基础仍是电路有规则地改变与保存状态，组织这些状态的方式却有巨大进步：更快的进位逻辑、流水线、乱序执行、预测、缓存和多核，都让简单电路完成更多有用工作。规模、组织方式与软件共同造就了今天的电脑。</p>
+  </div>
+  <p class="cf-closing">从程序看，是计算、判断、传送与控制流程；从电路看，是电信号的传播与状态的保存。<strong>“加、比、搬、跳”让我们看清主干，真正的性能来自这些动作怎样被组织。</strong></p>
+</section>
+</section>
+
+<details class="cf-details cf-sources" id="sources">
+  <summary id="sources-title">资料与进一步阅读</summary>
+  <p>电路、指令集与微架构是不同层次。下面的资料分别对应本页的机制说明；时间换算表采用明确列出的教学参数，可按公式独立复算。</p>
+  <ol>
+    <li><a href="https://www.unicode.org/charts/PDF/U0000.pdf" target="_blank" rel="noopener noreferrer">Unicode：C0 Controls and Basic Latin</a>：ASCII 范围的字符与编码。</li>
+    <li><a href="https://ocw.mit.edu/courses/6-004-computation-structures-spring-2017/pages/c3/c3s1/" target="_blank" rel="noopener noreferrer">MIT 6.004：CMOS 与逻辑门</a>；<a href="https://ocw.mit.edu/courses/6-004-computation-structures-spring-2017/pages/c8/c8s1/" target="_blank" rel="noopener noreferrer">加法器、二进制乘法与设计取舍</a>。</li>
+    <li><a href="https://computationstructures.org/notes/sequential_logic/notes.html" target="_blank" rel="noopener noreferrer">Computation Structures：Sequential Logic</a>：反馈、状态保存与同步电路；本页一位存储演示采用上升沿触发模型。</li>
+    <li><a href="https://docs.riscv.org/reference/isa/v20260120/unpriv/rv32.html" target="_blank" rel="noopener noreferrer">RISC-V 官方规范：RV32I v2.1</a>：40 条基础整数指令、PC、访存与条件分支；<a href="https://raw.githubusercontent.com/riscv/riscv-opcodes/master/extensions/rv_i" target="_blank" rel="noopener noreferrer">RISC-V 官方指令编码表</a>。</li>
+    <li><a href="https://ocw.mit.edu/courses/6-004-computation-structures-spring-2017/pages/c7/c7s1/" target="_blank" rel="noopener noreferrer">MIT 6.004：Performance Measures</a>；<a href="https://www.intel.com/content/www/us/en/gaming/resources/cpu-clock-speed.html" target="_blank" rel="noopener noreferrer">Intel：CPU 时钟频率</a>；<a href="https://www.intel.com/content/www/us/en/support/articles/000055611/processors.html" target="_blank" rel="noopener noreferrer">Intel：TDP 的定义</a>。</li>
+    <li><a href="https://arxiv.org/abs/1801.01203" target="_blank" rel="noopener noreferrer">Kocher 等：Spectre Attacks: Exploiting Speculative Execution（2018）</a>；<a href="https://www.intel.com/content/www/us/en/developer/articles/technical/software-security-guidance/technical-documentation/hardware-behavior-related-to-speculative-execution.html" target="_blank" rel="noopener noreferrer">Intel：推测执行的硬件行为与防护</a>。</li>
+    <li><a href="https://pages.cs.wisc.edu/~remzi/OSTEP/threads-intro.pdf" target="_blank" rel="noopener noreferrer">OSTEP：Concurrency: An Introduction</a>；<a href="https://www.intel.com/content/www/us/en/gaming/resources/hyper-threading.html" target="_blank" rel="noopener noreferrer">Intel：硬件多线程与逻辑处理器</a>。</li>
+    <li><a href="https://timeline.intel.com/1971/the-first-programmable-microprocessor%3A-the-4004" target="_blank" rel="noopener noreferrer">Intel：4004 历史资料</a>；<a href="https://www.apple.com/newsroom/2023/10/apple-unveils-m3-m3-pro-and-m3-max-the-most-advanced-chips-for-a-personal-computer/" target="_blank" rel="noopener noreferrer">Apple：M3 发布资料</a>。两者统计范围不同，不能据此比较 CPU 性能。</li>
+    <li><a href="https://www.youtube.com/watch?v=FnuhxdrFhmA&amp;t=449" target="_blank" rel="noopener noreferrer">延伸视频：从 07:29 查看时间尺度类比</a>。本页用明示参数重新换算，不将视频中的类比数字作为所有处理器的规格。</li>
+  </ol>
+</details>
+<div id="cf-related"></div>
+</div>
+</div>
+</main>
+<footer><span>OSLab · 并发</span><a href="#top">返回顶部 ↑</a></footer>
+</div>
+<noscript><p>启用 JavaScript 后可以使用知识目录与交互演示；正文仍可直接阅读。</p></noscript>
+<script src="knowledge-pages.js?v=20261103-cpu"></script>
+<script src="cpu-foundations.js?v=20261103-motion-final"></script>
+<script src="cpu-foundations-visuals.js?v=20261103-motion-final"></script>
+<script src="concurrency-movies.js?v=20261103-motion-final"></script>
+<script src="concurrency-movies-cpu.js?v=20261103-motion-final"></script>
+<script src="heading-typography.js?v=20261028-titles-1"></script>
+</body>
+</html>

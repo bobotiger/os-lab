@@ -212,3 +212,41 @@
   #waiting .cc-progress { flex-basis:auto; margin-left:auto; }
   #waiting .cc-pace { margin-left:0; }
 }
+
+/* Explanations precede the simulations they introduce. */
+.cc-page .cc-subheading { margin: 28px 0 12px; }
+.cc-page .cc-code-explainer { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); gap: 32px; align-items: start; margin: 24px 0; }
+.cc-code-explainer > * { min-width: 0; }
+.cc-code-explainer p { font-size: 16px; line-height: 1.9; margin: 12px 0; }
+.cc-page :is(.cc-code-explainer, .c2-code-pair) pre { background: #f5f7f5; border-left: 2px solid #a9c2b6; padding: 18px 20px; margin: 12px 0; font: 15px/1.8 Consolas, "Liberation Mono", monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cc-page .cc-code-explainer > pre { margin-top: 0; }
+.cc-page .cc-reference-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 22px 0 26px; font-size: 16px; line-height: 1.9; }
+.cc-reference-table th, .cc-reference-table td { text-align: left; vertical-align: top; padding: 16px; border-bottom: 1px solid var(--line); }
+.cc-reference-table thead { background: #f0f5f1; }
+.cc-reference-table th:first-child { width: 26%; }
+.cc-reference-table tbody th { font-weight: 600; }
+.cc-request-state { margin: 12px 0 18px; }
+.cc-request-state > div { display: grid; grid-template-columns: 90px minmax(0,1fr); gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); line-height: 1.8; }
+.cc-request-state dt { color: var(--muted); }
+.cc-request-state dd { margin: 0; }
+.cc-page .cc-references { margin: 12px 0 32px; }
+.cc-references ul { margin: 4px 0 20px; padding-left: 22px; font-size: 14px; line-height: 1.9; }
+.cc-references li + li { margin-top: 8px; }
+.cc-references a { text-decoration: underline; text-underline-offset: 3px; }
+.cc-takeaway a { text-decoration: underline; text-underline-offset: 3px; }
+#bug-threads .c3-step-list code { white-space: pre-wrap; }
+@media (max-width: 1180px) and (min-width: 1001px), (max-width: 760px) {
+  .cc-page .cc-code-explainer { grid-template-columns: 1fr; gap: 12px; }
+}
+@media (max-width: 600px) {
+  .cc-page .cc-reference-table { font-size: 15px; }
+  .cc-reference-table th, .cc-reference-table td { padding: 12px 8px; }
+  .cc-reference-table th:first-child { width: 31%; }
+  .cc-page :is(.cc-code-explainer, .c2-code-pair) pre { padding: 14px 12px; }
+}
+
+.cc-page :is(.cc-code-explainer, .c2-code-pair) pre code { font: inherit; }
+.cc-page .c2-code-pair > div > p { margin: 8px 0; font-size: 15px; line-height: 1.8; }
+
+#bug-threads [data-operation="wait"] code { display: block; padding-left: 12px; }
+@media (max-width: 600px) { #bug-threads [data-operation="wait"] code { padding-left: 4px; } }
