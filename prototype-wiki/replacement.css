@@ -1,5 +1,5 @@
 /* Replacement policy: decisions, workload, implementation cost and memory pressure. */
-.pr-page{--ink:#263e46;--muted:#52676f;--line:#d8e2df;--blue:#315c9b;--green:#246a55;--amber:#8d541b;--violet:#68508c;color:var(--ink);font-family:"Segoe UI","Microsoft YaHei",sans-serif}
+.pr-page{--ink:#263e46;--muted:#52676f;--line:#d8e2df;--blue:#315c9b;--green:#246a55;--amber:#8d541b;--violet:#68508c;color:var(--ink);font-family:var(--wiki-font-text)}
 .pr-page *,.pr-page *::before,.pr-page *::after{box-sizing:border-box;min-width:0}.pr-page [hidden]{display:none!important}
 .pr-page .site-header{min-height:62px;border:0}.pr-page .site-header nav{display:none}.pr-page main>section{padding:0;margin:0;border:0}
 .pr-page .intro{padding:18px 0 22px}.pr-page h1{font-size:34px;line-height:1.4;letter-spacing:-.035em;margin:0 0 9px}
@@ -27,8 +27,8 @@
 .pr-page .sequence-label{display:flex;flex-wrap:wrap;gap:7px 15px;font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:7px}
 .pr-page .sequence-label small{font-size:11px}.pr-page .sequence{position:relative;display:flex;gap:5px;overflow-x:auto;padding:4px 2px 9px;scrollbar-width:thin}
 .pr-page .sequence button{flex:0 0 46px;min-height:58px;padding:4px 3px;border:0;border-bottom:3px solid transparent;border-radius:3px;background:#f1f4f7}
-.pr-page .sequence small{display:block;font:10px/1.6 ui-monospace,Consolas,monospace;color:var(--muted)}
-.pr-page .sequence b{display:block;font:500 21px/1.4 ui-monospace,Consolas,monospace;color:var(--blue)}
+.pr-page .sequence small{display:block;font:10px/1.6 var(--wiki-font-mono);color:var(--muted)}
+.pr-page .sequence b{display:block;font:500 21px/1.4 var(--wiki-font-mono);color:var(--blue)}
 .pr-page .sequence button[aria-pressed=true]{background:#e5efea;border-bottom-color:var(--green)}.pr-page .sequence button.completed{background:#fff}
 .pr-page .current-reading{padding:13px 0;margin:6px 0 5px;min-height:92px}
 .pr-page .current-reading h3{font-size:21px;line-height:1.6;letter-spacing:-.02em;margin:0 0 5px;text-wrap:pretty}
@@ -39,12 +39,12 @@
 .pr-page .comparison{--frame-unit:92px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
 .pr-page .comparison-panel{padding-top:13px;border-top:2px solid #b5c6c0;display:flex;flex-direction:column}
 .pr-page .comparison-panel>header{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
-.pr-page .group-letter{font:600 13px/1.5 ui-monospace,Consolas,monospace;color:var(--muted);margin-right:4px}
+.pr-page .group-letter{font:600 13px/1.5 var(--wiki-font-mono);color:var(--muted);margin-right:4px}
 .pr-page .policy-rule{font-size:12px;line-height:1.8;color:var(--muted);margin:13px 0 11px;min-height:44px}
 .pr-page .frame-grid{display:flex;flex-wrap:wrap;gap:6px}.pr-page .frame{width:var(--frame-unit);height:108px;flex:0 0 var(--frame-unit);padding:8px 4px;border:1px solid #b9cdc4;border-bottom:3px solid #b9cdc4;border-radius:5px;background:#f4f8f6;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:5px}
 .pr-page .frame>small{font-size:11px;line-height:1.5;color:var(--green)}.pr-page .frame-content{display:flex;align-items:center;justify-content:center;gap:5px;width:100%}
-.pr-page .frame strong{font:600 27px/1.25 ui-monospace,Consolas,monospace;color:var(--blue)}
-.pr-page .frame del{font:18px/1.4 ui-monospace,Consolas,monospace;color:var(--amber);text-decoration-thickness:2px}.pr-page .frame i{font-size:12px;font-style:normal;color:var(--muted)}
+.pr-page .frame strong{font:600 27px/1.25 var(--wiki-font-mono);color:var(--blue)}
+.pr-page .frame del{font:18px/1.4 var(--wiki-font-mono);color:var(--amber);text-decoration-thickness:2px}.pr-page .frame i{font-size:12px;font-style:normal;color:var(--muted)}
 .pr-page .frame>span{font-size:10px;line-height:1.7;text-align:center;color:var(--muted)}
 .pr-page .frame.selected{background:#eaf4ef;border-bottom-color:var(--green)}.pr-page .frame.is-empty{background:#f5f6f6;border:1px dashed #a3b2ad}.pr-page .frame.is-empty strong{font-size:21px;color:var(--muted)}
 .pr-page .decision{display:flex;flex-wrap:wrap;align-items:center;gap:4px 7px;font-size:13px;line-height:1.85;margin:12px 0 7px;min-height:26px}
@@ -66,7 +66,7 @@
 .pr-page .opt-benchmark-cards{display:flex;flex-direction:column}
 .pr-page .opt-benchmark-cards>div{display:grid;grid-template-columns:1fr auto;align-items:center;column-gap:7px;border-bottom:1px solid #ded8e6;padding:9px 0}
 .pr-page .opt-benchmark-cards>div>span{font-size:13px;line-height:1.8}.pr-page .opt-benchmark-cards>div>div{grid-column:2;grid-row:1 / span 2;white-space:nowrap}
-.pr-page .opt-benchmark-cards strong{font:500 32px/1.3 ui-monospace,Consolas,monospace;color:var(--ink)}
+.pr-page .opt-benchmark-cards strong{font:500 32px/1.3 var(--wiki-font-mono);color:var(--ink)}
 .pr-page .opt-benchmark-cards small{font-size:11px;margin-left:5px;color:var(--muted)}
 .pr-page .opt-benchmark-cards p{grid-column:1;font-size:11px;line-height:1.7;margin:2px 0 0;color:var(--muted)}
 .pr-page .opt-baseline strong,.pr-page .opt-baseline>span{color:var(--violet)}.pr-page .opt-baseline>span{font-weight:650}
@@ -74,25 +74,25 @@
 .pr-page .text-action{background:none;border:0;padding:8px 0;color:var(--violet);font-size:12px;text-align:left}
 .pr-page #cmp-cost{margin-top:17px}.pr-page #cmp-cost label{justify-content:space-between}
 .pr-page #cost-miss-label{font-weight:600;color:var(--amber)}.pr-page .amat-result{display:flex;flex-direction:column;gap:4px;padding:10px 0}
-.pr-page .amat-result strong{font:550 30px/1.4 ui-monospace,Consolas,monospace;color:var(--amber)}.pr-page .amat-result span{font-size:12px;color:var(--muted)}
+.pr-page .amat-result strong{font:550 30px/1.4 var(--wiki-font-mono);color:var(--amber)}.pr-page .amat-result span{font-size:12px;color:var(--muted)}
 .pr-page .cost-formula{background:#f7f2e8;padding:9px;font-size:12px}.pr-page .cost-values{border-top:1px solid var(--line);padding-top:10px}
 .pr-page .cost-values p{font-size:12px;line-height:1.9;margin:0 0 14px}.pr-page .cost-values b,.pr-page .cost-values span{display:block}
 .pr-page .workbench{display:grid;grid-template-columns:220px minmax(0,1fr);gap:30px;padding:22px;background:#f7f9f8;border:1px solid var(--line);border-radius:7px}
 .pr-page .work-settings .case-options{flex-direction:column;margin:0 0 25px}.pr-page .work-settings .case-options button{flex:auto;background:#fff}
 .pr-page .work-settings .case-options button[aria-pressed=true]{background:#e7f0eb}
-.pr-page .curve-control{display:flex;flex-wrap:wrap;gap:8px;font-size:14px}.pr-page .curve-control output{font:600 24px/1.4 ui-monospace,Consolas,monospace;color:var(--green);margin-left:auto}
+.pr-page .curve-control{display:flex;flex-wrap:wrap;gap:8px;font-size:14px}.pr-page .curve-control output{font:600 24px/1.4 var(--wiki-font-mono);color:var(--green);margin-left:auto}
 .pr-page .curve-control input{flex-basis:100%}.pr-page .pattern-preview{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin:0 0 20px;font-size:11px;color:var(--muted);min-height:32px}
-.pr-page .pattern-preview>b{width:26px;height:28px;display:grid;place-items:center;font:14px ui-monospace,Consolas,monospace;background:#fff;color:var(--blue);border-radius:3px}
+.pr-page .pattern-preview>b{width:26px;height:28px;display:grid;place-items:center;font:14px var(--wiki-font-mono);background:#fff;color:var(--blue);border-radius:3px}
 .pr-page .pattern-preview>b.is-hot{background:#e1eaf7;border-bottom:2px solid var(--blue)}.pr-page .pattern-preview>span{margin-right:5px}
 .pr-page .curve-figure{margin:0}.pr-page .curve-legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:12px;color:var(--muted);margin:0 0 9px}
 .pr-page .curve-legend svg{width:32px;height:8px;vertical-align:middle;margin-right:5px;overflow:visible}
-.pr-page .curve-chart{width:100%;cursor:crosshair}.pr-page .curve-chart svg{width:100%;display:block;font:11px "Segoe UI","Microsoft YaHei",sans-serif;fill:var(--muted)}
+.pr-page .curve-chart{width:100%;cursor:crosshair}.pr-page .curve-chart svg{width:100%;display:block;font:11px var(--wiki-font-text);fill:var(--muted)}
 .pr-page .curve-figure figcaption{font-size:11px;line-height:1.8;color:var(--muted);margin:9px 0 13px}
 .pr-page .point-results{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;border-top:1px solid var(--line);padding-top:14px}
 .pr-page .point-results>div{display:flex;flex-direction:column;gap:6px}.pr-page .point-results b{font-size:13px;font-weight:550}
-.pr-page .point-results strong{font:500 24px/1.4 ui-monospace,Consolas,monospace}.pr-page .point-results span{font-size:11px;line-height:1.8;color:var(--muted)}
+.pr-page .point-results strong{font:500 24px/1.4 var(--wiki-font-mono)}.pr-page .point-results span{font-size:11px;line-height:1.8;color:var(--muted)}
 .pr-page .work-finding{border-left:3px solid var(--green);padding:16px 20px;background:#edf4f0;margin:20px 0 0}
-.pr-page .sample-pages{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:4px;margin:16px 0}.pr-page .sample-pages span{font:13px/2 ui-monospace,Consolas,monospace;text-align:center;background:#eef2f6}
+.pr-page .sample-pages{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:4px;margin:16px 0}.pr-page .sample-pages span{font:13px/2 var(--wiki-font-mono);text-align:center;background:#eef2f6}
 .pr-page .subtopics{display:flex;flex-wrap:wrap;gap:22px;margin:0 0 22px;border-bottom:1px solid var(--line)}
 .pr-page .subtopics button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:10px 0;font-size:13px}
 .pr-page .subtopics button[aria-pressed=true]{border-bottom-color:var(--green);color:var(--green);font-weight:600}
@@ -107,7 +107,7 @@
 .pr-page #thrash-demo-condition{margin:12px 0}
 .pr-page .thrash-jobs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:17px}
 .pr-page .thrash-jobs>span{background:#e8f1ec;border:1px solid #cadcd1;border-radius:4px;padding:7px 10px;font-size:12px;line-height:1.8;color:var(--green)}
-.pr-page .thrash-jobs b{margin-right:4px}.pr-page .thrash-jobs small{font:11px ui-monospace,Consolas,monospace;margin-left:8px;color:var(--muted)}
+.pr-page .thrash-jobs b{margin-right:4px}.pr-page .thrash-jobs small{font:11px var(--wiki-font-mono);margin-left:8px;color:var(--muted)}
 .pr-page .thrash-jobs [data-state=queued]{border-style:dashed;background:#f2f4f3;color:var(--muted)}.pr-page .thrash-jobs [data-state=done]{background:white;color:var(--muted)}
 .pr-page .thrash-layout{display:grid;grid-template-columns:minmax(0,1fr) 195px;gap:25px}
 .pr-page .thrash-reading{margin:0 0 16px}.pr-page #thrash-progress{font-size:12px;line-height:1.8;color:var(--muted);min-height:23px;margin:0 0 5px}
@@ -135,7 +135,7 @@
 .pr-page #thrash-play{min-width:90px}.pr-page .thrash-speed-label{margin-left:auto}
 .pr-page .live-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;border-top:1px solid var(--line);padding-top:12px}
 .pr-page .live-metrics>span{font-size:12px;line-height:1.8;color:var(--muted);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.pr-page .live-metrics b{font:500 26px/1.4 ui-monospace,Consolas,monospace;color:var(--ink);font-variant-numeric:tabular-nums}
+.pr-page .live-metrics b{font:500 26px/1.4 var(--wiki-font-mono);color:var(--ink);font-variant-numeric:tabular-nums}
 .pr-page .thrash-follow{border-left:1px solid var(--line);padding-left:20px}.pr-page .thrash-follow>h4{font-size:12px;color:var(--muted);font-weight:500;line-height:1.8;margin:0 0 12px}
 .pr-page .thrash-location{display:flex;flex-direction:column;gap:5px;min-height:94px;font-size:12px;line-height:1.8;margin:0 0 17px}
 .pr-page .thrash-location>b{color:var(--blue);font-size:20px}.pr-page .thrash-location>span{color:var(--muted)}
@@ -152,7 +152,7 @@
 .pr-page .pressure-panel+section{border-top-color:var(--green)}.pr-page .pressure-panel>header{display:grid;grid-template-rows:subgrid;grid-row:span 2}
 .pr-page .pressure-panel h4{font-size:16px;line-height:1.7;margin:0 0 12px}
 .pr-page .pressure-panel header p{font-size:13px;line-height:1.8;margin:0;color:var(--muted)}
-.pr-page .pressure-panel header strong{font:500 37px/1.4 ui-monospace,Consolas,monospace;color:var(--ink);margin-right:6px}
+.pr-page .pressure-panel header strong{font:500 37px/1.4 var(--wiki-font-mono);color:var(--ink);margin-right:6px}
 .pr-page .thrash-fault-count{font-size:12px;line-height:1.9;color:var(--muted);margin:10px 0 15px}
 .pr-page .thrash-time{height:24px;width:100%;background:#f1f4f2;border-radius:3px}
 .pr-page .thrash-time-bar{height:24px;background:repeating-linear-gradient(135deg,#a56c32 0,#a56c32 4px,#c08b55 4px,#c08b55 7px);border-radius:3px}

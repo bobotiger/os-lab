@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="typography.css">
 <title>计算、等待与暂停：观察进程状态 · OSLab</title>
 <style>
 :root{--ink:#253330;--green:#176754;--blue:#315f7b;--rust:#9d493b;--line:#d9e1dc;--paper:#fbfcfa}
 *{box-sizing:border-box}
-body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.85 "Noto Sans SC","Source Han Sans SC","Microsoft YaHei",sans-serif;letter-spacing:0}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.85 var(--wiki-font-text);letter-spacing:0}
 main{max-width:1100px;margin:auto;padding:28px 36px 60px}
 a{color:var(--green);text-underline-offset:4px}
 nav{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font-size:13px;padding-bottom:24px;border-bottom:1px solid var(--line)}
@@ -21,24 +22,24 @@ header{padding:26px 0 22px}h1{font-size:32px;line-height:1.4;margin:8px 0 14px}h
 .exercise ul{margin:0 0 14px;padding-left:22px}.exercise li+li{margin-top:8px}
 .reference-answer{border-left:2px solid #9bbcb0;padding-left:16px;margin:18px 0 0}
 .reference-answer h4{color:var(--green);margin-top:0}
-.output-guide th{white-space:nowrap}.output-guide td:first-child{font-family:Consolas,monospace;white-space:nowrap}
+.output-guide th{white-space:nowrap}.output-guide td:first-child{font-family:var(--wiki-font-mono);white-space:nowrap}
 .table-scroll td:first-child code,.state-guide th:first-child,.condition-guide th:first-child,.condition-guide td:first-child{white-space:nowrap;overflow-wrap:normal}
 section{padding:28px 0;border-bottom:1px solid var(--line)}.compare,.facts{display:grid;grid-template-columns:1fr 1fr;gap:32px}.compare>article,.facts>article{min-width:0}.scenario{font-size:13px;color:#596a63}
-.state{font:38px/1.4 Consolas,monospace;margin:12px 0 8px}.green{color:var(--green)}.blue{color:var(--blue)}.rust{color:var(--rust)}.caption{font-size:13px;color:#596a63}.question{margin-top:18px;border-left:3px solid var(--rust);padding-left:16px}
+.state{font:38px/1.4 var(--wiki-font-mono);margin:12px 0 8px}.green{color:var(--green)}.blue{color:var(--blue)}.rust{color:var(--rust)}.caption{font-size:13px;color:#596a63}.question{margin-top:18px;border-left:3px solid var(--rust);padding-left:16px}
 .stages{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--line);margin:18px 0 24px}.stages button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:12px 16px;font:inherit;font-size:14px;line-height:1.7;color:#596a63;cursor:pointer}.stages button[aria-selected="true"]{border-bottom-color:var(--green);color:var(--green);font-weight:500}
 button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--green);outline-offset:4px}
-.current{min-height:84px}.current h3{margin-bottom:8px}.objects{display:grid;grid-template-columns:1fr 1fr;gap:28px}.object{border:1px solid var(--line);border-radius:4px;padding:18px;min-width:0}.object h3{display:flex;justify-content:space-between;gap:12px;align-items:baseline}.badge{font:24px/1 Consolas,monospace;color:var(--green)}.object:nth-child(2) .badge{color:var(--blue)}.object .action{min-height:62px}
-.cpu-label{font-size:13px;margin:12px 0 8px}.cpu-value{font:24px/1.4 Consolas,monospace}.meter{height:18px;background:#e9eeea;margin:10px 0}.meter span{display:block;height:100%;background:var(--green)}.object:nth-child(2) .meter span{background:var(--blue)}.pipe{margin-top:20px;border-block:1px solid var(--line);padding:12px 0;font-size:14px}.pipe strong{font-weight:500;color:var(--blue)}
-.meter-axis{position:relative;height:30px;margin-top:-10px;font:12px/1.5 Consolas,"Microsoft YaHei",monospace;color:#596a63}
+.current{min-height:84px}.current h3{margin-bottom:8px}.objects{display:grid;grid-template-columns:1fr 1fr;gap:28px}.object{border:1px solid var(--line);border-radius:4px;padding:18px;min-width:0}.object h3{display:flex;justify-content:space-between;gap:12px;align-items:baseline}.badge{font:24px/1 var(--wiki-font-mono);color:var(--green)}.object:nth-child(2) .badge{color:var(--blue)}.object .action{min-height:62px}
+.cpu-label{font-size:13px;margin:12px 0 8px}.cpu-value{font:24px/1.4 var(--wiki-font-mono)}.meter{height:18px;background:#e9eeea;margin:10px 0}.meter span{display:block;height:100%;background:var(--green)}.object:nth-child(2) .meter span{background:var(--blue)}.pipe{margin-top:20px;border-block:1px solid var(--line);padding:12px 0;font-size:14px}.pipe strong{font-weight:500;color:var(--blue)}
+.meter-axis{position:relative;height:30px;margin-top:-10px;font:12px/1.5 var(--wiki-font-mono);color:#596a63}
 .meter-axis span{position:absolute;top:8px;white-space:nowrap}
 .meter-axis span::before{content:"";position:absolute;top:-8px;height:6px;border-left:1px solid #596a63}
 .meter-axis span:first-child{left:0}.meter-axis span:first-child::before{left:0}
 .meter-axis span:nth-child(2){left:50%;transform:translateX(-50%)}.meter-axis span:nth-child(2)::before{left:50%}
 .meter-axis span:last-child{right:0}.meter-axis span:last-child::before{right:0}
-.steps{display:grid;grid-template-columns:40px 1fr;gap:12px 18px}.step-number{font:24px Consolas,monospace;color:var(--green)}.step-body{min-width:0}.step-body+.step-number{margin-top:16px}
-.command{position:relative;background:#eff4f3;border-left:2px solid #9bbcb0;margin:14px 0;padding:14px 52px 14px 14px}.command pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:13px/1.85 Consolas,monospace}.copy{position:absolute;right:8px;top:8px;width:32px;height:32px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--green);cursor:pointer}.copy span{display:block;width:12px;height:14px;border:1.5px solid currentColor;margin:auto;box-shadow:-3px -3px 0 -1px white,-3px -3px 0 0 currentColor}.command-feedback{font-size:13px;line-height:1.8;color:var(--green);margin:0 0 16px;overflow-wrap:anywhere}
-.meanings{margin:14px 0 20px}.meanings dt{font-size:14px;font-weight:500;margin-top:12px}.meanings dd{font-size:14px;margin:4px 0 0}code{font-family:Consolas,monospace;overflow-wrap:anywhere}
-details{margin:16px 0}summary{cursor:pointer;color:var(--green)}details>div{padding-top:14px}.raw{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.8 Consolas,monospace;background:#eff4f3;padding:14px}.table-scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px;margin:14px 0}td,th{border-bottom:1px solid var(--line);padding:10px 8px;text-align:left;vertical-align:top}th{font-weight:500}footer{font-size:13px;padding-top:24px}
+.steps{display:grid;grid-template-columns:40px 1fr;gap:12px 18px}.step-number{font:24px var(--wiki-font-mono);color:var(--green)}.step-body{min-width:0}.step-body+.step-number{margin-top:16px}
+.command{position:relative;background:#eff4f3;border-left:2px solid #9bbcb0;margin:14px 0;padding:14px 52px 14px 14px}.command pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:13px/1.85 var(--wiki-font-mono)}.copy{position:absolute;right:8px;top:8px;width:32px;height:32px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--green);cursor:pointer}.copy span{display:block;width:12px;height:14px;border:1.5px solid currentColor;margin:auto;box-shadow:-3px -3px 0 -1px white,-3px -3px 0 0 currentColor}.command-feedback{font-size:13px;line-height:1.8;color:var(--green);margin:0 0 16px;overflow-wrap:anywhere}
+.meanings{margin:14px 0 20px}.meanings dt{font-size:14px;font-weight:500;margin-top:12px}.meanings dd{font-size:14px;margin:4px 0 0}code{font-family:var(--wiki-font-mono);overflow-wrap:anywhere}
+details{margin:16px 0}summary{cursor:pointer;color:var(--green)}details>div{padding-top:14px}.raw{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.8 var(--wiki-font-mono);background:#eff4f3;padding:14px}.table-scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14px;margin:14px 0}td,th{border-bottom:1px solid var(--line);padding:10px 8px;text-align:left;vertical-align:top}th{font-weight:500}footer{font-size:13px;padding-top:24px}
 @media(max-width:700px){main{padding:18px 18px 40px}h1{font-size:26px}h2{font-size:21px}.compare,.facts,.objects{grid-template-columns:1fr;gap:20px}.compare>article+article{border-top:1px solid var(--line);padding-top:18px}.state{font-size:32px}.steps{grid-template-columns:28px 1fr;gap:12px}.stages{display:grid;grid-template-columns:1fr 1fr}.stages button{padding:12px 6px;font-size:13px}.current{min-height:120px}.object .action{min-height:0}}
 
 /* Keep the end of a paragraph readable at different screen widths. */

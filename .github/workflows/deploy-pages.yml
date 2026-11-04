@@ -1,4 +1,4 @@
-name: Deploy OSLab website
+name: Deploy OSLab Wiki
 
 on:
   push:
@@ -30,7 +30,7 @@ jobs:
           persist-credentials: false
       - name: Configure Pages
         uses: actions/configure-pages@v5
-      - name: Upload website
+      - name: Upload Wiki files
         uses: actions/upload-pages-artifact@v3
         with:
           path: prototype-wiki

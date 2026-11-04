@@ -4,13 +4,13 @@
   --practice-blue: #315f7b;
   --practice-rust: #9d493b;
   --practice-line: #d9e1dc;
-  font-family: "Noto Sans SC", "Source Han Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: var(--wiki-font-text);
   font-synthesis: none;
   color: var(--practice-ink);
 }
 .process-practice-page .intro { padding-bottom: 26px; }
 .process-practice-page h1 { font-size: 32px; letter-spacing: 0; }
-.process-practice-page h1 span { display: block; font: 14px/1.8 "Noto Sans SC", "Microsoft YaHei", sans-serif; color: #667772; margin-top: 4px; }
+.process-practice-page h1 span { display: block; font: 14px/1.8 var(--wiki-font-text); color: #667772; margin-top: 4px; }
 .process-practice-page .lead { font-size: 16px; line-height: 1.9; max-width: 66ch; }
 .process-practice-page .hw-meta { gap: 24px; margin: 18px 0 12px; }
 .process-practice-page .hw-back { margin: 14px 0; font-size: 13px; }
@@ -22,7 +22,7 @@
 .process-practice-page [role="tabpanel"] { scroll-margin-top: 18px; }
 .practice-index { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; margin: 28px 0 0; }
 .practice-index a { display: flex; align-items: baseline; gap: 14px; padding: 12px 0; border-top: 1px solid var(--practice-line); color: var(--practice-ink); }
-.practice-index span { font: 13px Consolas, monospace; color: var(--practice-green); }
+.practice-index span { font: 13px var(--wiki-font-mono); color: var(--practice-green); }
 .practice-index strong { font-size: 14px; font-weight: 500; }
 .practice-index a:hover strong { text-decoration: underline; text-underline-offset: 4px; }
 .practice-section-heading { padding: 24px 0; border-top: 2px solid var(--practice-green); }
@@ -33,7 +33,7 @@
 .practice-setup > p { grid-column: 2; font-size: 13px; line-height: 1.9; }
 .practice-exercise { border-top: 1px solid var(--practice-line); padding: 34px 0 42px; scroll-margin-top: 24px; }
 .practice-exercise-heading { display: flex; gap: 22px; align-items: center; }
-.practice-number { font: 40px/1 Consolas, monospace; color: var(--practice-green); flex: 0 0 54px; }
+.practice-number { font: 40px/1 var(--wiki-font-mono); color: var(--practice-green); flex: 0 0 54px; }
 .practice-topic { font-size: 12px; color: #667772; margin-bottom: 7px; }
 .practice-exercise h2 { font-size: 23px; line-height: 1.5; }
 .practice-question { font-size: 16px; line-height: 1.9; max-width: 72ch; margin: 20px 0 24px; }
@@ -41,7 +41,7 @@
 .practice-body > section { min-width: 0; }
 .practice-body h3 { font-size: 14px; font-weight: 500; margin: 0 0 14px; }
 .practice-command { display: flex; gap: 8px; align-items: flex-start; background: #eff4f3; border-left: 2px solid #9bbcb0; padding: 12px; margin: 10px 0; }
-.practice-command pre { flex: 1; min-width: 0; margin: 0; padding: 0; border: 0; background: none; white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.8 Consolas, monospace; }
+.practice-command pre { flex: 1; min-width: 0; margin: 0; padding: 0; border: 0; background: none; white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.8 var(--wiki-font-mono); }
 .practice-command code { background: none; padding: 0; font: inherit; }
 .practice-command-argument { white-space: nowrap; }
 .practice-command button { border: 0; border-radius: 4px; width: 32px; height: 32px; flex: 0 0 32px; background: none; color: var(--practice-green); cursor: pointer; }
@@ -52,11 +52,11 @@
 .practice-result { border-top: 1px solid var(--practice-line); padding-top: 16px; margin: 20px 0; color: var(--practice-green); font-size: 16px; line-height: 1.7; font-weight: 500; }
 .practice-trace { margin-top: 18px; }
 .practice-trace summary { cursor: pointer; font-size: 13px; color: var(--practice-blue); padding: 10px 0; }
-.practice-trace pre { max-height: 400px; overflow: auto; font: 12px/1.75 Consolas, "Microsoft YaHei", monospace; background: #f3f6f8; padding: 14px; border: 0; }
+.practice-trace pre { max-height: 400px; overflow: auto; font: 12px/1.75 var(--wiki-font-mono); background: #f3f6f8; padding: 14px; border: 0; }
 .practice-trace code { font: inherit; }
 .practice-reasoning ol { list-style: none; padding: 0; margin: 0; }
 .practice-reasoning li { display: flex; gap: 12px; padding-bottom: 20px; }
-.practice-step { font: 12px/24px Consolas, monospace; width: 24px; height: 24px; text-align: center; flex: 0 0 24px; background: #e6eee9; color: var(--practice-green); border-radius: 50%; }
+.practice-step { font: 12px/24px var(--wiki-font-mono); width: 24px; height: 24px; text-align: center; flex: 0 0 24px; background: #e6eee9; color: var(--practice-green); border-radius: 50%; }
 .practice-reasoning h4 { font-size: 14px; line-height: 1.7; font-weight: 500; margin: 0 0 6px; }
 .practice-reasoning p { font-size: 14px; line-height: 1.9; margin: 0; }
 .practice-conclusion { border-top: 2px solid #b9cbbb; padding-top: 16px; }
@@ -74,8 +74,8 @@
 .practice-timeline-scroll { overflow-x: auto; padding: 4px 0 10px; }
 .practice-timeline-grid { display: grid; grid-template-columns: 44px repeat(var(--practice-time), minmax(19px, 1fr)); gap: 3px; min-width: max-content; }
 .practice-lane-label { font-size: 11px; align-self: center; }
-.practice-time { font: 10px/22px Consolas, monospace; text-align: center; color: #62736d; }
-.practice-cell { font: 11px/28px Consolas, monospace; text-align: center; min-height: 28px; border-radius: 2px; }
+.practice-time { font: 10px/22px var(--wiki-font-mono); text-align: center; color: #62736d; }
+.practice-cell { font: 11px/28px var(--wiki-font-mono); text-align: center; min-height: 28px; border-radius: 2px; }
 .practice-cpu { background: #d2e6d9; color: #26543c; }
 .practice-io { background: #dae6ef; color: #315f7b; }
 .practice-io_done { background: #f1ddd5; color: #8a4235; }
@@ -87,8 +87,8 @@
 .practice-timeline-note { font-size: 12px; color: #62736d; line-height: 1.8; margin-top: 12px; }
 .practice-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; border-top: 1px solid var(--practice-line); margin: 18px 0; padding-top: 16px; }
 .practice-stats dt { font-size: 11px; color: #62736d; }
-.practice-stats dd { font: 25px/1.4 Consolas, monospace; margin: 6px 0 0; }
-.practice-stats small { font: 10px "Noto Sans SC", "Microsoft YaHei", sans-serif; white-space: nowrap; }
+.practice-stats dd { font: 25px/1.4 var(--wiki-font-mono); margin: 6px 0 0; }
+.practice-stats small { font: 10px var(--wiki-font-text); white-space: nowrap; }
 .practice-exercise-nav { display: flex; justify-content: space-between; gap: 20px; border-top: 1px solid var(--practice-line); padding-top: 16px; margin-top: 28px; font-size: 12px; color: var(--practice-green); }
 .practice-exercise-nav a { max-width: 48%; line-height: 1.9; }
 .practice-random-controls { margin: 0 0 24px; }
@@ -98,11 +98,11 @@
 .practice-seeds button[aria-pressed="true"] { background: var(--practice-green); color: white; }
 .practice-rule-selects { display: flex; flex-wrap: wrap; gap: 14px 26px; }
 .practice-rule-selects label { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; }
-.practice-rule-selects select { padding: 8px; border: 1px solid var(--practice-line); border-radius: 4px; background: white; font: 12px Consolas, monospace; max-width: 100%; }
+.practice-rule-selects select { padding: 8px; border: 1px solid var(--practice-line); border-radius: 4px; background: white; font: 12px var(--wiki-font-mono); max-width: 100%; }
 .practice-instructions { margin-top: 20px; }
 .practice-instructions > div { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--practice-line); }
 .practice-instructions dt { font-size: 12px; }
-.practice-instructions dd { margin: 0; font: 12px/1.8 Consolas, "Microsoft YaHei", monospace; overflow-wrap: anywhere; }
+.practice-instructions dd { margin: 0; font: 12px/1.8 var(--wiki-font-mono); overflow-wrap: anywhere; }
 .practice-seed-explanation { margin-top: 24px; padding-left: 16px; border-left: 2px solid #a8c3d6; }
 #practice-random-results { margin-top: 28px; }
 #practice-random-results h3 { font-size: 16px; margin-bottom: 16px; }
@@ -121,7 +121,7 @@
 .scheduling-practice-page .scheduling-comparison { margin: 0 0 24px; }
 .scheduling-practice-page .scheduling-comparison table { min-width: 620px; }
 .scheduling-case-label { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 12px; }
-.scheduling-case-label select { min-width: 0; max-width: 100%; padding: 8px; border: 1px solid var(--practice-line); border-radius: 4px; background: white; font: 12px Consolas, "Microsoft YaHei", monospace; }
+.scheduling-case-label select { min-width: 0; max-width: 100%; padding: 8px; border: 1px solid var(--practice-line); border-radius: 4px; background: white; font: 12px var(--wiki-font-mono); }
 .scheduling-symbols { margin: 0 0 24px; }
 .scheduling-symbols > div { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 12px; border-bottom: 1px solid var(--practice-line); padding: 8px 0; font-size: 12px; line-height: 1.9; }
 .scheduling-symbols dd { margin: 0; }
@@ -137,7 +137,7 @@
 .scheduling-segments { display: flex; align-items: stretch; gap: 6px; overflow-x: auto; padding-bottom: 10px; }
 .scheduling-segment { display: flex; flex-direction: column; gap: 7px; flex: 0 0 116px; padding: 12px 8px; border-top: 3px solid #80ab91; background: #edf4ee; font-size: 12px; }
 .scheduling-segment strong { font-weight: 500; }
-.scheduling-segment > span { font: 12px Consolas, monospace; }
+.scheduling-segment > span { font: 12px var(--wiki-font-mono); }
 .scheduling-segment small { font-size: 10px; line-height: 1.8; }
 .scheduling-job-1 { background: #eef3f8; border-color: #81a4be; }
 .scheduling-job-2 { background: #f8eeea; border-color: #c18c7b; }
@@ -160,12 +160,12 @@
 .mlfq-practice-page .mlfq-case-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 24px; border-block: 1px solid var(--practice-line); padding: 14px 0; margin-bottom: 20px; }
 .mlfq-practice-page .mlfq-case-heading h3 { margin: 0; }
 .mlfq-practice-page .mlfq-case-label { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0; font-size: 13px; }
-.mlfq-practice-page .mlfq-case-label select { min-width: 0; max-width: 100%; padding: 8px; border: 1px solid var(--practice-line); border-radius: 4px; background: white; font: 12px "Noto Sans SC", "Microsoft YaHei", sans-serif; }
+.mlfq-practice-page .mlfq-case-label select { min-width: 0; max-width: 100%; padding: 8px; border: 1px solid var(--practice-line); border-radius: 4px; background: white; font: 12px var(--wiki-font-text); }
 .mlfq-practice-page .practice-table-scroll table { min-width: 420px; }
 .mlfq-practice-page #parameters table { min-width: 0; table-layout: fixed; }
 .mlfq-practice-page #parameters th:first-child { width: 135px; }
 .mlfq-practice-page #parameters td { white-space: normal; line-height: 1.9; overflow-wrap: anywhere; }
-.mlfq-practice-page #parameters td:first-child { font: 12px/1.9 Consolas, monospace; }
+.mlfq-practice-page #parameters td:first-child { font: 12px/1.9 var(--wiki-font-mono); }
 .mlfq-practice-page .mlfq-case h4 { font-size: 13px; line-height: 1.8; font-weight: 500; margin: 20px 0 8px; }
 .mlfq-practice-page .mlfq-run-setup h4:first-child { margin-top: 0; }
 .mlfq-practice-page .mlfq-run-conditions .practice-table-scroll { margin-top: 16px; }
@@ -184,15 +184,15 @@
 .mlfq-practice-page .mlfq-axis-label, .mlfq-practice-page .mlfq-queue-label { position: sticky; left: 0; z-index: 2; background: #fafcfb; border-right: 1px solid var(--practice-line); padding: 12px 10px; }
 .mlfq-practice-page .mlfq-axis-label { font-size: 11px; }
 .mlfq-practice-page .mlfq-time-axis { position: relative; height: 42px; margin-left: 8px; }
-.mlfq-practice-page .mlfq-time-tick { position: absolute; bottom: 8px; transform: translateX(-50%); font: 11px Consolas, monospace; }
+.mlfq-practice-page .mlfq-time-tick { position: absolute; bottom: 8px; transform: translateX(-50%); font: 11px var(--wiki-font-mono); }
 .mlfq-practice-page .mlfq-time-tick:first-child { transform: none; }
 .mlfq-practice-page .mlfq-time-tick:last-child { transform: translateX(-100%); }
 .mlfq-practice-page .mlfq-queue-label { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-height: 90px; border-bottom: 1px solid var(--practice-line); font-size: 10px; color: #52655b; }
-.mlfq-practice-page .mlfq-queue-label strong { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; color: #243c30; font: 600 15px Consolas, "Microsoft YaHei", sans-serif; }
-.mlfq-practice-page .mlfq-queue-label small { font: 10px "Noto Sans SC", "Microsoft YaHei", sans-serif; }
+.mlfq-practice-page .mlfq-queue-label strong { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; color: #243c30; font: 600 15px var(--wiki-font-mono); }
+.mlfq-practice-page .mlfq-queue-label small { font: 10px var(--wiki-font-text); }
 .mlfq-practice-page .mlfq-queue-track { position: relative; margin-left: 8px; min-height: 90px; border-bottom: 1px solid var(--practice-line); }
 .mlfq-practice-page .mlfq-grid-line { position: absolute; top: 0; bottom: 0; border-left: 1px solid #e1e9e4; }
-.mlfq-practice-page .mlfq-segment { position: absolute; top: 24px; height: 40px; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: inset 0 0 0 1px var(--mlfq-job-border); background: var(--mlfq-job-fill); color: #203c30; font: 11px Consolas, monospace; white-space: nowrap; }
+.mlfq-practice-page .mlfq-segment { position: absolute; top: 24px; height: 40px; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: inset 0 0 0 1px var(--mlfq-job-border); background: var(--mlfq-job-fill); color: #203c30; font: 11px var(--wiki-font-mono); white-space: nowrap; }
 .mlfq-practice-page .mlfq-job-0 { --mlfq-job-fill: #d2e9d9; --mlfq-job-border: #57856a; }
 .mlfq-practice-page .mlfq-job-1 { --mlfq-job-fill: #d9e8f5; --mlfq-job-border: #577f9f; }
 .mlfq-practice-page .mlfq-job-2 { --mlfq-job-fill: #f4ded3; --mlfq-job-border: #ae725b; }
@@ -222,7 +222,7 @@
 .api-practice-page .api-tree { width: max-content; }
 .api-practice-page .api-tree li { text-align: center; position: relative; padding: 18px 8px 0; flex: 1; }
 .api-practice-page .api-tree > li { padding-top: 0; }
-.api-practice-page .api-tree-node { display: inline-block; min-width: 34px; height: 32px; padding: 3px 8px; border: 1px solid #97b1a2; border-radius: 3px; background: white; color: var(--practice-green); font: 16px/24px Consolas, monospace; }
+.api-practice-page .api-tree-node { display: inline-block; min-width: 34px; height: 32px; padding: 3px 8px; border: 1px solid #97b1a2; border-radius: 3px; background: white; color: var(--practice-green); font: 16px/24px var(--wiki-font-mono); }
 .api-practice-page .api-tree ul { padding-top: 14px; position: relative; }
 .api-practice-page .api-tree ul::before { content: ""; position: absolute; top: 0; left: 50%; height: 14px; border-left: 1px solid #97b1a2; }
 .api-practice-page .api-tree ul > li::before { content: ""; position: absolute; left: 0; right: 0; top: 0; border-top: 1px solid #97b1a2; }
@@ -230,7 +230,7 @@
 .api-practice-page .api-tree ul > li:last-child::before { right: 50%; }
 .api-practice-page .api-tree ul > li::after { content: ""; position: absolute; top: 0; left: 50%; height: 18px; border-left: 1px solid #97b1a2; }
 .api-practice-page .api-stage-controls { display: flex; gap: 8px; margin-top: 14px; }
-.api-practice-page .api-stage-controls button { width: 36px; height: 32px; border: 1px solid var(--practice-line); border-radius: 3px; background: white; color: var(--practice-green); font: 12px Consolas, monospace; cursor: pointer; }
+.api-practice-page .api-stage-controls button { width: 36px; height: 32px; border: 1px solid var(--practice-line); border-radius: 3px; background: white; color: var(--practice-green); font: 12px var(--wiki-font-mono); cursor: pointer; }
 .api-practice-page .api-stage-controls button[aria-pressed="true"] { color: white; background: var(--practice-green); border-color: var(--practice-green); }
 .api-practice-page .api-stage-controls button:focus-visible, .api-practice-page .api-source-actions button:focus-visible { outline: 2px solid var(--practice-blue); outline-offset: 3px; }
 .api-practice-page .api-tree-comparison { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -269,7 +269,7 @@
 .api-practice-page .api-program-modes dt { font-size: 12px; line-height: 1.9; color: var(--practice-blue); }
 .api-practice-page .api-program-modes dd { margin: 0; font-size: 13px; }
 .api-practice-page .api-program-output { margin: 16px 0; }
-.api-practice-page .api-program-output pre { background: #f3f6f8; border: 0; padding: 16px; font: 13px/1.9 Consolas, monospace; overflow: auto; }
+.api-practice-page .api-program-output pre { background: #f3f6f8; border: 0; padding: 16px; font: 13px/1.9 var(--wiki-font-mono); overflow: auto; }
 .api-practice-page .api-program-output code { background: none; padding: 0; font: inherit; }
 .api-practice-page .api-program-trace summary { overflow-wrap: anywhere; }
 .api-practice-page .api-program-trace pre { white-space: pre; }
@@ -285,28 +285,28 @@
 }
 .api-practice-page .api-probability th, .api-practice-page .api-probability td, .api-practice-page .api-exec-table th, .api-practice-page .api-exec-table td { padding: 10px 8px; }
 .api-practice-page .api-count { display: flex; align-items: center; gap: 8px; min-width: 70px; }
-.api-practice-page .api-count > span { width: 22px; flex: 0 0 22px; font: 13px Consolas, monospace; }
+.api-practice-page .api-count > span { width: 22px; flex: 0 0 22px; font: 13px var(--wiki-font-mono); }
 .api-practice-page .api-count i { display: block; width: var(--api-count); min-width: 2px; height: 8px; background: var(--practice-blue); }
 .api-practice-page .api-action-changes { margin-top: 24px; }
 .api-practice-page .api-action-changes > div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--practice-line); font-size: 12px; }
-.api-practice-page .api-action-changes dd { margin: 0; color: var(--practice-green); font-family: Consolas, monospace; }
+.api-practice-page .api-action-changes dd { margin: 0; color: var(--practice-green); font-family: var(--wiki-font-mono); }
 .api-practice-page .api-source { border-top: 1px solid var(--practice-line); border-bottom: 1px solid var(--practice-line); margin-bottom: 22px; }
 .api-practice-page .api-basic { margin-bottom: 24px; }
 .api-practice-page .api-basic p { font-size: 13px; line-height: 1.9; margin-top: 12px; }
-.api-practice-page .api-source summary { padding: 12px 0; font: 12px/1.9 Consolas, "Microsoft YaHei", sans-serif; color: var(--practice-blue); cursor: pointer; overflow-wrap: anywhere; }
-.api-practice-page .api-source pre { margin: 0 0 16px; max-height: 440px; overflow: auto; border: 0; background: #f3f6f8; font: 12px/1.8 Consolas, monospace; white-space: pre; padding: 16px; }
+.api-practice-page .api-source summary { padding: 12px 0; font: 12px/1.9 var(--wiki-font-mono); color: var(--practice-blue); cursor: pointer; overflow-wrap: anywhere; }
+.api-practice-page .api-source pre { margin: 0 0 16px; max-height: 440px; overflow: auto; border: 0; background: #f3f6f8; font: 12px/1.8 var(--wiki-font-mono); white-space: pre; padding: 16px; }
 .api-practice-page .api-source pre code, .api-practice-page .api-output pre code { font: inherit; background: none; padding: 0; }
 .api-practice-page .api-source-actions { display: flex; justify-content: flex-end; gap: 8px; padding-bottom: 8px; }
 .api-practice-page .api-source-actions button { width: 34px; height: 32px; border: 1px solid var(--practice-line); border-radius: 3px; color: var(--practice-green); background: white; cursor: pointer; }
 .api-practice-page .api-source-actions .practice-copy-icon { margin-left: 10px; }
-.api-practice-page .api-download-icon { font: 21px/20px Consolas, monospace; border-bottom: 1px solid currentColor; padding: 0 2px; }
+.api-practice-page .api-download-icon { font: 21px/20px var(--wiki-font-mono); border-bottom: 1px solid currentColor; padding: 0 2px; }
 .api-practice-page .api-output { border-top: 1px solid var(--practice-line); padding-top: 20px; }
-.api-practice-page .api-output pre { font: 12px/1.8 Consolas, "Microsoft YaHei", monospace; padding: 14px; white-space: pre-wrap; overflow-wrap: anywhere; border: 0; background: #f3f6f8; }
+.api-practice-page .api-output pre { font: 12px/1.8 var(--wiki-font-mono); padding: 14px; white-space: pre-wrap; overflow-wrap: anywhere; border: 0; background: #f3f6f8; }
 .api-practice-page .api-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .api-practice-page .api-pair > div { border-top: 3px solid #92bba5; padding: 16px 0; }
 .api-practice-page .api-pair > div:last-child { border-color: #89a9c0; }
 .api-practice-page .api-mechanism span { display: block; font-size: 12px; color: #62736d; }
-.api-practice-page .api-mechanism strong { display: block; font: 14px/1.8 Consolas, "Microsoft YaHei", sans-serif; color: var(--practice-ink); margin: 8px 0; }
+.api-practice-page .api-mechanism strong { display: block; font: 14px/1.8 var(--wiki-font-mono); color: var(--practice-ink); margin: 8px 0; }
 .api-practice-page .api-mechanism small { display: block; font-size: 11px; line-height: 1.9; }
 .api-practice-page .api-shared-object { border-top: 1px solid var(--practice-line); border-bottom: 1px solid var(--practice-line); text-align: center; padding: 12px; background: #f5f8f5; }
 .api-practice-page .api-file-definition { font-size: 13px; line-height: 1.9; margin-bottom: 18px; }
@@ -317,17 +317,17 @@
 .api-practice-page .api-file-reference.api-file-active { background: #e8f2ed; }
 .api-practice-page .api-file-reference.api-file-closed::after { visibility: hidden; }
 .api-practice-page .api-file-reference.api-file-closed strong { color: #7a837c; }
-.api-practice-page .api-file-demo .api-shared-object b { font: 24px/1.4 Consolas, monospace; color: var(--practice-green); }
+.api-practice-page .api-file-demo .api-shared-object b { font: 24px/1.4 var(--wiki-font-mono); color: var(--practice-green); }
 .api-practice-page .api-file-content { margin-top: 20px; }
 .api-practice-page .api-file-content h4 { font-size: 12px; font-weight: 500; margin: 0 0 8px; }
-.api-practice-page .api-file-content pre { min-height: 95px; padding: 12px; margin: 0; border: 0; background: #f3f6f8; font: 13px/1.8 Consolas, "Microsoft YaHei", monospace; }
+.api-practice-page .api-file-content pre { min-height: 95px; padding: 12px; margin: 0; border: 0; background: #f3f6f8; font: 13px/1.8 var(--wiki-font-mono); }
 .api-practice-page .api-file-action { min-height: 100px; font-size: 13px; line-height: 1.9; margin: 16px 0 8px; }
 .api-practice-page .api-file-controls { display: flex; align-items: center; gap: 8px; }
-.api-practice-page .api-file-controls button { width: 36px; height: 34px; border: 1px solid var(--practice-line); border-radius: 3px; background: white; color: var(--practice-green); font: 18px Consolas, monospace; cursor: pointer; }
+.api-practice-page .api-file-controls button { width: 36px; height: 34px; border: 1px solid var(--practice-line); border-radius: 3px; background: white; color: var(--practice-green); font: 18px var(--wiki-font-mono); cursor: pointer; }
 .api-practice-page .api-file-controls button:disabled { opacity: .4; cursor: default; }
 .api-practice-page .api-file-controls button:focus-visible { outline: 2px solid var(--practice-blue); outline-offset: 3px; }
 .api-practice-page .api-file-controls button span { font-size: 18px; color: inherit; }
-.api-practice-page #api-file-progress { display: inline; margin-left: 8px; font: 12px Consolas, monospace; }
+.api-practice-page #api-file-progress { display: inline; margin-left: 8px; font: 12px var(--wiki-font-mono); }
 @media (prefers-reduced-motion: reduce) {
   .api-practice-page .api-file-reference { transition: none; }
 }

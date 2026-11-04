@@ -1,5 +1,5 @@
 /* Scoped to the API page; code and object state form one reading surface. */
-.mi-page { --ink:#25374a; --muted:#5c6d7b; --line:#dbe3e8; --accent:#345db2; --accent-soft:#edf2fb; --surface:#f5f7f9; color:var(--ink); font-family:"Segoe UI","Microsoft YaHei",sans-serif; }
+.mi-page { --ink:#25374a; --muted:#5c6d7b; --line:#dbe3e8; --accent:#345db2; --accent-soft:#edf2fb; --surface:#f5f7f9; color:var(--ink); font-family:var(--wiki-font-text); }
 .mi-page [hidden] { display:none!important; }
 .mi-page button,.mi-page select { touch-action:manipulation; }
 .mi-page button { color:inherit; }
@@ -10,7 +10,7 @@
 .mi-page main { min-width:0; }
 .mi-page .mi-intro { padding:20px 0 28px; }
 .mi-page h1 { font-size:35px; margin:0 0 12px; }
-.mi-page h1 span { display:inline; margin-left:14px; font:14px "Segoe UI",sans-serif; letter-spacing:.05em; }
+.mi-page h1 span { display:inline; margin-left:14px; font:14px var(--wiki-font-text); letter-spacing:.05em; }
 .mi-intro p { max-width:850px; color:var(--muted); font-size:15px; line-height:1.85; }
 .mi-intro strong { color:var(--ink); font-weight:500; }
 .mi-skip { position:absolute; left:280px; top:-100px; padding:10px 16px; background:#fff; z-index:20; }
@@ -19,7 +19,7 @@
 .mi-workflow button { min-height:80px; padding:14px 22px; text-align:left; background:transparent; border:0; position:relative; }
 .mi-workflow button+button { border-left:1px solid var(--line); }
 .mi-workflow button>span { display:block; font-size:16px; font-weight:600; margin-bottom:5px; }
-.mi-workflow button code { color:var(--muted); font:13px Consolas,monospace; }
+.mi-workflow button code { color:var(--muted); font:13px var(--wiki-font-mono); }
 .mi-workflow button[aria-pressed=true] { background:#f0f4fa; box-shadow:inset 0 -3px var(--accent); }
 .mi-workflow button[aria-pressed=true]>span { color:var(--accent); }
 .mi-workflow button:hover { background:#f5f7fa; }
@@ -35,14 +35,14 @@
 .mi-page #mi-steps { list-style:none; margin:0; padding:0; display:grid; gap:6px; }
 .mi-page #mi-steps button { display:block; width:100%; min-height:70px; text-align:left; border:0; border-left:3px solid transparent; background:transparent; padding:11px 12px; border-radius:0 5px 5px 0; }
 #mi-steps button>span { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
-#mi-steps button>code { display:block; font:12px/1.65 Consolas,"Microsoft YaHei",monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
+#mi-steps button>code { display:block; font:12px/1.65 var(--wiki-font-mono); white-space:pre-wrap; overflow-wrap:anywhere; }
 .mi-page #mi-steps button[aria-pressed=true] { border-left-color:var(--accent); background:#fff; }
 #mi-steps button[aria-pressed=true]>span { color:var(--accent); font-weight:600; }
 #mi-steps button:hover { background:#eaf0f8; }
 #mi-setup { padding:14px 12px 0; font-size:12px; color:var(--muted); line-height:1.85; }
 .mi-state { grid-area:state; display:flex; flex-direction:column; min-width:0; padding:22px 26px 0; }
 .mi-current { display:flex; flex-direction:column; gap:5px; min-height:88px; }
-#mi-progress { color:var(--muted); font:12px Consolas,monospace; }
+#mi-progress { color:var(--muted); font:12px var(--wiki-font-mono); }
 .mi-current h3 { font-size:20px; line-height:1.55; font-weight:600; text-wrap:pretty; }
 #mi-current-code { display:none; }
 .mi-diagram { position:relative; display:grid; grid-template-columns:125px minmax(0,1fr); gap:38px; align-items:start; min-width:0; }
@@ -52,8 +52,8 @@
 .mi-pointers { display:grid; gap:10px; min-width:0; }
 .mi-pointers h4 { margin-bottom:2px; }
 .mi-pointer { min-width:0; min-height:84px; border:1px solid #c1cfe6; background:#edf2fa; border-radius:6px; padding:10px; }
-.mi-pointer strong { display:block; font:18px Consolas,monospace; }
-.mi-pointer code { display:block; font:13px/1.6 Consolas,monospace; margin-top:4px; color:#315591; }
+.mi-pointer strong { display:block; font:18px var(--wiki-font-mono); }
+.mi-pointer code { display:block; font:13px/1.6 var(--wiki-font-mono); margin-top:4px; color:#315591; }
 .mi-pointer small { display:block; font-size:11px; line-height:1.6; color:#516987; margin-top:4px; }
 .mi-pointer[data-status=null] { background:#f4f6f8; border-color:#d3dce4; }
 .mi-pointer[data-status=dangling],.mi-pointer[data-status=uninitialized] { background:#fdf0ed; border-color:#cf9a93; border-style:dashed; }
@@ -63,12 +63,12 @@
 .mi-object { min-width:0; width:calc(var(--share,1)*100%); border:1px solid #a7cbbc; border-radius:6px; background:#f4f9f6; }
 .mi-object header { padding:9px 10px; display:flex; align-items:baseline; flex-wrap:wrap; gap:3px 8px; }
 .mi-object header strong { font-weight:500; font-size:12px; color:#306757; }
-.mi-object header code { font:12px/1.5 Consolas,monospace; color:#306757; margin-left:auto; }
+.mi-object header code { font:12px/1.5 var(--wiki-font-mono); color:#306757; margin-left:auto; }
 .mi-object header>span { width:100%; font-size:11px; line-height:1.7; color:#426b5e; }
 .mi-cells { display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); padding:0 8px 8px; gap:4px; }
 .mi-cell { text-align:center; min-width:0; background:#e5f1eb; border:1px solid #c3dbce; border-radius:3px; padding:8px 1px; }
-.mi-cell small { display:block; font:11px/1.7 Consolas,monospace; color:#386252; }
-.mi-cell strong { display:block; font:26px/1.6 Consolas,monospace; color:#216149; }
+.mi-cell small { display:block; font:11px/1.7 var(--wiki-font-mono); color:#386252; }
+.mi-cell strong { display:block; font:26px/1.6 var(--wiki-font-mono); color:#216149; }
 .mi-cell>span { display:block; font-size:10px; color:#386252; }
 .mi-cell.mi-unknown { background:#fbf2e3 repeating-linear-gradient(135deg,transparent,transparent 7px,#d9be8a30 7px,#d9be8a30 8px); border-color:#e2cb9d; }
 .mi-cell.mi-unknown :is(small,strong,span) { color:#735123; }
@@ -97,7 +97,7 @@
 .mi-detail summary { cursor:pointer; min-height:52px; padding:14px 0; color:#40566c; font-size:14px; }
 .mi-detail[open] { padding-bottom:22px; }
 .mi-detail>p:not(.mi-caption) { font-size:14px; line-height:1.85; color:var(--muted); margin:8px 0 20px; }
-.mi-detail>code { display:block; font:14px/1.8 Consolas,monospace; margin:8px 0 16px; overflow-wrap:anywhere; }
+.mi-detail>code { display:block; font:14px/1.8 var(--wiki-font-mono); margin:8px 0 16px; overflow-wrap:anywhere; }
 #mi-rules { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 30px; margin:0; }
 #mi-rules dt { font-size:13px; font-weight:600; }
 #mi-rules dd { margin:5px 0 0; color:var(--muted); font-size:13px; line-height:1.85; }
@@ -113,7 +113,7 @@
 .mi-error-heading { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
 .mi-error-heading h3,.mi-correction h3 { font-size:17px; }
 #mi-error-kind { font-size:12px; color:#963c32; }
-.mi-page pre { font:13px/1.85 Consolas,"Microsoft YaHei",monospace; white-space:pre-wrap; overflow-wrap:anywhere; border:0; border-radius:6px; padding:12px; margin:12px 0 20px; background:#f4f6f9; color:#354d6f; }
+.mi-page pre { font:13px/1.85 var(--wiki-font-mono); white-space:pre-wrap; overflow-wrap:anywhere; border:0; border-radius:6px; padding:12px; margin:12px 0 20px; background:#f4f6f9; color:#354d6f; }
 #mi-error-code span { display:block; }
 #mi-error-code .mi-problem { color:#963c32; background:#fbe5df; }
 #mi-error-reason { margin-top:10px; font-size:14px; line-height:1.9; }
@@ -123,14 +123,14 @@
 .mi-boundary { display:grid; grid-template-columns:minmax(0,2fr) minmax(65px,1fr); gap:6px; }
 .mi-outside { border:1px dashed #c79389; border-radius:6px; background:#fbefec; padding:8px 4px; display:flex; flex-direction:column; justify-content:center; text-align:center; color:#963c32; }
 .mi-outside span { font-size:10px; }
-.mi-outside strong { font:16px/2 Consolas,monospace; }
+.mi-outside strong { font:16px/2 var(--wiki-font-mono); }
 .mi-invalid { outline:2px solid #b36355; outline-offset:-2px; }
 .mi-invalid b { display:block; font-size:10px; color:#963c32; overflow-wrap:anywhere; }
 .mi-compare { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:28px; }
 .mi-compare section { border-top:2px solid #79a38e; padding-top:14px; }
 .mi-compare section+section { border-color:#be8d70; }
 .mi-compare h3 { font-size:16px; margin-bottom:8px; }
-.mi-compare code { font:13px/1.8 Consolas,monospace; overflow-wrap:anywhere; }
+.mi-compare code { font:13px/1.8 var(--wiki-font-mono); overflow-wrap:anywhere; }
 .mi-mini { display:flex; flex-direction:column; gap:14px; margin-top:16px; font-size:14px; }
 .mi-mini b { color:#306d55; font-weight:500; }
 .mi-mini strong { color:#306d55; font-size:13px; padding-top:10px; border-top:1px solid var(--line); }
@@ -208,7 +208,7 @@
 .mi-receive-row>code { background:#edf2fa; color:#315591; border-radius:5px; padding:10px; }
 .mi-receive-row>span { text-align:center; color:#327566; font-size:23px; }
 .mi-receive-row>div { padding:10px; border:1px solid #a7cbbc; border-radius:5px; background:#f4f9f6; }
-.mi-receive-row>div span { display:block; color:#216149; font:20px/1.8 Consolas,monospace; }
+.mi-receive-row>div span { display:block; color:#216149; font:20px/1.8 var(--wiki-font-mono); }
 .mi-warning .mi-receive-row>span { color:#a33f35; }
 .mi-warning .mi-receive-row>div { border-style:dashed; }
 .mi-page :is(.mi-controls button,.mi-scenarios button,#mi-errors button):hover:not(:disabled) { filter:brightness(.96); }

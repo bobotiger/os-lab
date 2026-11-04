@@ -1,5 +1,5 @@
 /* A hardware path and a physical address scale; independent of other lesson layouts. */
-.tx-page { --tx-ink:#24354a; --tx-muted:#5d6b7b; --tx-blue:#315fb6; --tx-green:#216d57; --tx-gold:#846012; --tx-red:#ad3e32; --tx-line:#dbe2e9; color:var(--tx-ink); font-family:"Segoe UI","Microsoft YaHei",sans-serif; }
+.tx-page { --tx-ink:#24354a; --tx-muted:#5d6b7b; --tx-blue:#315fb6; --tx-green:#216d57; --tx-gold:#846012; --tx-red:#ad3e32; --tx-line:#dbe2e9; color:var(--tx-ink); font-family:var(--wiki-font-text); }
 .tx-page [hidden] { display:none !important; }
 .tx-page .site-header { min-height:58px; border:0; }
 .tx-page main { padding-bottom:0; }
@@ -28,25 +28,25 @@
 .tx-page .tx-request { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin:22px 0 30px; }
 .tx-page .tx-presets { display:flex; flex-wrap:wrap; gap:6px; }
 .tx-page .tx-presets button { min-height:44px; padding:8px 13px; background:#f5f7fa; border:0; border-radius:6px; color:var(--tx-muted); font-size:13px; }
-.tx-page .tx-presets button b { margin-left:6px; font:600 14px Consolas,monospace; }
+.tx-page .tx-presets button b { margin-left:6px; font:600 14px var(--wiki-font-mono); }
 .tx-page .tx-presets button[aria-pressed="true"] { color:var(--tx-blue); background:#eaf0fb; }
 .tx-page .tx-presets button:hover { background:#e8edf4; }
 .tx-page .tx-custom { display:flex; align-items:center; gap:12px; color:var(--tx-muted); font-size:12px; }
-.tx-page #tx-address { width:74px; min-height:44px; border:1px solid #bccadc; border-radius:6px; padding:4px 10px; color:var(--tx-blue); background:#fff; font:500 20px Consolas,monospace; }
+.tx-page #tx-address { width:74px; min-height:44px; border:1px solid #bccadc; border-radius:6px; padding:4px 10px; color:var(--tx-blue); background:#fff; font:500 20px var(--wiki-font-mono); }
 .tx-page #tx-input-error { margin:0 0 22px; color:var(--tx-red); font-size:14px; line-height:1.8; }
 .tx-page .tx-circuit { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,2.4fr) minmax(0,1fr); column-gap:30px; align-items:stretch; }
 .tx-page .tx-node { position:relative; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; width:100%; min-height:204px; padding:15px 8px; border:1px solid transparent; border-radius:8px; color:var(--tx-ink); background:transparent; text-align:center; }
 .tx-page .tx-node-owner { font-size:11px; letter-spacing:.04em; color:var(--tx-muted); }
 .tx-page .tx-node-title { font-size:14px; font-weight:500; line-height:1.5; }
-.tx-page .tx-number { font:500 44px/1.2 Consolas,monospace; font-variant-numeric:tabular-nums; }
+.tx-page .tx-number { font:500 44px/1.2 var(--wiki-font-mono); font-variant-numeric:tabular-nums; }
 .tx-page .tx-source .tx-number { color:var(--tx-blue); }
 .tx-page .tx-node-note { min-height:34px; max-width:100%; color:var(--tx-muted); font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
 .tx-page .tx-mmu { display:grid; grid-template-columns:1fr 1fr; gap:28px; padding:18px 12px 6px; border:1px solid #d7dfe8; border-radius:10px; background:#f7f9fb; position:relative; }
 .tx-page .tx-mmu-title { position:absolute; left:18px; top:-9px; padding:0 8px; background:#fff; color:var(--tx-muted); font-size:11px; line-height:18px; }
 .tx-page .tx-register { display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; padding:5px 8px; border-bottom:1px solid #d8c89d; color:var(--tx-gold); font-size:12px; }
-.tx-page .tx-register b { font:600 21px/1.2 Consolas,monospace; }
-.tx-page .tx-formula { font:500 19px/1.3 Consolas,"Microsoft YaHei",monospace; white-space:nowrap; }
-.tx-page .tx-node:is(.tx-source,.tx-check)::after,.tx-page .tx-mmu::after { content:'→'; position:absolute; right:-27px; top:calc(50% - 12px); width:24px; height:24px; color:#7b8b9c; font:24px/1 Consolas,monospace; pointer-events:none; }
+.tx-page .tx-register b { font:600 21px/1.2 var(--wiki-font-mono); }
+.tx-page .tx-formula { font:500 19px/1.3 var(--wiki-font-mono); white-space:nowrap; }
+.tx-page .tx-node:is(.tx-source,.tx-check)::after,.tx-page .tx-mmu::after { content:'→'; position:absolute; right:-27px; top:calc(50% - 12px); width:24px; height:24px; color:#7b8b9c; font:24px/1 var(--wiki-font-mono); pointer-events:none; }
 .tx-page .tx-source::after { right:-28px !important; }
 .tx-page .tx-check::after { right:-27px !important; }
 .tx-page .tx-node[aria-pressed="true"] { background:#edf3fc; }
@@ -65,23 +65,23 @@
 .tx-page .tx-physical { padding:18px 18px 12px; background:#f8faf9; border-radius:8px; }
 .tx-page .tx-memory-head { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:4px 12px; margin-bottom:14px; }
 .tx-page .tx-memory-head h3 { font-size:13px; font-weight:500; }
-.tx-page .tx-memory-head h3 span { margin-left:8px; color:var(--tx-muted); font:12px Consolas,monospace; }
+.tx-page .tx-memory-head h3 span { margin-left:8px; color:var(--tx-muted); font:12px var(--wiki-font-mono); }
 .tx-page .tx-memory-head > span { font-size:12px; color:var(--tx-muted); }
 .tx-page .tx-memory-map { position:relative; display:grid; grid-template-columns:repeat(64,minmax(0,1fr)); min-height:68px; background:#edf1f3; border-radius:4px; }
 .tx-page .tx-os { grid-column:1 / span 8; display:grid; place-items:center; background:#dce2e7; border-radius:4px 0 0 4px; color:#49596b; font-size:12px; }
 .tx-page .tx-memory-other { display:grid; place-items:center; grid-column:9 / span 16; color:var(--tx-muted); font-size:12px; }
 .tx-page [data-base] { display:flex; flex-direction:column; gap:5px; align-items:center; justify-content:center; min-height:68px; padding:4px 1px 12px; background:transparent; border:1px dashed #aabbb3; color:var(--tx-muted); font-size:12px; }
-.tx-page [data-base] b { font:500 15px/1.3 Consolas,monospace; }
+.tx-page [data-base] b { font:500 15px/1.3 var(--wiki-font-mono); }
 .tx-page [data-base="24"] { grid-column:25 / span 16; }
 .tx-page [data-base="40"] { grid-column:41 / span 16; }
 .tx-page [data-base][aria-pressed="true"] { color:var(--tx-green); border:1px solid #8db8a8; background:#deeee7; }
 .tx-page [data-base]:hover { background:#d7e9df; }
 .tx-page .tx-target { position:absolute; bottom:0; height:10px; width:calc(100% / 64); border:2px solid var(--tx-green); background:#fff; pointer-events:none; }
 .tx-page .tx-target[data-accessed="true"] { background:var(--tx-green); }
-.tx-page .tx-scale { position:relative; height:19px; margin-top:5px; color:var(--tx-muted); font:11px/1.5 Consolas,monospace; }
+.tx-page .tx-scale { position:relative; height:19px; margin-top:5px; color:var(--tx-muted); font:11px/1.5 var(--wiki-font-mono); }
 .tx-page .tx-scale span { position:absolute; }
 .tx-page .tx-reading { display:flex; gap:18px; min-height:106px; align-items:flex-start; padding:22px 0 14px; }
-.tx-page .tx-progress { flex:0 0 auto; padding-top:4px; color:var(--tx-muted); font:12px/1.5 Consolas,monospace; }
+.tx-page .tx-progress { flex:0 0 auto; padding-top:4px; color:var(--tx-muted); font:12px/1.5 var(--wiki-font-mono); }
 .tx-page .tx-reading h3,.tx-page .tx-reading h4 { font-size:19px; font-weight:600; line-height:1.6; }
 .tx-page .tx-reading p { max-width:850px; color:var(--tx-muted); font-size:13px; line-height:1.85; margin-top:4px; }
 .tx-page .tx-reading[data-fault="true"] h3 { color:var(--tx-red); }
@@ -101,7 +101,7 @@
 .tx-page .tx-detail > summary > span:first-child { display:flex; flex-direction:column; gap:6px; }
 .tx-page .tx-detail summary small { color:var(--tx-muted); font-size:12px; }
 .tx-page .tx-detail summary strong { color:var(--tx-ink); font-size:18px; font-weight:600; line-height:1.6; }
-.tx-page .tx-expand { flex-shrink:0; color:var(--tx-blue); font:24px/1 Consolas,monospace; }
+.tx-page .tx-expand { flex-shrink:0; color:var(--tx-blue); font:24px/1 var(--wiki-font-mono); }
 .tx-page .tx-detail[open] > summary .tx-expand { transform:rotate(45deg); }
 .tx-page .tx-detail-body { padding:4px 0 30px; }
 .tx-page .tx-detail-lead { max-width:800px; font-size:15px; line-height:1.9; }
@@ -114,7 +114,7 @@
 .tx-page .tx-move h3 { font-size:19px; line-height:1.6; }
 .tx-page .tx-move header p { font-size:13px; color:var(--tx-muted); line-height:1.8; margin-top:6px; }
 .tx-page .tx-move-top { display:flex; align-items:center; flex-wrap:wrap; gap:12px 28px; margin:22px 0; color:var(--tx-muted); font-size:12px; }
-.tx-page .tx-move-top strong { color:var(--tx-blue); margin-left:8px; font:600 18px Consolas,monospace; }
+.tx-page .tx-move-top strong { color:var(--tx-blue); margin-left:8px; font:600 18px var(--wiki-font-mono); }
 .tx-page #tx-move-base { color:var(--tx-gold); }
 .tx-page #tx-move-mode { margin-left:auto; color:var(--tx-ink); }
 .tx-page .tx-move-row + .tx-move-row { margin-top:18px; }
@@ -123,13 +123,13 @@
 .tx-page .tx-move-row-title > span { color:var(--tx-muted); }
 .tx-page .tx-move-row-title > b { margin-left:auto; color:var(--tx-gold); font-size:11px; font-weight:500; }
 .tx-page .tx-move-memory { display:grid; grid-template-columns:repeat(16,minmax(0,1fr)); border:1px solid #b4c5bc; border-radius:3px; overflow:hidden; background:#e4efe9; }
-.tx-page .tx-cell { display:grid; place-items:center; min-height:46px; min-width:0; border-right:1px solid #c2d5ca; color:var(--tx-green); font:500 19px Consolas,monospace; }
+.tx-page .tx-cell { display:grid; place-items:center; min-height:46px; min-width:0; border-right:1px solid #c2d5ca; color:var(--tx-green); font:500 19px var(--wiki-font-mono); }
 .tx-page .tx-cell:last-child { border-right:0; }
 .tx-page .tx-cell[data-selected="true"] { color:#fff; background:var(--tx-green); }
 .tx-page .tx-move-row[data-owner="none"] .tx-move-memory { background:#f1f3f5; border-style:dashed; border-color:#c4cdd6; }
 .tx-page .tx-move-row[data-owner="none"] .tx-cell { border-right-color:#dce2e9; }
 .tx-page .tx-move-row[data-owner="copy"] .tx-move-memory { border-style:dashed; }
-.tx-page .tx-move-labels { display:grid; grid-template-columns:repeat(16,minmax(0,1fr)); min-height:22px; padding-top:6px; color:var(--tx-muted); font:11px/1.6 Consolas,"Microsoft YaHei",monospace; }
+.tx-page .tx-move-labels { display:grid; grid-template-columns:repeat(16,minmax(0,1fr)); min-height:22px; padding-top:6px; color:var(--tx-muted); font:11px/1.6 var(--wiki-font-mono); }
 .tx-page .tx-move-labels span:last-child { text-align:right; }
 .tx-page .tx-move-labels .tx-empty-note { grid-column:1 / -1; text-align:left !important; }
 .tx-page .tx-move-steps { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px; margin-top:22px; border-bottom:1px solid var(--tx-line); }
@@ -143,14 +143,14 @@
 .tx-page .tx-cost h3 { font-size:18px; line-height:1.6; }
 .tx-page .tx-cost > div p { color:var(--tx-muted); font-size:14px; line-height:1.9; margin:10px 0; }
 .tx-page .tx-cost-numbers { display:flex; flex-wrap:wrap; gap:12px 24px; font-size:12px; color:var(--tx-muted); }
-.tx-page .tx-cost-numbers b { color:var(--tx-ink); font:500 30px/1.5 Consolas,monospace; }
+.tx-page .tx-cost-numbers b { color:var(--tx-ink); font:500 30px/1.5 var(--wiki-font-mono); }
 .tx-page .tx-allocation { margin:0; align-self:center; }
 .tx-page .tx-allocation figcaption { margin-bottom:12px; color:var(--tx-muted); font-size:12px; }
 .tx-page .tx-allocation-bar { display:grid; grid-template-columns:repeat(16,minmax(0,1fr)); min-height:68px; background:#deeee7; border:1px solid #aec8bb; border-radius:4px; overflow:hidden; }
 .tx-page .tx-allocation-bar > span { display:grid; place-items:center; text-align:center; border-right:1px solid #aec8bb; color:#315c4c; font-size:12px; }
 .tx-page .tx-allocation-bar > span:last-child { border:0; }
 .tx-page .tx-unused { background:repeating-linear-gradient(135deg,#f2f4f5 0 4px,#dde3e7 4px 5px) !important; color:#586774 !important; }
-.tx-page .tx-allocation-scale { display:flex; justify-content:space-between; margin-top:6px; color:var(--tx-muted); font:11px Consolas,monospace; }
+.tx-page .tx-allocation-scale { display:flex; justify-content:space-between; margin-top:6px; color:var(--tx-muted); font:11px var(--wiki-font-mono); }
 .tx-page .tx-allocation p { color:var(--tx-muted); font-size:12px; line-height:1.8; margin-top:12px; }
 .tx-page .tx-cost > .tx-insight { grid-column:1 / -1; }
 .tx-page .tx-binding { padding:24px; border:1px solid var(--tx-line); border-radius:10px; background:#f8fafb; margin:22px 0; }
@@ -165,15 +165,15 @@
 .tx-page .tx-binding-map { position:relative; margin:64px 0 32px; }
 .tx-page .tx-binding-memory { position:relative; height:56px; background:repeating-linear-gradient(to right,transparent 0 calc(100% / 64 - 1px),#dde4e9 calc(100% / 64 - 1px) calc(100% / 64)),#edf1f3; border-radius:4px; }
 .tx-page .tx-binding-allocation { position:absolute; top:0; bottom:0; border:1px solid #8cb7a3; background:#dbeee4; }
-.tx-page .tx-binding-allocation > span { position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%); color:var(--tx-green); font:12px Consolas,monospace; white-space:nowrap; }
+.tx-page .tx-binding-allocation > span { position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%); color:var(--tx-green); font:12px var(--wiki-font-mono); white-space:nowrap; }
 .tx-page .tx-binding-target { position:absolute; top:0; bottom:0; width:calc(100% / 64); background:var(--tx-green); }
-.tx-page .tx-binding-target-label { position:absolute; bottom:calc(100% + 10px); display:flex; flex-direction:column; align-items:center; transform:translateX(-50%); color:var(--tx-green); font:12px/1.6 Consolas,monospace; white-space:nowrap; }
-.tx-page .tx-binding-target-label strong { font:500 26px/1.2 Consolas,monospace; }
+.tx-page .tx-binding-target-label { position:absolute; bottom:calc(100% + 10px); display:flex; flex-direction:column; align-items:center; transform:translateX(-50%); color:var(--tx-green); font:12px/1.6 var(--wiki-font-mono); white-space:nowrap; }
+.tx-page .tx-binding-target-label strong { font:500 26px/1.2 var(--wiki-font-mono); }
 .tx-page .tx-binding-target-label::after { content:''; position:absolute; top:100%; left:50%; height:10px; width:1px; background:var(--tx-green); }
-.tx-page .tx-map-zero,.tx-page .tx-map-end { position:absolute; top:calc(100% + 8px); color:var(--tx-muted); font:12px Consolas,monospace; }
+.tx-page .tx-map-zero,.tx-page .tx-map-end { position:absolute; top:calc(100% + 8px); color:var(--tx-muted); font:12px var(--wiki-font-mono); }
 .tx-page .tx-map-zero { left:0; }.tx-page .tx-map-end { right:0; }
 .tx-page #tx-old-address { position:absolute; top:6px; transform:translateX(-50%); min-width:44px; min-height:44px; padding:3px; border:1px dashed #9caabc; border-radius:3px; color:var(--tx-muted); background:#fff; font-size:11px; }
-.tx-page #tx-old-address b { font:600 16px Consolas,monospace; }
+.tx-page #tx-old-address b { font:600 16px var(--wiki-font-mono); }
 .tx-page #tx-old-address[aria-pressed="true"] { color:var(--tx-red); border-color:var(--tx-red); background:#fceee9; }
 .tx-page #tx-old-explanation { margin-top:14px; font-size:13px; color:var(--tx-muted); line-height:1.8; }
 .tx-page #tx-old-explanation[data-wrong="true"] { color:var(--tx-red); }

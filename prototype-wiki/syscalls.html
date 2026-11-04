@@ -3,15 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="typography.css">
 <title>系统调用与内核控制 · OSLab</title>
 <style>
 :root{--ink:#253330;--green:#176754;--blue:#315f7b;--rust:#9d493b;--line:#d9e1dc;--paper:#fbfcfa}
-*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.85 "Noto Sans SC","Source Han Sans SC","Microsoft YaHei",sans-serif;letter-spacing:0}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.85 var(--wiki-font-text);letter-spacing:0}
 main{max-width:1100px;margin:auto;padding:28px 36px 60px}a{color:var(--green);text-underline-offset:4px}nav{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:24px}
 header{padding:26px 0 22px}h1{font-size:32px;line-height:1.4;margin:8px 0 14px}h2{font-size:23px;line-height:1.5;margin:0 0 14px}h3{font-size:18px;line-height:1.6;margin:0 0 12px}h4{font-size:15px;margin:18px 0 8px}p{margin:0 0 14px}.eyebrow{font-size:13px;color:var(--green)}.lead{max-width:68ch}
 .conditions,.fields{display:grid;grid-template-columns:100px minmax(0,1fr);gap:12px 18px;padding:16px 0;margin:18px 0}.conditions{border-block:1px solid var(--line)}dt{font-weight:500}dd{margin:0}
 .section-links{justify-content:flex-start;gap:12px 24px;padding:10px 0 18px}section{padding:28px 0;border-bottom:1px solid var(--line);scroll-margin-top:20px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:32px}.pair>article{min-width:0}.caption{font-size:13px;color:#596a63;margin-top:14px}
-.command{position:relative;background:#eff4f3;border-left:2px solid #9bbcb0;padding:14px 52px 14px 14px;margin:14px 0}pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.85 Consolas,monospace}.raw{padding:14px;background:#f0f3f5;border-left:2px solid #8ca8ba;margin:12px 0 16px}code{font-family:Consolas,monospace;overflow-wrap:anywhere}
+.command{position:relative;background:#eff4f3;border-left:2px solid #9bbcb0;padding:14px 52px 14px 14px;margin:14px 0}pre{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.85 var(--wiki-font-mono)}.raw{padding:14px;background:#f0f3f5;border-left:2px solid #8ca8ba;margin:12px 0 16px}code{font-family:var(--wiki-font-mono);overflow-wrap:anywhere}
 .copy{position:absolute;right:8px;top:8px;width:32px;height:32px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--green);cursor:pointer}.copy span{display:block;width:12px;height:14px;border:1.5px solid currentColor;margin:auto;box-shadow:-3px -3px 0 -1px white,-3px -3px 0 0 currentColor}.command-feedback{font-size:13px;color:var(--green);margin:0 0 16px;overflow-wrap:anywhere}
 .observations{padding-left:22px}.observations li+li{margin-top:12px}.observations code{color:var(--blue)}.comparison{display:grid;grid-template-columns:1fr 1fr;gap:0 32px;margin:18px 0}.comparison>div{padding:14px 0;border-top:1px solid var(--line)}.comparison dt{color:var(--blue)}.comparison dd{margin-top:6px}
 .controls{margin:18px 0 24px}.mode-label{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:18px}select{font:inherit;width:240px;max-width:100%;padding:6px 30px 6px 8px;border:1px solid var(--line);border-radius:4px;background:white;color:var(--ink)}fieldset{border:0;padding:0;margin:0;min-width:0}legend{font-size:14px;margin-bottom:10px}.stage-options{display:flex;flex-wrap:wrap;gap:12px 24px}.stage-options label{display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer}.stage-options input{accent-color:var(--green);width:17px;height:17px;flex-shrink:0}

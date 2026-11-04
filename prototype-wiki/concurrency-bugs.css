@@ -18,7 +18,7 @@ body[data-page="concurrencyBugs"] #trace > .cc-mode-tabs { margin: 12px 0; }
 .bug-check b { font-weight: 600; background: #f9e7e3; padding: 0 5px; border-radius: 3px; }
 #bug-threads .c3-step-list { margin: 4px 0 8px; }
 #bug-threads .c3-step-list li { padding: 4px 8px; line-height: 1.55; font-size: 16px; }
-#bug-threads .c3-step-list code { font: 14px/1.7 Consolas,"Liberation Mono",monospace; white-space: pre-wrap; }
+#bug-threads .c3-step-list code { font: 14px/1.7 var(--wiki-font-mono); white-space: pre-wrap; }
 #bug-threads .c3-step-list .c3-past { color: #607166; }
 #bug-threads .c3-step-list .c3-current { color: var(--bug-thread); border-left-color: var(--bug-thread); background: #fff; box-shadow: inset 0 0 0 1px var(--bug-thread); }
 #bug-threads .c3-step-list .c3-failed { color: var(--cc-error); background: #fff; border-left-color: var(--cc-error); box-shadow: inset 0 0 0 1px var(--cc-error); }
@@ -92,7 +92,7 @@ body[data-page="concurrencyBugs"] #trace > .cc-mode-tabs { margin: 12px 0; }
 /* One persistent stage: the object moves, and the earlier check stays in place. */
 .bug-movie { max-width: 1040px; margin-inline: auto; border: 1px solid #cbd8cf; background: #fcfdfa; padding: 24px 28px 20px; --movie-a:#326bab; --movie-b:#9b651c; --movie-error:#b43e32; }
 .bug-movie-heading { min-height: 87px; }
-#bug-movie-mode { display: block; color: var(--accent); font: 600 13px/1.6 Arial,sans-serif; letter-spacing: .04em; margin-bottom: 10px; }
+#bug-movie-mode { display: block; color: var(--accent); font: 600 13px/1.6 var(--wiki-font-text); letter-spacing: .04em; margin-bottom: 10px; }
 #bug-movie-title { font-size: 26px; line-height: 1.5; margin: 0; color: var(--ink); }
 .bug-movie-stage { height: 350px; position: relative; isolation: isolate; }
 .bug-movie-stage [hidden] { display: none; }
@@ -100,7 +100,7 @@ body[data-page="concurrencyBugs"] #trace > .cc-mode-tabs { margin: 12px 0; }
 .bug-movie-stage [data-actor="B"] { left: 83%; }
 .bug-movie-actor { top: 16px; display: flex; justify-content: center; align-items: center; gap: 10px; color: var(--movie-a); font-size: 16px; font-weight: 700; }
 .bug-movie-actor[data-actor="B"] { color: var(--movie-b); }
-.bug-movie-avatar { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; background: var(--movie-a); color: white; font: 700 22px/1 Arial,sans-serif; }
+.bug-movie-avatar { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; background: var(--movie-a); color: white; font: 700 22px/1 var(--wiki-font-text); }
 [data-actor="B"] .bug-movie-avatar { background: var(--movie-b); }
 .bug-movie-memory { top: 96px; width: 24%; max-width: 190px; min-height: 78px; display: flex; flex-direction: column; gap: 2px; padding: 8px; border: 1px solid #c6cfc8; border-radius: 9px; background: #fff; z-index: 2; }
 .bug-movie-memory::after { content:''; position:absolute; bottom:-7px; left:calc(50% - 6px); width:12px; height:12px; transform:rotate(45deg); border-right:1px solid #c6cfc8; border-bottom:1px solid #c6cfc8; background:#fff; }
@@ -114,7 +114,7 @@ body[data-page="concurrencyBugs"] #trace > .cc-mode-tabs { margin: 12px 0; }
 .bug-movie-source-label { position: absolute; top:139px; left:50%; transform:translateX(-50%); font-size:15px; font-weight:700; white-space:nowrap; }
 .bug-movie-source { position:absolute; top:184px; left:50%; transform:translateX(-50%); width:124px; height:72px; border:2px solid #8fab98; border-radius:5px; background:#eef4ed; display:grid; place-items:center; z-index:1; }
 #bug-movie-empty { font-size:24px; font-weight:700; line-height:1.4; }
-.bug-movie-token,.bug-movie-copy { position:absolute; top:220px; left:50%; transform:translate(-50%,-50%); display:grid; place-items:center; width:102px; height:56px; border:2px solid #18745d; border-radius:6px; background:#14745d; color:white; font:700 22px/1.4 Arial,sans-serif; box-shadow:0 5px 10px #27483920; z-index:4; }
+.bug-movie-token,.bug-movie-copy { position:absolute; top:220px; left:50%; transform:translate(-50%,-50%); display:grid; place-items:center; width:102px; height:56px; border:2px solid #18745d; border-radius:6px; background:#14745d; color:white; font:700 22px/1.4 var(--wiki-font-text); box-shadow:0 5px 10px #27483920; z-index:4; }
 .bug-movie-copy { background:var(--movie-a); border-color:var(--movie-a); }
 .bug-movie-receipt { top:192px; height:56px; width:116px; border-bottom:2px solid #bdcbd1; display:grid; place-items:center; font-size:18px; font-weight:700; color:var(--accent); }
 .bug-movie-state { top:271px; font-size:15px; font-weight:600; line-height:1.65; color:var(--movie-a); }
@@ -132,7 +132,7 @@ body[data-page="concurrencyBugs"] #trace > .cc-mode-tabs { margin: 12px 0; }
 .bug-movie[data-phase="take-a"] .bug-movie-route-take, .bug-movie[data-phase="init-b"] .bug-movie-route-write,
 .bug-movie[data-kind="ordering"][data-phase="result"][data-ready="true"] .bug-movie-route-take { opacity:1; }
 .bug-movie[data-kind="atomicity"][data-error="true"] .bug-movie-route-error { opacity:1; }
-.bug-movie-cross { position:absolute; left:66.5%; top:220px; transform:translate(-50%,-50%); width:35px; height:35px; border-radius:50%; background:#fff0ec; border:2px solid var(--movie-error); color:var(--movie-error); font:700 29px/29px Arial,sans-serif; text-align:center; z-index:5; display:none; }
+.bug-movie-cross { position:absolute; left:66.5%; top:220px; transform:translate(-50%,-50%); width:35px; height:35px; border-radius:50%; background:#fff0ec; border:2px solid var(--movie-error); color:var(--movie-error); font:700 29px/29px var(--wiki-font-text); text-align:center; z-index:5; display:none; }
 .bug-movie[data-error="true"] .bug-movie-cross { display:block; }
 .bug-movie[data-kind="ordering"] .bug-movie-cross { left:33.5%; }
 .bug-movie[data-error="true"] #bug-movie-source { border:3px solid var(--movie-error); background:#fff0ec; color:var(--movie-error); }

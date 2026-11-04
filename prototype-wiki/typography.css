@@ -1,0 +1,14 @@
+:root {
+  --wiki-font-cjk: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC";
+  --wiki-font-text: var(--wiki-font-cjk), system-ui, sans-serif;
+  --wiki-font-mono: Consolas, "SFMono-Regular", "Liberation Mono", var(--wiki-font-cjk), monospace;
+}
+
+body,
+:where(button, input, select, textarea) {
+  font-family: var(--wiki-font-text);
+}
+
+:where(code, kbd, pre, samp) {
+  font-family: var(--wiki-font-mono);
+}

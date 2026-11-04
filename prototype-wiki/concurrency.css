@@ -19,7 +19,7 @@
 .cc-page .cc-section { padding: 32px 0 40px; border-top: 1px solid var(--line); scroll-margin-top: 24px; }
 .cc-page h2 { font-size: 26px; margin: 0 0 16px; }
 .cc-page h3 { font-size: 18px; line-height: 1.6; }
-.cc-page code { font: .93em/1.7 Consolas, "Liberation Mono", monospace; overflow-wrap: anywhere; }
+.cc-page code { font: .93em/1.7 var(--wiki-font-mono); overflow-wrap: anywhere; }
 .cc-page .cc-intro-text { max-width: 850px; line-height: 1.9; margin: 0 0 24px; }
 .cc-page .cc-caption, .cc-page .cc-conditions { font-size: 14px; line-height: 1.85; color: var(--muted); }
 .cc-page .cc-conditions { margin: 18px 0; }
@@ -218,7 +218,7 @@
 .cc-page .cc-code-explainer { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1fr); gap: 32px; align-items: start; margin: 24px 0; }
 .cc-code-explainer > * { min-width: 0; }
 .cc-code-explainer p { font-size: 16px; line-height: 1.9; margin: 12px 0; }
-.cc-page :is(.cc-code-explainer, .c2-code-pair) pre { background: #f5f7f5; border-left: 2px solid #a9c2b6; padding: 18px 20px; margin: 12px 0; font: 15px/1.8 Consolas, "Liberation Mono", monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cc-page :is(.cc-code-explainer, .c2-code-pair) pre { background: #f5f7f5; border-left: 2px solid #a9c2b6; padding: 18px 20px; margin: 12px 0; font: 15px/1.8 var(--wiki-font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 .cc-page .cc-code-explainer > pre { margin-top: 0; }
 .cc-page .cc-reference-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 22px 0 26px; font-size: 16px; line-height: 1.9; }
 .cc-reference-table th, .cc-reference-table td { text-align: left; vertical-align: top; padding: 16px; border-bottom: 1px solid var(--line); }

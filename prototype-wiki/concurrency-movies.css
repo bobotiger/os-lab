@@ -1,7 +1,7 @@
 /* Mechanism-specific stages share playback and readable object identities. */
 .cm-demo { max-width:1040px; margin:20px auto; padding:22px 24px 18px; border:1px solid #c7d6cc; background:#fcfdfa; --cm-a:#326baa; --cm-b:#97601d; --cm-green:#14745d; --cm-red:#b33e33; }
 .cm-heading { min-height:92px; }
-.cm-context { display:block; color:var(--cm-green); font:600 13px/1.6 Arial,sans-serif; margin-bottom:8px; }
+.cm-context { display:block; color:var(--cm-green); font:600 13px/1.6 var(--wiki-font-text); margin-bottom:8px; }
 .cm-heading h3 { margin:0; color:var(--ink,#273b31); font-size:25px; line-height:1.5; }
 .cm-stage { position:relative; isolation:isolate; min-height:260px; }
 .cm-stage *, .cm-controls * { box-sizing:border-box; }
@@ -20,13 +20,13 @@
 .cm-detail { margin-block:18px; }
 .cm-detail > summary { min-height:44px; padding-block:9px; cursor:pointer; }
 .cm-detail[open] > summary { margin-bottom:18px; }
-.cm-flight { position:absolute; z-index:10; transform:translate(-50%,-50%); display:grid; place-items:center; min-width:48px; max-width:110px; min-height:44px; padding:7px 12px; border-radius:6px; background:var(--cm-green); color:white; border:2px solid var(--cm-green); font:bold 21px/1.4 Arial,sans-serif; box-shadow:0 0 0 5px #14745d16; pointer-events:none; white-space:nowrap; }
+.cm-flight { position:absolute; z-index:10; transform:translate(-50%,-50%); display:grid; place-items:center; min-width:48px; max-width:110px; min-height:44px; padding:7px 12px; border-radius:6px; background:var(--cm-green); color:white; border:2px solid var(--cm-green); font:bold 21px/1.4 var(--wiki-font-text); box-shadow:0 0 0 5px #14745d16; pointer-events:none; white-space:nowrap; }
 .cm-flight.cm-copy { background:var(--cm-a); border-color:var(--cm-a); }
 .cm-flight.cm-key { background:#fff0c8; border-color:#9e721b; color:#6f4b11; }
 .cm-flight.cm-permit,.cm-flight.cm-count-dot { border-radius:50%; background:#b27b27; border-color:#b27b27; font-size:16px; min-width:48px; height:48px; }
 .cm-flight.cm-thread-token,.cm-flight.cm-request-A { background:var(--cm-a); border-color:var(--cm-a); border-radius:50%; }
 .cm-moving-out { visibility:hidden; }
-.cm-badge { display:inline-grid; place-items:center; min-width:36px; min-height:36px; padding:5px 7px; border-radius:50%; background:var(--cm-a); color:white; font:700 18px/1.3 Arial,sans-serif; }
+.cm-badge { display:inline-grid; place-items:center; min-width:36px; min-height:36px; padding:5px 7px; border-radius:50%; background:var(--cm-a); color:white; font:700 18px/1.3 var(--wiki-font-text); }
 .cm-badge.cm-B,.cm-badge.cm-C { background:var(--cm-b); }
 .cm-object { text-align:center; padding:10px; }
 .cm-object > span { display:block; font-size:14px; line-height:1.6; }
@@ -57,7 +57,7 @@
 .cm-join { border:2px solid #80ac95; }
 .cm-join.cm-stop { border-color:var(--cm-b);background:#fff1dc; }
 .cm-unborn { opacity:.55; }
-.cm-key { display:inline-grid;place-items:center;min-width:45px;height:36px;border:2px solid #a27928;border-radius:5px;background:#fff0cb;color:#6e4e14;font:bold 17px/1.3 Arial,sans-serif; }
+.cm-key { display:inline-grid;place-items:center;min-width:45px;height:36px;border:2px solid #a27928;border-radius:5px;background:#fff0cb;color:#6e4e14;font:bold 17px/1.3 var(--wiki-font-text); }
 .cm-key-slot { display:inline-grid;place-items:center;min-width:48px;min-height:38px;border-bottom:2px solid #ccd4cd; }
 .cm-dead { position:relative;min-height:310px;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:64px 170px 44px;gap:10px; }
 .cm-key-bank { grid-column:1/-1;display:flex;justify-content:center;align-items:center;gap:14px;font-size:14px; }
@@ -136,14 +136,14 @@
 .cm-no-other { visibility:hidden; }
 .cm-wait-track { grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px; }
 .cm-wait-track >div { position:relative;min-height:80px;padding-top:4px;border-top:2px solid #becdc2;text-align:center;font-size:13px; }
-.cm-tracked { display:inline-grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--cm-a);color:white;font:bold 16px/1.3 Arial,sans-serif; }
+.cm-tracked { display:inline-grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--cm-a);color:white;font:bold 16px/1.3 var(--wiki-font-text); }
 .cm-wait-track .cm-tracked { display:grid;margin:7px auto; }
 .cm-queue-scene[data-error="true"] .cm-queue,.cm-buffer[data-error="true"] .cm-queue { outline:3px solid var(--cm-red);outline-offset:3px; }
 .cm-queue-scene[data-error="true"] .cm-consumer small,.cm-deadlocked { color:var(--cm-red);font-weight:700; }
 .cm-permits { min-height:300px; }
 .cm-permit-pool { display:flex;flex-direction:column;align-items:center;gap:8px;min-height:120px; }
 .cm-permit-pool >div { display:flex;align-items:center;justify-content:center;gap:12px;min-width:150px;min-height:60px;padding:10px;border:2px solid #b38b4a;border-radius:12px;background:#fff5df; }
-.cm-coin { display:inline-grid;place-items:center;width:36px;height:36px;border:2px solid #a97421;border-radius:50%;background:#ffe3a9;color:#794d10;font:bold 16px/1.2 Arial,sans-serif; }
+.cm-coin { display:inline-grid;place-items:center;width:36px;height:36px;border:2px solid #a97421;border-radius:50%;background:#ffe3a9;color:#794d10;font:bold 16px/1.2 var(--wiki-font-text); }
 .cm-empty-bank { font-size:30px;color:#7a581f; }
 .cm-permit-people { display:flex;justify-content:space-around;gap:12px;margin-top:18px; }
 .cm-permit-person { flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:10px 6px;border:1px dashed #c2cec5;border-radius:8px;gap:6px;text-align:center; }
@@ -157,7 +157,7 @@
 .cm-small-bank >div { display:flex;gap:8px;justify-content:center;align-items:center;min-height:42px; }
 .cm-buffer-main { display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:16px; }
 .cm-reservation { display:grid;place-items:center;min-height:40px;font-size:12px; }
-.cm-post-point { min-height:24px;font:13px/1.7 Consolas,monospace;color:#816026; }
+.cm-post-point { min-height:24px;font:13px/1.7 var(--wiki-font-mono);color:#816026; }
 .cm-buffer .cm-queue-lock { margin-top:12px; }
 .cm-buffer-states { display:flex;justify-content:space-between;gap:15px;font-size:13px;margin-top:8px;min-height:45px; }
 @media(max-width:800px), (min-width:1001px) and (max-width:1180px) {

@@ -58,7 +58,7 @@
 .c2-condition-rules { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
 .c2-condition-rules > div { border-left: 3px solid var(--accent); padding: 10px 18px; background: #f4f7f4; }
 .c2-condition-rules span { display: block; font-size: 15px; }
-.c2-condition-rules strong { display: block; font: 500 27px/1.8 Consolas,monospace; color: var(--accent); }
+.c2-condition-rules strong { display: block; font: 500 27px/1.8 var(--wiki-font-mono); color: var(--accent); }
 .c2-condition-rules p { font-size: 15px; }
 .c2-simulation { display: grid; grid-template-columns: minmax(0,1.6fr) minmax(260px,1fr); gap: 28px; margin: 28px 0 14px; align-items: start; }
 .c2-queue-diagram { min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 8px; background: #fafbf9; }

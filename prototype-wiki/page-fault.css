@@ -39,7 +39,7 @@
 .pf-page-leaving{position:absolute;inset:0;background:#fcf3e3;pointer-events:none}
 .pf-page-leaving b{color:var(--pf-warm)}
 .pf-transfer rect{fill:#fff;stroke:var(--pf-green);stroke-width:1.5}
-.pf-transfer text{fill:var(--pf-green);font:600 11px system-ui,sans-serif}
+.pf-transfer text{fill:var(--pf-green);font:600 11px var(--wiki-font-text)}
 .pf-transfer[data-kind=write] rect{stroke:var(--pf-warm)}
 .pf-transfer[data-kind=write] text{fill:var(--pf-warm)}
 .pf-result,.pf-request,.pf-bits>div,#pf-process-state{position:relative}
@@ -47,7 +47,7 @@
 .pf-motion-focus.is-green{border-color:var(--pf-green);background:#146c570a}
 .pf-motion-focus.is-warm{border-color:var(--pf-warm);background:#8856160a}
 .pf-pool-frames i{position:relative}
-.pf-pool-motion{position:absolute;inset:-1px;display:grid;place-items:center;font:600 11px system-ui,sans-serif;opacity:0;pointer-events:none}
+.pf-pool-motion{position:absolute;inset:-1px;display:grid;place-items:center;font:600 11px var(--wiki-font-text);opacity:0;pointer-events:none}
 .pf-pool-motion.is-allocate{color:#815019;border:1px solid #be965a;background:#fbefd9}
 .pf-pool-motion.is-reclaim{color:var(--pf-green);border:1px dashed var(--pf-green);background:#e5f3eb}
 @media(max-width:760px){.pf-access-toolbar .pf-controls,.pf-access-toolbar .pf-counts{flex-basis:100%}.pf-access-toolbar .pf-position{width:auto;margin:0 0 0 auto}.pf-access-toolbar .pf-counts dd{font-size:22px}.pf-lab{grid-template-columns:1fr;gap:16px}.pf-access-context{display:contents}.pf-access-context .pf-log{grid-row:1;margin:0}.pf-storage{grid-row:2}.pf-process{grid-row:3;grid-template-columns:1fr 1fr;gap:10px 16px}.pf-process-heading{grid-column:1;grid-row:1}.pf-result{grid-column:1;grid-row:2}.pf-bits{grid-row:1/3;align-content:center}.pf-process .pf-cpu{grid-column:1/-1;grid-row:3}.pf-stages{gap:4px}.pf-access-toolbar .pf-counts dt{font-size:11px}}
