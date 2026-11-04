@@ -127,7 +127,7 @@
       concurrentStructures: [['threads-locks-usage.pdf','第 29 章：锁的粒度与近似计数']],
       conditionVariables: [['threads-cv.pdf','第 30 章：条件等待与有限缓冲区']],
       semaphores: [['threads-sema.pdf','第 31 章：许可计数与生产者—消费者']],
-      concurrencyBugs: [['threads-bugs.pdf','第 32 章：原子性违反与顺序违反']],
+      concurrencyBugs: [['threads-bugs.pdf','第 32 章：违反原子性与执行顺序']],
       deadlock: [['threads-bugs.pdf','第 32 章 §32.3：死锁的条件与处理']],
       events: [['threads-events.pdf','第 33 章：事件循环、异步 I/O 与状态保存']],
       concurrencyExperiments: [['threads-intro.pdf','第 26 章：共享更新'],['threads-bugs.pdf','第 32 章：同步范围与死锁']]

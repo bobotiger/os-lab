@@ -17,8 +17,8 @@
 <section class="cf-hero">
   <p class="eyebrow">并发 / 硬件基础</p>
   <h1>现代 CPU 的工作原理</h1>
-  <p class="cf-lead">画面、声音与复杂的计算，都从电路中的 <strong>0 与 1</strong> 开始。</p>
-  <p class="cf-copy">逻辑电路负责运算，寄存器保存状态，程序指令组织执行。主频、数据等待与并行能力，共同影响最终性能。</p>
+  <p class="cf-lead">处理器用二进制（binary）表示数据和指令。下面从电路怎样处理 <strong>0 和 1</strong> 开始，逐步看 CPU 怎样保存结果和执行程序。</p>
+  <p class="cf-copy">加法电路算出的结果可以先存进寄存器，供下一条指令使用。接下来会用一个求和程序把这些步骤连起来，再看等数据和增加核心怎样影响完成时间。</p>
 </section>
 
 <div class="cf-reading-layout">
@@ -85,7 +85,7 @@
   <div class="cf-split">
     <div class="cf-prose">
       <h4>一位全加器：同时算出和与进位</h4>
-      <p>输入是两个二进制位 A、B，以及低一位传来的进位 C<sub>in</sub>。输出是本位的和 S，以及交给高一位的进位 C<sub>out</sub>。</p>
+      <p>一位全加器（full adder）的输入是两个二进制位 A、B，以及低一位传来的进位 C<sub>in</sub>。输出是本位的和 S，以及交给高一位的进位 C<sub>out</sub>。</p>
       <p>例如 <code>1 + 1 + 0 = 10₂</code>：本位写 0，向高一位进 1。全加器是组合逻辑电路，<strong>负责产生进位，不负责记住进位</strong>；要保存计算结果，还需要寄存器。</p>
       <p>把多个一位全加器按位连接，就能构成多位加法器。64 位加法器可以这样理解，但高性能实现常用更快的进位网络，减少逐位等待。</p>
     </div>
@@ -264,7 +264,7 @@
     <summary>RISC-V 指令的编码与执行</summary>
     <div class="cf-expanded-content">
       <div class="cf-prose">
-        <p>指令集约定了指令的编码与含义。汇编器把人能读懂的指令写法转换成二进制；CPU 的译码电路按照同一套约定，识别要做的操作和要使用的寄存器。</p>
+        <p>指令集（instruction set）规定了处理器能执行哪些指令，以及每条指令如何编码。汇编器把人能读懂的指令写法转换成二进制；CPU 的译码电路按照同一套约定，识别要做的操作和要使用的寄存器。</p>
         <p>例如，<code>add x5, x6, x7</code> 表示：读出寄存器 x6 和 x7 中的数，相加后写入 x5。这里的 5、6、7 是<strong>寄存器编号</strong>，不是参与相加的数。</p>
       </div>
       <figure class="cf-instruction-example cf-example-figure">
@@ -338,7 +338,7 @@
 
 <section class="cf-section" id="prediction" aria-labelledby="prediction-title">
   <h3 id="prediction-title">分支预测与推测执行</h3>
-  <p class="cf-section-lead">现代高性能核心把指令处理拆成流水线，并让多条指令重叠推进。遇到分支时，真正的去向可能尚未算出；如果总等到结果确定才取后续指令，流水线就容易断流。条件依赖慢速内存时，等待还会更长。</p>
+  <p class="cf-section-lead">现代高性能处理器把指令处理分成多个阶段。流水线（pipeline）让不同指令在不同阶段重叠执行。遇到条件分支时，处理器可能还没算出接下来要执行哪条指令。如果等到分支结果出来才取指，流水线里就会有阶段停下来等待。条件依赖慢速内存时，等待还会更长。</p>
   <div class="cf-demo cf-branch-demo" id="cf-branch-demo" data-step="0">
     <div class="cf-demo-heading">
       <div><h4>同一个分支：等待，或提前计算</h4><p>r 初始为 0。flag 还在读取；预测器先猜 flag 为 1，后面的加法所需数据已经就绪。</p></div>
@@ -419,11 +419,11 @@
 
 <section class="cf-section" id="specifications" aria-labelledby="specifications-title">
   <h3 id="specifications-title">CPU 性能规格及其含义</h3>
-  <p class="cf-section-lead">主频描述节奏；微架构，即核心内部的组织方式，影响每个周期能完成的工作；核心数提供并行资源；存储系统决定能否及时供给数据。它们共同影响性能。</p>
+  <p class="cf-section-lead">主频（clock frequency）表示处理器每秒的时钟周期数。微架构（microarchitecture）决定核心如何组织和执行指令，核心数影响并行能力，存储系统则影响指令和数据能否及时到达。</p>
   <div class="cf-performance cf-speed-demo" id="cf-speed-demo">
     <p class="cf-kicker">用同样的工作量比较</p>
     <h4>主频、每周期指令数与执行时间</h4>
-    <p>假定 A、B 使用同一指令集，各执行 <strong>100 亿条指令</strong>。先看默认结果，再把 B 的平均 IPC 从 2 降到 1，观察先后顺序怎样改变。</p>
+    <p>IPC（instructions per cycle）表示平均每个时钟周期完成的指令数。假定 A、B 使用同一指令集，各执行 <strong>100 亿条指令</strong>。先看默认结果，再把 B 的平均 IPC 从 2 降到 1，观察先后顺序怎样改变。</p>
     <div class="cf-speed-controls">
       <label for="cf-speed-frequency"><span>处理器 A · 主频 <output id="cf-speed-frequency-value">5 GHz</output></span><input id="cf-speed-frequency" type="range" min="2" max="6" step="0.5" value="5"><small>平均 IPC 固定为 1</small></label>
       <label for="cf-speed-ipc"><span>处理器 B · 平均 IPC <output id="cf-speed-ipc-value">2</output></span><input id="cf-speed-ipc" type="range" min="0.5" max="3" step="0.5" value="2"><small>主频固定为 4 GHz</small></label>
@@ -495,7 +495,7 @@
 <footer><span>OSLab · 并发</span><a href="#top">返回顶部 ↑</a></footer>
 </div>
 <noscript><p>启用 JavaScript 后可以使用知识目录与交互演示；正文仍可直接阅读。</p></noscript>
-<script src="knowledge-pages.js?v=20261103-cpu"></script>
+<script src="knowledge-pages.js?v=20261104-terms"></script>
 <script src="cpu-foundations.js?v=20261103-motion-final"></script>
 <script src="cpu-foundations-visuals.js?v=20261103-motion-final"></script>
 <script src="concurrency-movies.js?v=20261103-motion-final"></script>

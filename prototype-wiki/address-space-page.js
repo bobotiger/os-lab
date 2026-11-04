@@ -5,10 +5,10 @@ function renderAddressSpacePage(root) {
   const blocks = ['OS','A',null,'B',null,'C'];
   root.innerHTML = '<div class="page as-page" id="top">'+wikiHeader('addressSpaces',[])+
     '<a class="as-skip" href="#as-main">跳到正文</a><main id="as-main">'+
-    '<section class="intro"><h1>地址空间 <span>Address Spaces</span></h1><p class="definition"><strong>地址空间是进程看到的内存视图。</strong>程序用虚拟地址引用指令和数据；它们在物理内存中的位置，由 OS 与硬件共同管理。</p></section>'+
+    '<section class="intro"><h1>地址空间 <span>Address Spaces</span></h1><p class="definition"><strong>虚拟地址空间（virtual address space）是进程可使用的虚拟地址范围。</strong>程序用虚拟地址（virtual address）访问指令和数据，操作系统与硬件共同决定这些地址如何对应到物理内存。</p></section>'+
     '<div class="as-topics" role="tablist" aria-label="地址空间学习主题">'+Object.entries(names).map(([id,name])=>'<button type="button" role="tab" id="as-topic-'+id+'" data-topic="'+id+'" aria-controls="'+id+'" aria-selected="false" tabindex="-1">'+name+'</button>').join('')+'</div>'+
     '<section id="overview" class="as-panel" role="tabpanel" aria-labelledby="as-topic-overview">'+
-      '<div class="as-lead"><h2>进程的虚拟地址空间与物理内存</h2><p>切换进程时，不必把整份程序内存搬出再搬入。各进程共同驻留，仍使用自己的虚拟地址。</p></div>'+
+      '<div class="as-lead"><h2>进程的虚拟地址空间与物理内存</h2><p>切换进程时，操作系统不需要把整个进程移出内存。多个进程可以同时留在物理内存中，各自使用自己的虚拟地址。</p></div>'+
       '<figure class="as-view-figure" id="as-view-figure" aria-labelledby="as-view-title">'+
         '<figcaption id="as-view-title"><span>进程视图 · 放大</span><span>机器中的物理内存</span></figcaption>'+
         '<div class="as-view-pair" id="as-view-pair">'+
@@ -17,17 +17,17 @@ function renderAddressSpacePage(root) {
           '<svg class="as-view-route" id="as-view-route" aria-hidden="true"><defs><marker id="as-route-head" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#315fc4"/></marker></defs><path id="as-view-line" marker-end="url(#as-route-head)"/></svg>'+
         '</div><div class="as-view-result" aria-live="polite"><span class="as-va-readout">虚拟地址 <b>6</b></span><span aria-hidden="true">→</span><span class="as-pa-readout">物理地址 <b id="as-view-pa">22</b></span><p id="as-view-explanation">当前使用 A 的映射，其他进程仍留在原处。</p></div>'+
       '</figure><p class="as-boundary">本例单 CPU，三个进程各使用 16 个地址单位，并分别连续放置；编号不对应真实字节。两侧按各自范围绘制，柱高不用于比较容量。</p>'+
-      '<div class="as-goal-strip"><section><h3>内存位置对程序透明</h3><p>程序使用虚拟地址，不必知道实际装入位置。</p></section><section><h3>进程之间的内存隔离</h3><p>共用物理内存，不等于可以任意访问其他进程。</p></section><section><h3>地址转换的时间与空间开销</h3><p>转换消耗时间，记录映射需要空间。</p></section></div>'+
+      '<div class="as-goal-strip"><section><h3>程序无需知道实际的内存位置</h3><p>程序使用虚拟地址，不必知道实际装入位置。</p></section><section><h3>进程之间的内存隔离</h3><p>共用物理内存，不等于可以任意访问其他进程。</p></section><section><h3>地址转换的时间与空间开销</h3><p>转换消耗时间，记录映射需要空间。</p></section></div>'+
       '<details class="as-reference"><summary>OS 与硬件如何配合</summary><p>OS 建立和管理映射及访问权限；硬件在普通访存时执行地址转换与权限检查。普通访存不需要每次执行系统调用；缺页或权限异常会转入 OS 处理。程序打印出的普通用户态指针也是虚拟地址。</p><a href="address-translation.html">查看地址转换 →</a></details>'+
     '</section>'+
     '<section id="layout" class="as-panel" role="tabpanel" aria-labelledby="as-topic-layout" hidden><div id="as-layout-host"></div></section>'+
     '<section id="isolation" class="as-panel" role="tabpanel" aria-labelledby="as-topic-isolation" hidden>'+
-      '<div class="as-lead"><h2>私有地址空间与共享映射</h2><p>两组都让 A 写入 99，再由 B 读取。区别在于：两个地址最终指向两份存储，还是同一份存储。</p></div>'+
+      '<div class="as-lead"><h2>私有地址空间与共享映射</h2><p>两组都先让 A 写入 99，再看 B 读到什么。如果两者各有一份数据，B 仍读到 10。如果它们访问的是同一份数据，B 就能读到 99。</p></div>'+
       '<div class="as-mapping-comparison" id="as-isolation-pair">'+['private','shared'].map(type=>'<figure class="as-mapping-case" data-mapping-case="'+type+'"><figcaption><h3>'+ (type==='private'?'私有映射':'共享映射')+'</h3><span>'+ (type==='private'?'同址 · 两份对象':'异址 · 同一对象')+'</span></figcaption><div class="as-map-sources"><button type="button" id="'+(type==='private'?'as-isolation-write':'as-shared-write')+'" data-comparison-write="'+type+'" class="as-source as-source-a"><span>进程 A</span><strong>地址 6</strong><small>写入 99 →</small></button><button type="button" data-comparison-read="'+type+'" class="as-source as-source-b" disabled><span>进程 B</span><strong>地址 '+(type==='private'?'6':'10')+'</strong><small>等待 A 写入</small></button></div><svg class="as-map-links" viewBox="0 0 400 76" preserveAspectRatio="none" aria-hidden="true"><defs><marker id="as-head-'+type+'" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7 Z" fill="#758ba0"/></marker></defs><path data-map-route="A" d="M96 2 L'+(type==='private'?'96':'200')+' 69" marker-end="url(#as-head-'+type+')"/><path data-map-route="B" d="M304 2 L'+(type==='private'?'304':'200')+' 69" marker-end="url(#as-head-'+type+')"/></svg><div class="as-map-stores">'+(type==='private'?['private-A','private-B']:['shared']).map(object=>'<div class="as-storage" data-object-readout="'+object+'"><span>'+ (object==='shared'?'共享对象':object.endsWith('A')?'A 的私有对象':'B 的私有对象')+'</span><strong>10</strong></div>').join('')+'</div><div class="as-map-result" data-case-result="'+type+'"><span>B 的读取结果</span><strong>—</strong><small>尚未读取</small></div></figure>').join('')+'</div>'+
-      '<div class="as-comparison-bottom"><p id="as-isolation-result" aria-live="polite"></p><button type="button" id="as-isolation-reset" class="as-quiet-button">重置</button></div><p class="as-boundary">两组执行相同操作；共享映射已建立，读写均被允许。地址为示意编号，与“进程内部的布局”使用不同配置。</p>'+
-      '<div class="as-comparison-insight"><strong>隔离与共享可以同时成立</strong><p>私有部分互不影响；经 OS 建立共享映射后，不同进程可以访问同一份存储。共享的是存储内容，虚拟地址不必相同。</p></div>'+
+      '<div class="as-comparison-bottom"><p id="as-isolation-result" aria-live="polite"></p><button type="button" id="as-isolation-reset" class="as-quiet-button">重置</button></div><p class="as-boundary">两组的读写操作相同。共享组已经建立映射，两个进程都可以访问那份数据。地址为示意编号，与“进程内部的布局”使用不同配置。</p>'+
+      '<div class="as-comparison-insight"><strong>隔离与共享可以同时成立</strong><p>通过私有映射（private mapping）写入的数据，只对本进程可见。建立共享映射（shared mapping）后，两个进程即使用不同的虚拟地址，也可以访问同一份内容。</p></div>'+
     '</section>'+
-    '<nav class="as-next-links" aria-label="相关知识"><a href="memory-api.html">内存 API →</a><a href="address-translation.html">地址转换 →</a></nav></main><footer class="site-footer"><span>OSLab / 内存虚拟化</span><a href="#top">回到页首 ↑</a></footer></div>';
+    '<nav class="as-next-links" aria-label="相关知识"><a href="memory-api.html">内存分配接口 →</a><a href="address-translation.html">地址转换 →</a></nav></main><footer class="site-footer"><span>OSLab / 内存虚拟化</span><a href="#top">回到页首 ↑</a></footer></div>';
   root.querySelector('.site-header nav').remove();
   const $ = selector=>root.querySelector(selector);
   const $$ = selector=>[...root.querySelectorAll(selector)];

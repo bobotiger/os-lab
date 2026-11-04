@@ -51,7 +51,7 @@ document.querySelector('#root').innerHTML = `
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">CPU 虚拟化 / UNIX 接口 / 作业</p>
         <h1 id="page-title">进程 API 作业 <span>Process API Homework</span></h1>
-        <p class="lead">结合进程树推演进程的创建与退出，并通过程序理解 fork、exec、wait 和管道通信。</p>
+        <p class="lead">先用进程树（process tree）追踪父子关系，再用 C 程序练习创建进程、替换程序映像、等待子进程退出，以及用管道（pipe）连接两个进程的输入和输出。</p>
         <dl class="hw-meta"><div><dt>运行环境</dt><dd>Ubuntu 22.04</dd></div><div><dt>程序与编译器</dt><dd>Python 3 · GCC</dd></div></dl>
         <p class="hw-back"><a class="inline-link" href="process-api.html">进程 API：fork、exec 与 wait</a></p>
       </section>

@@ -1,8 +1,8 @@
 (() => {
   const U=OSLabConcurrencyStage2UI,M=OSLabConcurrencyBugs;
   U.shell('concurrencyBugs',[{href:'#patterns',title:'错误类型'},{href:'#trace',title:'交错与修正'},{href:'#review',title:'检查方法'}],`
-    <section class="intro"><p class="eyebrow">并发 / 正确性</p><h1>并发错误</h1><p class="lead">单次访问受到保护，<span class="read-keep">并不等于</span>多步操作的逻辑正确。</p><p class="definition">即使每次共享数据访问都正确加锁，多步操作仍可能因穿插或先后次序错误而失败。分析时需要明确：哪些操作必须作为整体完成，哪些操作必须发生在另一些操作之后。</p></section>
-    <section class="cc-section" id="patterns"><h2>原子性违反与顺序违反</h2><div class="c3-pair c3-editorial"><div><h3>原子性违反</h3><p>原本应当作为一个整体完成的操作，被其他线程插入修改。例如先检查队列非空，释放锁后再取任务，先前的检查就可能已经失效。</p></div><div><h3>顺序违反</h3><p>程序依赖的先后关系没有得到保证。例如使用配置的线程先取得锁，也不能让尚未发生的初始化自动完成；还需要明确的完成条件。</p></div></div><p class="cc-caption">“原子性”是针对需要保持的逻辑关系而言，不要求把所有操作都变成一条硬件指令。这里的两种错误都可以发生在单核上。</p></section>
+    <section class="intro"><p class="eyebrow">并发 / 正确性</p><h1>并发错误</h1><p class="lead">即使每次读写都加了锁，多步操作仍可能因线程之间的执行次序而出错。这类问题属于并发错误（concurrency bug）。</p><p class="definition">检查并发程序时，要分清哪些步骤必须作为一个整体完成，哪些步骤必须按规定的先后次序执行。</p></section>
+    <section class="cc-section" id="patterns"><h2>原子性与执行顺序错误</h2><div class="c3-pair c3-editorial"><div><h3>违反原子性</h3><p>违反原子性（atomicity violation）是指本应作为整体完成的操作被其他线程打断。例如检查队列非空后就解锁，等到取任务时，任务可能已被另一个线程取走。</p></div><div><h3>违反执行顺序</h3><p>违反执行顺序（order violation）是指依赖的先后关系没有得到保证。例如程序必须先初始化、再读取配置。即使读取线程拿到了锁，也仍要确认初始化已经完成。</p></div></div><p class="cc-caption">“原子性”是针对需要保持的逻辑关系而言，不要求把所有操作都变成一条硬件指令。这里的两种错误都可以发生在单核上。</p></section>
     <section class="cc-section" id="trace"><h2>错误交错与同步范围</h2>
       <div class="cc-mode-tabs" role="group" aria-label="错误类型"><button data-bug-kind="atomicity" aria-pressed="true">检查后使用</button><button data-bug-kind="ordering" aria-pressed="false">初始化后使用</button></div>
       <p class="cc-intro-text" id="bug-purpose"></p><div class="bug-settings"><div class="cc-preset" role="group" aria-label="同步方案"><span>保护方式</span><button data-bug-variant="unsafe" aria-pressed="true"></button><button data-bug-variant="safe" aria-pressed="false"></button></div>
@@ -12,9 +12,9 @@
       <details id="bug-detail" class="cc-details bug-detail"><summary>执行次序与逐操作详情</summary><div class="cc-preset" role="group" aria-label="线程次序"><span>执行次序</span><button data-bug-order="first" aria-pressed="true"></button><button data-bug-order="second" aria-pressed="false"></button></div>
       <div id="bug-demo"><div class="bug-stage"><div class="c3-shared"><div class="bug-data-heading"><span id="bug-shared-label"></span><span id="bug-change" class="bug-change"></span></div><div id="bug-object" class="bug-object"><strong id="bug-value"></strong><p id="bug-data-note"></p></div><div class="bug-lock-status"><span>互斥锁</span><strong id="bug-lock"></strong></div></div><div class="c3-pair" id="bug-threads"></div></div><div class="bug-step-footer"><div class="cc-log" role="status" aria-live="polite"><span id="bug-action"></span><p id="bug-log"></p></div>${OSLabConcurrencyUI.transport('bug')}</div><p class="cc-result" id="bug-result" hidden></p></div>
       </details>
-      <details class="cc-details bug-model-notes"><summary>模型条件与实际程序</summary><p>这是受控交错的伪代码模型，每次共享数据访问都受同一互斥锁保护，发生错误时暂停。实际 C/C++ 程序中的无同步数据竞争涉及语言的未定义行为，不能只按这个模型推断。</p></details>
+      <details class="cc-details bug-model-notes"><summary>模型条件与实际程序</summary><p>这是受控交错的伪代码模型，每次共享数据访问都受同一互斥锁保护，发生错误时暂停。实际 C/C++ 程序中，如果未同步的访问构成数据竞争（data race），就会产生未定义行为（undefined behavior），不能用这个顺序模型预测结果。</p></details>
     </section>
-    <section class="cc-section" id="review"><h2>并发程序的检查方法</h2><div class="c3-list"><div><h3>操作的前提条件</h3><p>取任务时队列必须非空；使用配置时初始化必须已经完成。把这些关系写清楚，才能判断锁的范围和等待条件是否足够。</p></div><div><h3>共享状态的变化时机</h3><p>尤其注意释放锁、等待返回和调用其他模块的前后。曾经成立的判断，不一定在重新获得锁后仍成立；给每行代码分别加锁也不能代替保护完整操作。</p></div><div><h3>反例与修正验证</h3><p>一次正确输出只说明一种执行次序没有暴露问题。修正后还要检查原来的错误次序，以及线程先后顺序反过来的情况。扩大锁的范围也有代价，应覆盖必要关系，并留意是否新增持锁等待。</p></div></div></section>`);
+    <section class="cc-section" id="review"><h2>并发程序的检查方法</h2><div class="c3-list"><div><h3>操作的前提条件</h3><p>取任务时队列必须非空；使用配置时初始化必须已经完成。把这些关系写清楚，才能判断锁的范围和等待条件是否足够。</p></div><div><h3>共享状态的变化时机</h3><p>尤其注意释放锁、等待返回和调用其他模块的前后。曾经成立的判断，不一定在重新获得锁后仍成立；给每行代码分别加锁也不能代替保护完整操作。</p></div><div><h3>反例与修正验证</h3><p>修正后，先用原来出错的执行顺序再试一次。然后交换 A、B 的先后顺序，检查原本先执行的线程变成后执行时，是否仍能得到正确结果。扩大锁的范围也有代价，应覆盖必要关系，并留意是否新增持锁等待。</p></div></div></section>`);
   document.querySelector('.cc-page').classList.add('c3-page');
   let kind='atomicity',variant='unsafe',order='first';
   const names={start:'初始状态',lock:'获取锁',unlock:'释放锁',check:'检查条件',take:'按检查结果取任务',init:'初始化配置',signal:'通知等待者',wait:'释放锁并等待',use:'使用配置'};

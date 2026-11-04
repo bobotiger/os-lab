@@ -7,14 +7,14 @@
     runtime: ['ONNX Runtime · 执行后端', 'https://onnxruntime.ai/docs/execution-providers/'],
     windows: ['Microsoft · Windows ML', 'https://learn.microsoft.com/en-us/windows/ai/new-windows-ml/overview'],
     hybrid: ['Microsoft · 本地与云端协作方向', 'https://blogs.windows.com/windowsexperience/2026/10/07/building-windows-for-hybrid-intelligence/'],
-    security: ['Microsoft · 代理安全设计', 'https://learn.microsoft.com/en-us/windows/security/book/operating-system-agentic-security'],
+    security: ['Microsoft · 智能体安全设计', 'https://learn.microsoft.com/en-us/windows/security/book/operating-system-agentic-security'],
     cgroup: ['Linux · 控制组与资源分配', 'https://docs.kernel.org/admin-guide/cgroup-v2.html'],
   };
   const source = id => `<a class="ai-source" href="${sources[id][1]}" target="_blank" rel="noopener noreferrer">${sources[id][0]} ↗</a>`;
   const term = (id, label) => `<button type="button" class="ai-term" data-term="${id}" aria-haspopup="dialog">${label}</button>`;
   const terms = {
     memory: {name:'显存容量与带宽', text:'模型的参数和计算中的临时结果都要占用内存。独立显卡通常有专用显存；集成 GPU 等设备也可能与 CPU 共享内存。容量决定能放下多少数据，带宽表示单位时间能传输多少数据。', example:'即使计算单元很多，如果模型放不下，或者计算单元一直在等数据，任务也未必完成得快。共享内存能减少某些复制，但仍要处理数据格式、访问同步和带宽竞争。'},
-    sandbox: {name:'沙箱与执行权限限制', text:'沙箱是限制程序能访问哪些资源、能执行哪些操作的环境。例如，只让一个代理读取指定课程文件夹，并拒绝它访问其他目录或网络。具体限制由操作系统及相关执行环境落实。', example:'写在提示词里的“不要读取其他文件”是一条给模型的要求；文件访问控制则可以在请求真正发生时拒绝它。沙箱不保证模型结论正确，也不能自动撤销已经产生的外部影响。'},
+    sandbox: {name:'沙箱与执行权限限制', text:'沙箱是限制程序能访问哪些资源、能执行哪些操作的环境。例如，只让一个智能体读取指定课程文件夹，并拒绝它访问其他目录或网络。具体限制由操作系统及相关执行环境落实。', example:'写在提示词里的“不要读取其他文件”是一条给模型的要求；文件访问控制则可以在请求真正发生时拒绝它。沙箱不保证模型结论正确，也不能自动撤销已经产生的外部影响。'},
   };
   const chapters = [['task','程序与模型'],['silicon','CPU 与加速器'],['journey','计算分工'],['system','AI 与操作系统'],['future','系统设计设想']];
   const flow = items => `<div class="ai-flow">${items.map((text,i)=>`${i?'<span class="ai-arrow" aria-hidden="true">→</span>':''}<div class="ai-flow-item">${text}</div>`).join('')}</div>`;
@@ -47,9 +47,9 @@
     platform: {label:'平台提供公共能力', status:'已有平台实例 · Windows ML', title:'共享的推理运行时与硬件适配',
       paragraphs:['如果每个应用都要分别适配 CPU、GPU 和 NPU，并携带自己的运行软件，开发和更新会重复进行。系统平台可以提供公共的推理运行时和设备执行后端，让应用通过约定的接口使用硬件。','Windows ML 是一个已有实例：应用可以选择使用共享的系统运行时，由平台维护相关组件。这里共享的是软件基础设施；多个应用是否共用同一模型、怎样分配设备时间，仍是另外的设计问题。'],
       path:['录音、绘图等多个应用','公共推理运行时与执行后端','CPU / GPU / NPU'], takeaway:'改变的是公共能力由谁提供、谁维护。减少重复适配，并不意味着系统已经能理解每个用户任务的目的。', source:'windows'},
-    agent: {label:'代理持续执行任务', status:'产品探索 · 所引安全文档包含实验能力', title:'AI 代理选择行动并调用工具',
-      paragraphs:['AI 代理（Agent）是围绕目标选择行动、调用工具并观察结果的软件。比如先读取指定材料，再运行统计程序，根据结果补充图表，最后生成报告草稿。模型参与决定下一步，文件读取、计算和保存仍由具体工具执行。','普通自动化也能串联多个步骤，区别在于代理可以用模型处理途中出现的新情况。不过，灵活选择行动也可能带来误操作。系统需要识别是谁在行动、它获得了哪些权限，并在每次资源访问时执行相应限制。'],
-      path:['用户给出目标','模型选择行动，工具执行','观察结果，再决定下一步'], takeaway:`代理可以运行在现有应用与平台之上。${term('sandbox','沙箱')}、身份和访问控制用于限制行动范围；模型说“我会遵守要求”，不能代替实际的权限检查。`, source:'security'},
+    agent: {label:'智能体持续执行任务', status:'产品探索 · 所引安全文档包含实验能力', title:'AI 智能体选择行动并调用工具',
+      paragraphs:['AI 智能体（AI agent）是能围绕任务目标选择下一步、调用工具并根据结果继续处理的软件。比如先读取指定材料，再运行统计程序，根据结果补充图表，最后生成报告草稿。模型参与决定下一步，文件读取、计算和保存仍由具体工具执行。','普通自动化也能串联多个步骤，区别在于智能体可以用模型处理途中出现的新情况。不过，灵活选择行动也可能带来误操作。系统需要识别是谁在行动、它获得了哪些权限，并在每次资源访问时执行相应限制。'],
+      path:['用户给出目标','模型选择行动，工具执行','观察结果，再决定下一步'], takeaway:`智能体可以运行在现有应用与平台之上。${term('sandbox','沙箱')}、身份和访问控制用于限制行动范围；模型说“我会遵守要求”，不能代替实际的权限检查。`, source:'security'},
   };
   const futures = {
     goal: {label:'围绕目标管理工作', action:'把截止时间改为今晚', bridgeTitle:'用户目标与执行活动的关联', ideaTitle:'跨应用任务的统一记录', gapTitle:'期限和预算带来的约束',
@@ -82,7 +82,7 @@
       <div class="ai-heading"><h2>AI 应用中的程序与模型</h2><p>打开录音、识别语音、整理要点、保存文件，看起来是一件事，实际需要普通程序与模型计算配合完成。</p></div>
       <div class="ai-task-strip" aria-label="从录音到笔记的处理过程"><div><span>应用处理</span><strong>读取录音</strong><p>取得声音的数字表示。</p></div><span class="ai-arrow" aria-hidden="true">→</span><div class="is-model"><span>模型计算</span><strong>识别语音</strong><p>根据声音生成转写文字。</p></div><span class="ai-arrow" aria-hidden="true">→</span><div class="is-model"><span>模型计算</span><strong>整理要点</strong><p>根据文字生成笔记草稿。</p></div><span class="ai-arrow" aria-hidden="true">→</span><div><span>应用处理</span><strong>保存与核对</strong><p>保存文件，由人检查内容。</p></div></div>
       <div class="ai-prose"><p>读取和保存文件，可以由程序按照明确的规则完成。语音识别与内容整理，则可以使用从数据中训练出来的模型。模型把输入转换为预测或生成结果，但结果仍可能出错，因此这里把产物称为“草稿”。</p><p><strong>模型由计算结构和参数共同描述。</strong>参数是一组从训练数据中学到的数值，决定输入怎样影响结果。录音本身也会先表示为数值，处理器执行模型中的运算，最终由软件把结果解释为文字。语音转写与笔记整理可以使用不同模型。</p><p>本页主要讨论神经网络模型。神经网络把多层数值计算连接起来，前一层的输出成为后一层的输入；训练会调整其中的参数，使整个模型更好地完成目标任务。</p></div>
-      <div class="ai-subsection"><h3>模型训练与推理</h3><div class="ai-choice-row" role="group" aria-label="比较训练与推理"><button type="button" data-mode="training" aria-pressed="false">训练：调整参数</button><button type="button" data-mode="inference" aria-pressed="true">推理：处理新输入</button></div><div class="ai-model-example" aria-live="polite"><div id="ai-model-flow"></div><p id="ai-model-explanation"></p></div><p class="ai-prose">在这个例子中，课堂录音的转写属于推理：使用已经训练好的模型处理新录音，模型参数保持不变。输入改变，输出仍会改变。模型训练通常需要反复调整参数；推理虽然省去了这部分工作，计算量也可能很大。</p></div>
+      <div class="ai-subsection"><h3>模型训练与推理</h3><div class="ai-choice-row" role="group" aria-label="比较训练与推理"><button type="button" data-mode="training" aria-pressed="false">训练：调整参数</button><button type="button" data-mode="inference" aria-pressed="true">推理：处理新输入</button></div><div class="ai-model-example" aria-live="polite"><div id="ai-model-flow"></div><p id="ai-model-explanation"></p></div><p class="ai-prose">在这个例子中，语音转写使用已经训练好的模型处理新录音，属于推理（inference）。推理时模型参数保持不变，但输入变了，输出也可能改变。训练（training）则需要反复调整参数。推理省去了参数调整，仍可能需要大量计算。</p></div>
       <div class="ai-subsection ai-math-section"><div><h3>模型计算中的乘法与加法</h3><p>下面用两项输入和四组固定参数，计算四个输出。每组都先相乘、再相加；把参数按行列排成数表，就是矩阵。大量这类运算，是神经网络需要计算资源的一个重要原因。</p><p class="ai-note">这是手工设置的小算例，不是语音识别模型。真实网络还包含其他运算以及多层之间的数据传递。</p>${source('model')}</div><div class="ai-math-demo"><div class="ai-choice-row" role="group" aria-label="改变算例输入"><button type="button" data-input="0" aria-pressed="true">输入（2，1）</button><button type="button" data-input="1" aria-pressed="false">输入（1，3）</button></div><div id="ai-math" aria-live="polite"></div><p class="ai-note">只改变输入，四组参数保持不变。</p></div></div>
       ${forward('silicon','模型需要执行大量计算；处理器的设计决定了哪些计算适合交给它。')}
     </section>
@@ -92,11 +92,11 @@
       <div id="ai-chip-detail" class="ai-chip-detail"><div class="ai-chip-copy"><p class="ai-kicker" id="ai-chip-name"></p><h3 id="ai-chip-title"></h3><div id="ai-chip-text"></div></div><figure class="ai-chip-figure"><div id="ai-chip-art"></div><figcaption id="ai-chip-caption"></figcaption></figure></div>
       <div class="ai-chip-tradeoffs"><div><h3>设计优势</h3><p id="ai-chip-benefit"></p></div><div><h3>适用条件与限制</h3><p id="ai-chip-limit"></p></div></div><div id="ai-chip-source"></div>
       <div class="ai-takeaway"><strong>它们共同完成任务，而不是依次取代前一种处理器。</strong><p>CPU 可以组织程序并直接计算；合适的部分可以交给加速器。加速器通常需要软件准备数据和提交任务，能否加速还取决于模型、任务规模与设备支持。</p></div>
-      ${forward('journey','从“有这种硬件”到“模型真的在它上面运行”，中间还需要软件安排。')}
+      ${forward('journey','设备有 GPU 或 NPU，还得有软件把模型中的运算交给它。下面跟着录音数据看应用、运行时和驱动分别做什么。')}
     </section>
     <section id="journey" class="ai-panel" role="tabpanel" aria-labelledby="tab-journey" tabindex="0" hidden>
       <div class="ai-heading"><h2>模型计算的执行分工</h2><p>下面仍以录音与笔记为例。普通应用负责组织任务，模型计算则可以使用不同的执行路线。</p></div>
-      <div class="ai-role-lines"><div><strong>推理运行时</strong><p>读取模型，组织输入输出，安排模型中的运算。它需要知道哪些部分能够由所选设备执行。</p></div><div><strong>执行后端与驱动</strong><p>执行后端把受支持的运算适配到设备；驱动负责与具体设备通信。它们把软件安排转换为可以提交的设备工作。</p></div><div><strong>操作系统</strong><p>管理进程、内存、设备访问和权限。它为这些软件提供执行基础；模型如何拆分，通常还需要运行时、后端和应用配置共同决定。</p></div></div>
+      <div class="ai-role-lines"><div><strong>推理运行时</strong><p>读取模型，组织输入输出，安排模型中的运算。它需要知道哪些部分能够由所选设备执行。</p></div><div><strong>执行后端与驱动</strong><p>执行后端把模型中的运算转换成设备支持的操作。驱动再把这些操作提交给设备执行。</p></div><div><strong>操作系统</strong><p>管理进程、内存、设备访问和权限。它为这些软件提供执行基础；模型如何拆分，通常还需要运行时、后端和应用配置共同决定。</p></div></div>
       <div class="ai-demo-heading"><h3>执行路线与数据流向</h3><span>方案推演 · 不运行真实模型</span></div>
       <div class="ai-routes" role="group" aria-label="选择模型执行路线">${Object.entries(routes).map(([id,name])=>`<button type="button" data-route="${id}" aria-pressed="false"><span>${name}</span><small>${routeHints[id]}</small></button>`).join('')}</div>
       <div id="ai-compatibility" class="ai-compatibility" hidden><label><input id="ai-unsupported" type="checkbox"> 假设这台 NPU 不支持模型中的一项运算</label><fieldset id="ai-fallback-options" hidden><legend>在这个教学案例中选择处理方式</legend><label><input type="radio" name="fallback" value="stop" checked> 停止提交，调整模型或配置</label><label><input type="radio" name="fallback" value="cpu"> 配置 CPU 接手该项运算</label></fieldset></div>
@@ -110,7 +110,7 @@
       <div class="ai-heading"><h2>AI 操作系统的设想与已有基础</h2><p><span class="ai-keep">模型推理平台</span>已有实现，<span class="ai-keep">面向代理的系统支持</span>仍在探索。这些是设想的基础，<span class="ai-keep">不代表</span><span class="ai-keep">完整方案</span><span class="ai-keep">已经实现</span>。</p><p>下面比较<span class="ai-keep">应用功能</span>、<span class="ai-keep">公共平台</span>和<span class="ai-keep">代理执行环境</span>。它们<span class="ai-keep">可以共存</span>，<span class="ai-keep">没有必然的升级顺序</span>。</p></div>
       <div class="ai-levels" role="group" aria-label="AI 改变的不同层面">${Object.entries(levels).map(([id,l])=>`<button type="button" data-level="${id}" aria-pressed="false">${l.label}</button>`).join('')}</div>
       <div class="ai-system-detail"><p id="ai-level-status" class="ai-kicker"></p><h3 id="ai-level-title"></h3><div id="ai-level-lead" class="ai-prose"></div><div id="ai-system-path"></div><p id="ai-level-outcome" class="ai-takeaway"></p><div id="ai-level-source"></div></div>
-      <div class="ai-subsection"><h3>AI 代理的权限与执行控制</h3><div class="ai-boundary"><div><span>可以由模型参与的工作</span><p>理解用户目标、提出计划、选择工具、解释结果。</p></div><div><span>需要可靠机制落实的规则</span><p>哪些文件可以读取、允许花多少资源、任务能否继续执行、操作是否留下记录。</p></div></div><p class="ai-prose">模型可能理解错目标，也可能受到材料中错误或恶意内容的影响。因此，授权和资源限制要在具体执行环节检查。代理应用本身也可以维护任务计划；系统集成的价值，是让多个应用使用统一的身份、权限和资源管理机制，共同遵守用户设定的约束。</p><p class="ai-prose">许多 AI 能力可以先建立在现有系统之上，再逐步与文件、设备和任务管理整合。是否需要修改内核，应看现有机制缺少什么；并不意味着要用语言模型替代内核，或让模型决定每一次 CPU 时间片。</p></div>
+      <div class="ai-subsection"><h3>AI 智能体的权限与执行控制</h3><div class="ai-boundary"><div><span>可以由模型参与的工作</span><p>理解用户目标、提出计划、选择工具、解释结果。</p></div><div><span>需要可靠机制落实的规则</span><p>哪些文件可以读取、允许花多少资源、任务能否继续执行、操作是否留下记录。</p></div></div><p class="ai-prose">模型可能理解错目标，也可能受到材料中错误或恶意内容的影响。因此，授权和资源限制要在具体执行环节检查。代理应用本身也可以维护任务计划；系统集成的价值，是让多个应用使用统一的身份、权限和资源管理机制，共同遵守用户设定的约束。</p><p class="ai-prose">许多 AI 能力可以先建立在现有系统之上，再逐步与文件、设备和任务管理整合。是否需要修改内核，应看现有机制缺少什么；并不意味着要用语言模型替代内核，或让模型决定每一次 CPU 时间片。</p></div>
       ${forward('future','这些已有能力为系统设计提供了基础。下一节以跨应用课题为例，讨论仍需解决的问题。')}
     </section>
     <section id="future" class="ai-panel" role="tabpanel" aria-labelledby="tab-future" tabindex="0" hidden>
@@ -121,7 +121,7 @@
       <div class="ai-future-reasoning"><div><span class="ai-status ai-existing">已有基础</span><p id="ai-foundation"></p><div id="ai-future-source"></div></div><div><h3 id="ai-bridge-title"></h3><p id="ai-bridge"></p></div></div>
       <div class="ai-design-board"><div class="ai-demo-heading"><h3 id="ai-idea-title"></h3><span class="ai-status ai-proposal">设计推演</span></div><p id="ai-idea"></p><div class="ai-plan-root"><strong>校园节能课题</strong><span>期限 · 数据权限 · 费用预算 · 草稿产物</span></div><div id="ai-plan"></div><p class="ai-note">这些工作归属于同一目标；横向排列不表示执行先后。</p><div class="ai-plan-controls"><button type="button" id="ai-change-plan"></button><button type="button" id="ai-reset-plan">恢复原条件</button></div><p id="ai-plan-outcome" aria-live="polite"></p></div>
       <div class="ai-open-problem"><h3 id="ai-gap-title"></h3><p id="ai-gap"></p></div>
-      <div class="ai-connection"><h3>异构计算与 CPU 虚拟化的联系</h3><p>资源变成 CPU、加速器和云服务的组合，任务也可能跨越多个程序；但“共享有限资源、保留控制权、约束执行”这些问题仍然存在。异构计算指不同类型处理器协同工作，它把已有问题带到了更广的环境中。</p><div><a href="limited-direct-execution.html"><strong>受限直接执行</strong><span>执行效率与控制权怎样兼顾</span></a><a href="cpu-scheduling.html"><strong>CPU 调度</strong><span>有限资源怎样在多个需求间分配</span></a><a href="multiprocessor.html"><strong>多处理器调度</strong><span>任务放在哪里运行，迁移有何代价</span></a></div></div>
+      <div class="ai-connection"><h3>异构计算与 CPU 虚拟化的联系</h3><p>资源变成 CPU、加速器和云服务的组合，任务也可能跨越多个程序；但“共享有限资源、保留控制权、约束执行”这些问题仍然存在。异构计算（heterogeneous computing）让不同类型的处理器分工协作，例如由 CPU 运行应用逻辑，由加速器承担适合并行执行的模型计算。</p><div><a href="limited-direct-execution.html"><strong>受限直接执行</strong><span>执行效率与控制权怎样兼顾</span></a><a href="cpu-scheduling.html"><strong>CPU 调度</strong><span>有限资源怎样在多个需求间分配</span></a><a href="multiprocessor.html"><strong>多处理器调度</strong><span>任务放在哪里运行，迁移有何代价</span></a></div></div>
     </section>
     <details class="ai-reference ai-source-notes"><summary>资料范围与来源</summary><p>资料核对日期：2026 年 10 月 28 日。硬件与运行时部分依据厂商技术文档；代理系统部分区分已有平台能力、产品探索与本页提出的设计设想。技术文档支持的是相应机制，不能据此认定整套未来方案已经实现。</p><div class="ai-source-list">${Object.keys(sources).map(source).join('')}</div></details>
     </main><footer class="site-footer"><span>OSLab / CPU 虚拟化 · 拓展阅读</span><a href="#top">回到页首 ↑</a></footer>

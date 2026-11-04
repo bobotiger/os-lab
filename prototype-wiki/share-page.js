@@ -6,8 +6,8 @@ function renderSharePage(root) {
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">CPU 虚拟化 / 调度</p>
         <h1 id="page-title">比例份额调度 <span>Proportional Share</span></h1>
-        <p class="lead">除了响应与周转，调度还可以按权重分配 CPU 份额。</p>
-        <p class="definition">目标份额 = 自身权重 ÷ 当前可运行进程的总权重，不保证每轮的分配顺序。彩票调度和步长调度（Stride）使用同样的权重，以不同规则选择每轮的运行者。</p>
+        <p class="lead">比例份额调度（proportional-share scheduling）按权重分配 CPU 时间。参与竞争的任务不变时，权重越大，长期分到的 CPU 时间越多。</p>
+        <p class="definition">把一个进程的权重除以所有可运行进程的总权重，就得到它的目标份额。目标份额说明长期要分到多少 CPU 时间，具体哪一轮轮到它取决于算法。彩票调度（lottery scheduling）和步长调度（stride scheduling）使用相同的权重，但选取下一次运行任务的方法不同。</p>
         <p class="model-note">单核，三个进程始终可运行并持续竞争 CPU，无 I/O，切换开销为零，每次分配 1 个示意 CPU 单位。一条序列内权重固定；彩票使用给定种子的伪随机抽签序列。Stride 初始 pass 均为 0，并列按 A、B、C 顺序选择。</p>
       </section>
       <section class="share-demo" id="demo" aria-labelledby="demo-title">
@@ -27,14 +27,14 @@ function renderSharePage(root) {
         <div class="share-mechanisms">
           <section class="share-mechanism" aria-labelledby="lottery-title">
             <h3 id="lottery-title">彩票调度</h3>
-            <p class="share-method-note">权重对应票数。每轮抽一张票，拥有者获得 1 个 CPU 单位；票数占总数的比例就是中奖概率。</p>
+            <p class="share-method-note">每个进程按权重取得相应的票。每轮抽出一张票，持有该票的进程运行 1 个时间单位。一个进程如果拥有半数的票，每轮就有一半的概率被选中。</p>
             <div class="share-ticket-pool" id="share-ticket-pool" role="img" aria-label="票池"></div>
             <div class="share-winner"><p>最近一轮中奖票号 <strong id="share-ticket">—</strong></p><p>分配给 <strong id="lottery-winner">—</strong></p></div>
             <p class="share-decision" id="lottery-reason" aria-live="polite"></p>
           </section>
           <section class="share-mechanism" aria-labelledby="stride-title">
             <h3 id="stride-title">步长调度</h3>
-            <p class="share-method-note">步长 = ${strideScale} ÷ 权重。pass 是用于排序的累计虚拟进度；每轮选最小者，运行后增加它自己的步长。</p>
+            <p class="share-method-note">步长 = ${strideScale} ÷ 权重。pass 是记录分配进度的虚拟计数。每轮选择 pass 最小的进程，并在它运行后将它的 pass 增加一个步长。</p>
             <table class="share-pass"><thead><tr><th scope="col">进程</th><th scope="col">步长</th><th scope="col">pass 前</th><th scope="col">pass 后</th></tr></thead><tbody id="share-passes"></tbody></table>
             <p class="share-decision" id="stride-reason" aria-live="polite"></p>
           </section>

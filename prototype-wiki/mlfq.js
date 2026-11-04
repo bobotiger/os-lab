@@ -6,8 +6,8 @@ function renderMlfqPage(root) {
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">CPU 虚拟化 / 调度</p>
         <h1 id="page-title">多级反馈队列 <span>MLFQ</span></h1>
-        <p class="lead">不知道任务还要运行多久，也要让短任务及时响应，让长任务继续推进。</p>
-        <p class="definition">MLFQ 将就绪进程分入不同优先级的队列：高层优先，同层采用<a class="inline-link" href="round-robin.html">时间片轮转</a>。新进程先进入最高层，再根据累计 CPU 用量调整层级。</p>
+        <p class="lead">即使事先不知道任务需要运行多久，调度器也要兼顾短任务的响应速度和长任务的执行机会。</p>
+        <p class="definition">多级反馈队列（multi-level feedback queue，MLFQ）按优先级组织就绪进程。优先调度高层队列，同一层内采用<a class="inline-link" href="round-robin.html">时间片轮转</a>。新进程先进入最高层，再根据累计 CPU 用量调整层级。</p>
         <p class="model-note">单核、零切换开销、三个固定队列；Q0 最高，Q2 最低。时间片长度为 1 / 2 / 4，本层配额为 2 / 4 / 8 个示意时间单位。I/O 固定延迟且可并行，无设备争用；不同操作系统的反馈规则和参数并不相同。</p>
         <p class="model-note"><a class="inline-link" href="mlfq-homework.html">多级反馈队列作业：程序说明与六题参考实践</a></p>
       </section>
@@ -47,10 +47,10 @@ function renderMlfqPage(root) {
         <dl class="concepts rr-concepts">
           <div><dt>先比较层级，同层再轮转</dt><dd>新进程进入 Q0。只要更高层有就绪进程，就抢占低层运行者；本变体把被抢占者放回原层队首，保留本次时间片使用量和累计配额。</dd></div>
           <div><dt>时间片结束，不必立即降级</dt><dd>Q0 时间片长度为 1、累计配额为 2。第一次用完时间片，回 Q0 队尾；累计用满 2，才进入 Q1 并清零计数。Q2 不再下降，配额耗尽后仍在 Q2 轮转。</dd></div>
-          <div><dt>I/O 阻塞保留本层累计用量</dt><dd>本层配额限制的是多个时间片内累计使用的 CPU 时间。I/O 阻塞结束本次时间片，但不会清零本层用量；I/O 完成后，进程回到原层队尾。若阻塞前恰好用满配额，本例先降级再阻塞，因此频繁 I/O 不会使累计用量不断重新开始。</dd></div>
+          <div><dt>I/O 阻塞保留本层累计用量</dt><dd>本层配额要把进程在这一层用过的 CPU 时间加起来。进程因 I/O 阻塞时，本次时间片结束，已用的时间仍计入配额。I/O 完成后，进程回到相应队列的队尾。若阻塞前恰好用满配额，本例先降级再阻塞，因此频繁 I/O 不会使累计用量不断重新开始。</dd></div>
         </dl>
-        <div class="rr-tradeoff"><h3>整体提升使低层任务重新参与高层调度</h3><p>高层任务持续到来时，低层任务可能长期得不到 CPU，这种情况称为饥饿。本例每 12 个时间单位将已到达且未完成的进程提升到 Q0，清零时间片用量和本层累计用量；阻塞进程仍需等待 I/O 完成。</p><p>提升时，当前运行进程继续执行，就绪进程按原 Q0、Q1、Q2 的队列顺序合并。低层任务由此重新获得高优先级，但实际等待时间仍取决于竞争任务和提升周期。</p></div>
-        <div class="rr-tradeoff"><h3>根据 CPU 使用历史调整优先级</h3><p>CPU 段长度决定何时完成或阻塞，不参与队列选择。较少使用 CPU 的任务倾向于较长时间留在高层；持续消耗 CPU 的任务逐步降到低层，用更长的时间片运行。MLFQ 是一组可配置的策略，不是唯一固定的算法；配额累计、I/O 返回位置和提升顺序都需要明确约定。</p><p class="mlfq-boundary-note">同一时刻：先处理上一单位的完成、配额或时间片结束，再接收到达与 I/O 完成，随后处理整体提升，最后进行高层抢占与派发。最终完成优先于配额耗尽。</p></div>
+        <div class="rr-tradeoff"><h3>整体提升使低层任务重新参与高层调度</h3><p>高层任务持续到来时，低层任务可能长期得不到 CPU，这种情况称为饥饿（starvation）。本例每隔 12 个时间单位执行一次优先级提升（priority boost），把已到达且尚未完成的进程移到 Q0，清零时间片用量和本层累计用量；阻塞进程仍需等待 I/O 完成。</p><p>提升时，当前运行进程继续执行，就绪进程按原 Q0、Q1、Q2 的队列顺序合并。低层任务由此重新获得高优先级，但实际等待时间仍取决于竞争任务和提升周期。</p></div>
+        <div class="rr-tradeoff"><h3>根据 CPU 使用历史调整优先级</h3><p>CPU 执行段（CPU burst）的长短决定进程何时完成这段计算或转入等待。调度器根据队列优先级选进程。较少使用 CPU 的任务倾向于较长时间留在高层；持续消耗 CPU 的任务逐步降到低层，用更长的时间片运行。MLFQ 是一组可配置的策略，不是唯一固定的算法；配额累计、I/O 返回位置和提升顺序都需要明确约定。</p><p class="mlfq-boundary-note">同一时刻：先处理上一单位的完成、配额或时间片结束，再接收到达与 I/O 完成，随后处理整体提升，最后判断高优先级任务是否需要抢占 CPU，再选择要运行的进程。最终完成优先于配额耗尽。</p></div>
       </section>
       ${wikiRelated('mlfq')}
     </main><footer class="site-footer"><span>OSLab / CPU 虚拟化</span><a href="#top">回到页首 ↑</a></footer>
@@ -118,7 +118,7 @@ function renderMlfqPage(root) {
       case 'boost': return `${event.ids.join('、')} 恢复 Q0，时间片使用量和本层累计 CPU 用量清零；阻塞状态不变，已完成者不再进入队列。`;
       case 'preempt': return `更高层有就绪任务，${event.id} 返回 Q${event.level} 队首；时间片使用量 ${event.slice} / ${level.quantum}、本层累计 CPU 用量 ${event.used} / ${level.allotment} 均保留。`;
       case 'dispatch': return `选最高非空队列 Q${event.level} 的队首 ${event.id}；本层时间片长度 ${level.quantum}，累计配额 ${level.allotment}。`;
-      case 'finish': return `${event.id} 的最后一个 CPU 段完成，退出调度；即使配额同时用满，也不再降级或排队。`;
+      case 'finish': return `${event.id} 执行完最后一段 CPU 指令，退出调度；即使配额同时用满，也不再降级或排队。`;
       case 'block': return `${event.id} 阻塞至 t=${event.wakeAt}，本次时间片结束；保留 Q${event.level} 及本层用量 ${event.used} / ${level.allotment}，不是就绪等待。`;
       case 'demote': return `${event.id} 在 Q${event.from} 累计使用 ${levels[event.from].allotment} 个 CPU 时间单位，达到本层配额，降到 Q${event.level}；新层的时间片用量和累计用量归零。`;
       case 'renew': return `${event.id} 用满最低层 Q2 的配额，不再降级；重置计数，回 Q2 队尾。`;
@@ -127,7 +127,7 @@ function renderMlfqPage(root) {
   };
   const prepareRun = () => {
     purpose.textContent = {
-      feedback: '先给新任务较高优先级；持续消耗 CPU 的任务逐步下移。观察 B 到达时如何抢占低层任务：调度器只依据使用历史，不预知 B 是短任务。',
+      feedback: 'B 刚到达，按规则进入最高优先级队列。此时若 CPU 正在运行低优先级任务，调度器就会暂停它，让 B 先运行。调度器只比较队列优先级，无需知道 B 还要运行多久。',
       io: '分多次使用 CPU，也累计在同一份配额里。观察 B 每次 I/O 返回后的本层用量：主动让出 CPU 不会抹掉已经消耗的配额。',
       boost: '高层任务不断到来，低层的 A 可能长期等待。打开整体提升，对照 A 再次运行的时刻，观察重新进入高层带来的机会。',
     }[sceneId];
@@ -178,7 +178,7 @@ function renderMlfqPage(root) {
     const important = [...frame.events].sort((left, right) => priority.indexOf(left.type) - priority.indexOf(right.type))[0];
     root.querySelector('#mlfq-event-time').textContent = `t = ${time} / 当前主要变化`;
     root.querySelector('#mlfq-event-title').textContent = time === run.duration ? '所有进程完成，CPU 需求没有因降级增加' : important ? eventTitle(important) : active ? `${active.id} 在 Q${active.level} 继续运行` : '等待 I/O 完成或新进程到达';
-    root.querySelector('#mlfq-event-reason').textContent = important ? describeEvent(important) : active ? `高层没有就绪候选；${active.id} 本次时间片已用 ${active.sliceUsed} / ${levels[active.level].quantum}，本层配额已用 ${active.levelUsed} / ${levels[active.level].allotment}。` : '阻塞者不能被派发，CPU 不为阻塞者计入执行时间。';
+    root.querySelector('#mlfq-event-reason').textContent = important ? describeEvent(important) : active ? `高层没有就绪候选；${active.id} 本次时间片已用 ${active.sliceUsed} / ${levels[active.level].quantum}，本层配额已用 ${active.levelUsed} / ${levels[active.level].allotment}。` : '阻塞进程要等到条件满足后才能再次参与调度，等待期间不计入 CPU 执行时间。';
     const otherEvents = frame.events.filter(event => event !== important);
     root.querySelector('#mlfq-other-events').hidden = otherEvents.length === 0;
     root.querySelector('#mlfq-other-events-title').textContent = `本时刻的完整事件顺序（${frame.events.length} 项）`;

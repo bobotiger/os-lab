@@ -5,9 +5,9 @@ function renderMemoryApiPage(root) {
   const $$ = selector => [...root.querySelectorAll(selector)];
   const escape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const groups = {
-    allocation: {name:'申请与使用', api:'malloc · calloc', title:'malloc 的空间分配与初始化', lead:'指针保存对象的起始地址。申请成功后，能访问多大范围、能否读取内容，仍取决于对象的大小与初始化状态。', scenes:{malloc:'malloc',calloc:'calloc',failure:'分配失败'}, errors:['unallocated','size','string','uninitialized','bounds']},
+    allocation: {name:'申请与使用', api:'malloc · calloc', title:'malloc 的空间分配与初始化', lead:'分配成功后，指针保存新对象的起始地址。能访问多大范围取决于申请了多少字节。能否读取其中的值，还要看程序是否已经初始化了相应内容。', scenes:{malloc:'malloc',calloc:'calloc',failure:'分配失败'}, errors:['unallocated','size','string','uninitialized','bounds']},
     resize: {name:'按需调整', api:'realloc', title:'realloc 的大小调整与指针更新', lead:'原来两个 int 占 8 字节，现在需要三个。realloc 的参数是新的总大小 12 字节。成功时使用返回的指针；非零大小请求失败时，原对象仍然有效。', scenes:{move:'成功 · 移动位置',inplace:'成功 · 地址未变',resizeFailure:'失败 · 保留原对象'}, errors:[]},
-    release: {name:'结束使用', api:'free', title:'对象释放后，所有旧引用失效', lead:'复制指针不会复制对象。对象不再使用时释放一次；把某个指针设为 NULL，是另外一次赋值。', scenes:{alias:'两个引用，同一个对象'}, errors:['leak','useAfterFree','doubleFree','invalidFree']},
+    release: {name:'结束使用', api:'free', title:'对象释放后，所有旧引用失效', lead:'复制指针只会得到另一个指向同一对象的指针。释放对象后，这些指针都可能成为悬空指针（dangling pointer）。把其中一个设为 NULL，并不会更新其他指针。', scenes:{alias:'两个引用，同一个对象'}, errors:['leak','useAfterFree','doubleFree','invalidFree']},
   };
   const captions = {
     malloc:['声明指针，没有堆对象','申请成功，内容尚未初始化','写入后，两个元素有了确定值','读取两个元素，得到 30'],
@@ -41,12 +41,12 @@ function renderMemoryApiPage(root) {
     bounds:['访问索引应在对象范围内','/* 已分配两个 int */\np[1] = 30;','两个元素的索引只有 0、1。p[2] 已在对象之外，相邻地址可访问也不能使这次写入合法。'],
     leak:['不再使用时，先释放再清空','free(p);\np = NULL;','没有其他引用时，清空 p 会丢失访问与释放这个对象的途径；对象却仍占据分配空间。'],
     useAfterFree:['把使用安排在释放之前','int value = p[0];\nfree(p);','原对象的生命周期已经结束，即使原地址处的字节没有清零，也不能继续读取。'],
-    doubleFree:['同一次分配只释放一次','free(p);\np = NULL;','重复释放旧对象是未定义行为。把 p 清空后调用 free(NULL) 没有作用，但其他旧引用仍需管理。'],
+    doubleFree:['同一块内存只释放一次','free(p);\np = NULL;','重复释放旧对象是未定义行为。把 p 清空后调用 free(NULL) 没有作用，但其他旧引用仍需管理。'],
     invalidFree:['把分配起始指针传给 free','free(p);','p + 1 位于对象内部，不能作为释放参数；free 也不接受栈变量的地址。'],
   };
   root.innerHTML = `<div class="page mi-page" id="top">${wikiHeader('memoryApi', [])}
     <a class="mi-skip" href="#mi-main">跳到主要内容</a>
-    <main id="mi-main" tabindex="-1"><header class="mi-intro"><h1>内存 API <span>Memory API</span></h1><p>栈上的<span class="read-keep">局部变量</span>随<span class="read-keep">函数调用</span><span class="read-keep">自动管理</span>；<span class="read-keep">动态对象</span>由程序<span class="read-keep">申请</span>，<span class="read-keep">不再使用</span>时<span class="read-keep">释放</span>。<br><strong><span class="read-keep">指针变量</span>和它指向的对象，分别占用空间。</strong></p></header>
+    <main id="mi-main" tabindex="-1"><header class="mi-intro"><h1>内存分配接口 <span>Memory API</span></h1><p>在本页的 C 示例中，栈（stack）上的局部变量随函数调用建立和销毁。堆（heap）上的对象由程序通过动态内存分配（dynamic memory allocation）申请，使用完后要主动释放。<br><strong>指针变量和它指向的对象各占一份空间。</strong></p></header>
     <nav class="mi-workflow" aria-label="选择内存操作">${Object.entries(groups).map(([id,g])=>`<button type="button" data-group="${id}" aria-pressed="false"><span>${g.name}</span><code>${g.api}</code></button>`).join('')}</nav>
     <section id="demo" class="mi-lesson" aria-labelledby="mi-title">
       <div class="mi-lead"><h2 id="mi-title"></h2><p id="mi-lead"></p></div>
@@ -58,7 +58,7 @@ function renderMemoryApiPage(root) {
       </div>
       <p class="mi-caption">本例 int 为 4 字节，指针为 8 字节；地址是示意虚拟地址，申请大小非零。<span>? 未初始化</span><span>虚线 × 旧引用已失效</span></p>
       <div id="mi-next-thought" class="mi-takeaway"></div>
-      <details id="mi-failure" class="mi-detail" hidden><summary>realloc 失败时的指针处理</summary><p>同样返回 NULL，区别在于把结果保存到哪里。以下两种写法从同一个有效 p 出发，且没有其他引用。</p><div class="mi-compare"><section><h3>临时指针接收</h3><code>tmp = realloc(p, 12);</code><div class="mi-mini"><span>返回结果：tmp = NULL</span><div class="mi-receive-row"><code>p<br>0x1000</code><span aria-label="有效引用">→</span><div><b>8 字节 · 未释放</b><span>10　20</span></div></div><strong>原对象仍可访问和释放</strong></div></section><section><h3>直接覆盖 p</h3><code>p = realloc(p, 12);</code><div class="mi-mini mi-warning"><span>返回结果覆盖 p</span><div class="mi-receive-row"><code>p<br>NULL</code><span aria-label="引用丢失">×</span><div><b>8 字节 · 未释放</b><span>10　20</span></div></div><strong>最后一个引用丢失，造成泄漏</strong></div></section></div></details>
+      <details id="mi-failure" class="mi-detail" hidden><summary>realloc 失败时的指针处理</summary><p>两次 realloc 都失败并返回 NULL。比较把 NULL 先存到临时指针和直接存进 p 的后果。开始时只有 p 指向原对象。</p><div class="mi-compare"><section><h3>临时指针接收</h3><code>tmp = realloc(p, 12);</code><div class="mi-mini"><span>返回结果：tmp = NULL</span><div class="mi-receive-row"><code>p<br>0x1000</code><span aria-label="有效引用">→</span><div><b>8 字节 · 未释放</b><span>10　20</span></div></div><strong>原对象仍可访问和释放</strong></div></section><section><h3>直接覆盖 p</h3><code>p = realloc(p, 12);</code><div class="mi-mini mi-warning"><span>返回结果覆盖 p</span><div class="mi-receive-row"><code>p<br>NULL</code><span aria-label="引用丢失">×</span><div><b>8 字节 · 未释放</b><span>10　20</span></div></div><strong>最后一个引用丢失，造成泄漏</strong></div></section></div></details>
       <details id="mistakes" class="mi-detail"><summary id="mi-mistakes-label"></summary><div class="mi-error-intro"><strong>能编译、能运行，不等于内存使用正确</strong><p>对象边界和生命周期由程序管理。OS 的地址保护不能识别每个 C 对象的合法访问范围。</p></div><nav id="mi-errors" aria-label="选择相关错误"></nav><div class="mi-error-body"><div><div class="mi-error-heading"><h3 id="mi-error-title"></h3><span id="mi-error-kind"></span></div><pre id="mi-error-code"></pre><div id="mi-error-diagram" class="mi-diagram" role="group" aria-label="错误涉及的对象与位置"></div></div><div class="mi-correction"><h3 id="mi-fix-title"></h3><p id="mi-error-reason"></p><pre id="mi-fix"></pre><p id="mi-error-boundary" class="mi-caption"></p></div></div><p class="mi-error-foot">未定义行为没有规定的执行结果，可能崩溃，也可能没有立即可见的异常。调试时可借助 Valgrind 等工具查找非法访问和泄漏。</p></details>
       <details id="contracts" class="mi-detail"><summary id="mi-reference-title"></summary><code id="mi-signature"></code><dl id="mi-rules"></dl><p class="mi-caption">这些是 C 库接口，声明在 &lt;stdlib.h&gt; 中。size_t 表示大小，NULL 表示空指针。<a href="https://man7.org/linux/man-pages/man3/malloc.3.html">接口手册 →</a></p></details>
     </section><nav class="mi-related" aria-label="对象的分配与访问"><p>申请成功后，得到连续的虚拟地址范围；读写对象时，仍需把虚拟地址转换为物理地址。</p><a href="address-translation.html">地址转换：读写时找到物理位置 →</a><a href="free-space.html">空闲空间管理：为对象寻找空闲块 →</a><a href="paging.html#object">分页：一个对象跨越两页 →</a></nav></main><footer class="site-footer"><span>OSLab / 内存虚拟化</span><a href="#top">回到页首 ↑</a></footer><div id="mi-status" class="mi-sr" role="status"></div></div>`;

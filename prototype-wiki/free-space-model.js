@@ -33,7 +33,7 @@ function buildFreeSpaceStory() {
   blocks = [{start: 0, size: 12, owner: null}];
   add({label: '合并右邻', title: '再合并右邻，8 + 4 合并为 12', text: '合并后的块 [0, 8) 与右邻 [8, 12) 相接，更新为一个记录长度 12 的空闲表项。空闲总量仍是 12，改变的是记录方式。', inspected: [0], selected: 0});
   blocks = [{start: 0, size: 6, owner: 'N'}, {start: 6, size: 6, owner: null}];
-  add({label: '重试并拆分', title: '从长度 12 的空闲块分配 6 单位，剩余 6 单位', text: '再次请求 6，分配器从块的低地址端分出 [0, 6) 给新对象 N，剩余 [6, 12) 留在空闲列表。A 已释放，不是被搬到别处。', outcome: 'success', result: {start: 0, size: 6}});
+  add({label: '重试并拆分', title: '从长度 12 的空闲块分配 6 单位，剩余 6 单位', text: '再次请求 6，分配器从块的低地址端分出 [0, 6) 给新对象 N，剩余 [6, 12) 留在空闲链表。A 已释放，不是被搬到别处。', outcome: 'success', result: {start: 0, size: 6}});
   return frames.map((frame, index) => ({...frame, complete: index === frames.length - 1}));
 }
 
@@ -85,7 +85,7 @@ function buildFreeSpaceComparison(requests=[3,12]){
   const add=(requestIndex,phase,title,text)=>frames.push({requests:[...requests],requestIndex,request:requests[requestIndex],phase,title,text,rows:Object.fromEntries(Object.entries(rows).map(([id,row])=>[id,freeSpaceSnapshot(row.blocks,row)])),stage:frames.length});
   requests.forEach((request,requestIndex)=>{
     for(const row of Object.values(rows))Object.assign(row,{inspected:[],selected:null,current:null,result:null,status:'pending'});
-    add(requestIndex,'request',`申请 ${request} 单位连续空间`,requestIndex===0?'第 1 次请求。四组从相同的初始空闲布局中，按各自策略寻找合适的块。':`第 ${requestIndex+1} 次请求。四组从各自当前的空闲列表中选块；先前分配成功的对象仍保留。`);
+    add(requestIndex,'request',`申请 ${request} 单位连续空间`,requestIndex===0?'第 1 次请求。四组从相同的初始空闲布局中，按各自策略寻找合适的块。':`第 ${requestIndex+1} 次请求。四组从各自当前的空闲链表中选块；先前分配成功的对象仍保留。`);
     const searches=Object.fromEntries(Object.entries(rows).map(([id,row])=>{
       const candidates=row.blocks.filter(b=>b.owner===null);
       return [id,{items:id==='next'?[...candidates.filter(b=>b.start>=row.cursor),...candidates.filter(b=>b.start<row.cursor)]:candidates,at:0,done:false}];
@@ -104,7 +104,7 @@ function buildFreeSpaceComparison(requests=[3,12]){
     }
     for(const row of Object.values(rows)){row.current=null;row.status=row.selected===null?'rejected':'chosen';}
     const noneChosen = Object.values(rows).every(row => row.selected === null);
-    add(requestIndex,'choose',noneChosen?'没有足够大的空闲块':'选定位置，再改变空闲列表',noneChosen?'四组都没有找到合适的块，本次申请将失败；空闲空间不会被切分。':'检查结束。没有合适块的组将分配失败；其余组确定位置，但此时还没有切分空间。');
+    add(requestIndex,'choose',noneChosen?'没有足够大的空闲块':'选定位置，再改变空闲链表',noneChosen?'四组都没有找到合适的块，本次申请将失败；空闲空间不会被切分。':'检查结束。没有合适块的组将分配失败；其余组确定位置，但此时还没有切分空间。');
     for(const [id,row] of Object.entries(rows)){
       if(row.selected===null){row.failures++;row.status='failed';continue;}
       const chosen=row.blocks.find(b=>b.start===row.selected),start=chosen.start,remainder=chosen.size-request;

@@ -82,13 +82,13 @@ function renderProcessPage(root) {
         <section class="intro" aria-labelledby="page-title">
           <p class="eyebrow">CPU 虚拟化 / 进程</p>
           <h1 id="page-title">进程 <span>Process</span></h1>
-          <p class="lead">CPU 虚拟化通过轮流执行，让多个程序共享 CPU，并继续各自的计算。</p>
-          <p class="definition">进程是程序的一次执行。程序包含指令和相关数据，同一份程序可以由多个进程执行。操作系统分别记录每个进程的标识、执行位置、计算状态和所需资源。</p>
+          <p class="lead">只有一个逻辑 CPU 时，也可以同时打开多个程序。操作系统让它们轮流执行。某个进程还没做完就让出 CPU 时，系统会保存它的运行状态，下次再从原处接着执行。这是 CPU 虚拟化（CPU virtualization）的一种方式。</p>
+          <p class="definition">进程（process）是程序运行时形成的实例。同一个程序可以启动多次，每次执行都有自己的进程标识、运行状态和资源。</p>
         </section>
 
         <section class="state-section" id="states" aria-labelledby="states-title">
           <div class="section-heading"><div><h2 id="states-title">进程状态与状态转换</h2></div></div>
-          <p class="section-description">一颗 CPU 轮流执行 A、B。A 读取文件并等待数据时，B 可以继续计算；数据返回后，A 仍需等待调度。</p>
+          <p class="section-description">A 发出读取请求后要等文件数据。这段时间里，CPU 可以执行 B 的计算。数据到了，A 就回到就绪队列，等调度器再次选中它。</p>
           <div class="story">
             <div class="story-heading"><h3>文件读取过程中的进程状态</h3><div class="process-story-controls" role="group" aria-label="文件读取步骤控制"><button type="button" id="process-story-prev">上一步</button><button type="button" id="process-story-next">下一步</button><button type="button" id="process-story-return" hidden>从头查看读取过程</button></div></div>
             <div class="story-sequence-scroll" role="region" aria-label="文件读取步骤" tabindex="0"><ol class="story-steps">${DATA.story.map((step, index) => `<li><button type="button" data-step="${index}" aria-pressed="false"><span class="step-number">${String(index + 1).padStart(2, '0')}</span><span class="step-title">${step.title}</span><span class="step-state">${DATA.states.find(state => state.id === step.state).short}</span></button></li>`).join('')}</ol></div>
@@ -102,8 +102,8 @@ function renderProcessPage(root) {
         </section>
 
         <section class="pcb-section" id="pcb" aria-labelledby="pcb-title">
-          <div class="section-heading"><div><h2 id="pcb-title">进程切换与执行现场的保存</h2></div></div>
-          <p class="section-description">进程控制块（PCB）是 OS 记录进程信息的数据结构。进程暂停时，保存的执行现场记录了执行位置和计算状态。</p>
+          <div class="section-heading"><div><h2 id="pcb-title">上下文切换与执行现场</h2></div></div>
+          <p class="section-description">操作系统用进程控制块（process control block，PCB）记录进程信息。进行上下文切换（context switch）时，系统保存当前进程的执行现场，例如程序计数器和寄存器的值，再恢复下一个进程的执行现场。</p>
           <div class="cpu-context-demo"><div class="cpu-context-controls" role="group" aria-label="现场保存与恢复"><button type="button" data-context="0" aria-pressed="true">A 执行</button><button type="button" data-context="1" aria-pressed="false">切换到 B</button><button type="button" data-context="2" aria-pressed="false">恢复 A</button></div><div id="process-context-view" aria-live="polite" aria-atomic="true"></div><p class="cpu-caption">PC 记录下一条指令地址，R 示意一个通用寄存器；数值仅作示意。此处省略内核入口、内核上下文及返回过程，“受限直接执行”页展开这些环节。</p></div>
           <p class="section-description" id="context-switch">上下文切换先保存当前进程的现场，再恢复另一个进程的现场。之前的进程再次获得 CPU 时，才能从保存的位置继续执行。</p>
           <details class="process-reference"><summary>查看 PCB 的完整字段说明</summary><div class="pcb-reference-scroll" role="region" aria-label="PCB 典型字段" tabindex="0"><table class="pcb-table"><caption>PCB 中的典型信息，具体组织随操作系统实现而异</caption><thead><tr><th scope="col">字段</th><th scope="col">保存什么</th><th scope="col">为什么需要</th></tr></thead><tbody>${DATA.pcb.map(row => `<tr><th scope="row">${row.field}<span>${row.english}</span></th><td>${row.value}</td><td>${row.desc}</td></tr>`).join('')}</tbody></table></div></details>
@@ -112,7 +112,7 @@ function renderProcessPage(root) {
         <section class="related-section" id="related" aria-labelledby="related-title">
           <div class="section-heading"><div><h2 id="related-title">进一步理解</h2></div></div>
           <details class="process-reference" id="thread"><summary>进程与线程有什么区别？</summary><p>线程是进程内的执行流。同一进程的线程通常共享地址空间，但各自保存程序计数器和寄存器值。现代系统通常以线程为调度单位，本页的单核示例以进程为调度对象。</p></details>
-          <details class="process-reference" id="scheduling"><summary>调度怎样决定谁获得 CPU？</summary><p>调度从就绪的执行对象中选择一个，并为它分配 CPU。<a class="inline-link" href="${WIKI_PAGES.roundRobin.href}">时间片轮转</a>按就绪队列顺序分配 CPU；时间片耗尽时，未完成的进程回到队尾。</p></details>
+          <details class="process-reference" id="scheduling"><summary>调度怎样决定谁获得 CPU？</summary><p>调度器把 CPU 分给已经就绪的进程或线程。<a class="inline-link" href="${WIKI_PAGES.roundRobin.href}">时间片轮转</a>按就绪队列顺序分配 CPU；时间片耗尽时，未完成的进程回到队尾。</p></details>
           <details class="process-reference" id="virtual-memory"><summary>进程的地址空间与物理内存是什么关系？</summary><p>虚拟地址是进程使用的地址，虚拟地址空间是这些地址的集合。<a class="inline-link" href="${WIKI_PAGES.paging.href}">分页地址转换</a>根据映射关系得到物理地址。操作系统管理映射和访问权限，硬件在访问时执行相应检查。</p></details>
         </section>
         <section class="related-section" id="practice" aria-labelledby="process-practice-title"><div class="section-heading"><div><h2 id="process-practice-title">进程状态的运行记录与分析</h2></div></div><p class="process-homework-link"><a class="inline-link" href="process-homework.html">进程作业：计算与 I/O 等待</a></p><p class="process-homework-link"><a class="inline-link" href="cpu-virtualization-experiments.html">CPU 虚拟化实验：观察进程与 CPU 共享</a></p></section>

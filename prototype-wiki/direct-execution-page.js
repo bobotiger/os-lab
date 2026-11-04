@@ -6,8 +6,8 @@ function renderDirectExecutionPage(root) {
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">CPU 虚拟化 / 机制</p>
         <h1 id="page-title">受限直接执行 <span>Limited Direct Execution</span></h1>
-        <p class="lead">进程共享 CPU，既需要直接执行的效率，也需要 OS 能限制权限、重新取得控制权。</p>
-        <p class="definition">普通指令在用户态直接执行，权限受硬件限制；通过受控入口进入内核态后，操作系统才能执行必要的特权操作。</p>
+        <p class="lead">用户程序的大部分指令由 CPU 直接执行。硬件限制程序能做什么，并在系统调用、中断或异常发生时把控制权交给内核。这是受限直接执行（limited direct execution）的基本思路。</p>
+        <p class="definition">应用程序平时在用户态（user mode）运行。需要内核服务时，程序发起系统调用（system call），经受控入口进入内核态（kernel mode），由内核执行有权限限制的操作。</p>
       </section>
       <section class="lde-demo" id="demo" aria-labelledby="demo-title">
         <div class="section-heading"><div><h2 id="demo-title">系统调用、中断与异常</h2></div></div>
@@ -43,16 +43,16 @@ function renderDirectExecutionPage(root) {
       <section class="rr-rules" id="rules" aria-labelledby="rules-title"><div class="section-heading"><div><h2 id="rules-title">权限模式切换与进程切换</h2></div></div>
         <div class="lde-comparison">
           <div><h3>用户态与内核态切换</h3><p class="lde-change"><span>A · 用户态</span><span aria-hidden="true">→</span><span>A · 内核态</span></p><p>CPU 已进入内核，仍在 A 的进程上下文中。</p></div>
-          <div><h3>进程切换</h3><p class="lde-change"><span>A · 内核态</span><span aria-hidden="true">→</span><span>B · 内核态</span></p><p>OS 保存 A、恢复 B，然后才能返回 B 的用户程序。</p></div>
+          <div><h3>进程切换</h3><p class="lde-change"><span>A · 内核态</span><span aria-hidden="true">→</span><span>B · 内核态</span></p><p>内核先保存 A 的执行上下文，再恢复 B 的执行上下文。随后可以返回用户态，继续运行 B 的程序。</p></div>
         </div>
         <p class="lde-next-topic">计时器使 OS 能重新获得控制权；接下来选谁运行，由<a class="inline-link" href="cpu-scheduling.html">调度策略</a>决定。</p>
       </section>
       <section class="lde-entry-section" id="entry" aria-labelledby="entry-title"><div class="section-heading"><div><h2 id="entry-title">内核入口与权限保护</h2></div></div>
         <details class="lde-reference"><summary>系统调用、中断和异常，分别由什么触发？</summary>
-          <table class="lde-entry-table"><caption>入口组织与向量编号随体系结构变化。</caption><thead><tr><th scope="col">事件</th><th scope="col">触发来源</th><th scope="col">受控目标</th></tr></thead><tbody><tr><th scope="row">系统调用</th><td>程序的专用请求指令</td><td>系统调用入口</td></tr><tr><th scope="row">计时器中断</th><td>计时器硬件，异步触发</td><td>计时器处理入口</td></tr><tr><th scope="row">保护异常</th><td>当前指令的权限检查，同步触发</td><td>异常处理入口</td></tr></tbody></table>
+          <table class="lde-entry-table"><caption>时钟中断（timer interrupt）来自硬件计时器，异常（exception）则可能由当前指令触发。内核入口和向量编号因处理器体系结构而异。</caption><thead><tr><th scope="col">事件</th><th scope="col">触发来源</th><th scope="col">受控目标</th></tr></thead><tbody><tr><th scope="row">系统调用</th><td>程序的专用请求指令</td><td>系统调用入口</td></tr><tr><th scope="row">计时器中断</th><td>计时器硬件，异步触发</td><td>计时器处理入口</td></tr><tr><th scope="row">保护异常</th><td>当前指令的权限检查，同步触发</td><td>异常处理入口</td></tr></tbody></table>
         </details>
-        <details class="lde-reference"><summary>为什么不能用普通函数调用获得内核权限？</summary><p>普通函数调用只改变程序内的执行位置，不自动提高权限。内核先以足够权限配置陷阱／中断入口和计时器，再允许用户程序运行。CPU 按硬件规则和入口配置进入内核，用户程序不能任意指定内核入口地址。</p><p>普通指令直接执行时，权限检查和内存保护仍然有效。</p></details>
-        <details class="lde-reference"><summary>进入内核，是否意味着进程阻塞或退出？</summary><p>用户态、内核态表示 CPU 权限；运行、就绪、阻塞表示进程的运行条件。查询型系统调用可以不阻塞，等待 I/O 的调用则可能使进程阻塞。</p><p>保护异常发生后，违规操作未完成。内核是否终止进程、报告错误或采取其他处理，取决于系统与异常类型；进入内核本身不等于进程已退出。</p></details>
+        <details class="lde-reference"><summary>为什么不能用普通函数调用获得内核权限？</summary><p>普通函数调用只改变程序内的执行位置，不自动提高权限。操作系统先在内核态配置异常和中断入口，并设置硬件计时器，再启动用户程序。CPU 按硬件规则和入口配置进入内核，用户程序不能任意指定内核入口地址。</p><p>普通指令直接执行时，权限检查和内存保护仍然有效。</p></details>
+        <details class="lde-reference"><summary>进入内核，是否意味着进程阻塞或退出？</summary><p>进程进入内核态后，仍然可以在 CPU 上运行。例如查询进程号通常可以立即返回。读取尚未到达的数据时，进程才可能因为等待 I/O 而阻塞。</p><p>保护异常发生后，违规操作未完成。内核是否终止进程、报告错误或采取其他处理，取决于系统与异常类型；进入内核本身不等于进程已退出。</p></details>
       </section>
       ${wikiRelated('directExecution')}
     </main><footer class="site-footer"><span>OSLab / CPU 虚拟化</span><a href="#top">回到页首 ↑</a></footer>
@@ -110,7 +110,7 @@ function renderDirectExecutionPage(root) {
     const returning = snapshot.owner === 'user' && stage >= 4;
     const userSaved = frames.slice(0, stage + 1).some(frame => frame.owner === 'kernel');
     const transfer = entering ? 'A 用户现场 → A 的保存区；CPU 转入内核入口' : switching ? '保存 A 的内核上下文 → 恢复 B 的内核上下文' : returning ? `${snapshot.context} 的用户现场 → CPU，继续用户程序` : snapshot.owner === 'kernel' ? 'CPU 正在执行内核代码，用户现场留在保存区' : 'CPU 直接执行 A 的用户指令';
-    contextTransfer.innerHTML = `<p class="cpu-transfer-action">${transfer}</p><div class="cpu-context-layout cpu-lde-context"><div class="cpu-saved ${entering || switching ? 'is-transferring' : ''}"><h3>A 的保存区</h3><span>用户现场：PC、寄存器、用户栈指针</span><strong>${returning && snapshot.context === 'A' ? '已恢复到 CPU' : userSaved ? '已保存 A 的用户现场' : '尚未进入内核'}</strong><span>内核上下文：内核执行位置、栈指针等</span><strong>${changedProcess ? '已保存，可供以后恢复' : '尚未因切换而保存'}</strong></div><div class="cpu-registers process-${snapshot.context.toLowerCase()}"><span>CPU 当前执行</span><strong>${snapshot.context} · ${snapshot.owner === 'user' ? '用户程序' : '内核代码'}</strong><span>${snapshot.owner === 'kernel' ? `使用 ${snapshot.context} 的内核执行上下文` : `使用 ${snapshot.context} 的用户执行现场`}</span></div><div class="cpu-saved ${switching || returning && snapshot.context === 'B' ? 'is-transferring' : ''}"><h3>B 的保存区</h3><span>用户现场：PC、寄存器、用户栈指针</span><strong>${returning && snapshot.context === 'B' ? '已恢复到 CPU' : '预先保存，等待恢复'}</strong><span>内核上下文：内核执行位置、栈指针等</span><strong>${changedProcess ? '切换时已恢复' : '预先保存，等待恢复'}</strong></div></div><p class="cpu-caption">${switching ? '进程已从 A 换成 B，但 CPU 仍在内核态；下一阶段才返回 B 的用户代码。' : entering ? '硬件与入口代码共同保留返回所需状态；此时仍属于 A，尚未切换到 B。' : '用户现场用于回到用户程序；内核上下文用于在内核中暂停、恢复一个进程的执行。'}</p>`;
+    contextTransfer.innerHTML = `<p class="cpu-transfer-action">${transfer}</p><div class="cpu-context-layout cpu-lde-context"><div class="cpu-saved ${entering || switching ? 'is-transferring' : ''}"><h3>A 的保存区</h3><span>用户现场：PC、寄存器、用户栈指针</span><strong>${returning && snapshot.context === 'A' ? '已恢复到 CPU' : userSaved ? '已保存 A 的用户现场' : '尚未进入内核'}</strong><span>内核上下文：内核执行位置、栈指针等</span><strong>${changedProcess ? '已保存，可供以后恢复' : '尚未因切换而保存'}</strong></div><div class="cpu-registers process-${snapshot.context.toLowerCase()}"><span>CPU 当前执行</span><strong>${snapshot.context} · ${snapshot.owner === 'user' ? '用户程序' : '内核代码'}</strong><span>${snapshot.owner === 'kernel' ? `使用 ${snapshot.context} 的内核执行上下文` : `使用 ${snapshot.context} 的用户执行现场`}</span></div><div class="cpu-saved ${switching || returning && snapshot.context === 'B' ? 'is-transferring' : ''}"><h3>B 的保存区</h3><span>用户现场：PC、寄存器、用户栈指针</span><strong>${returning && snapshot.context === 'B' ? '已恢复到 CPU' : '预先保存，等待恢复'}</strong><span>内核上下文：内核执行位置、栈指针等</span><strong>${changedProcess ? '切换时已恢复' : '预先保存，等待恢复'}</strong></div></div><p class="cpu-caption">${switching ? '进程已从 A 换成 B，但 CPU 仍在内核态；下一阶段才返回 B 的用户代码。' : entering ? '硬件与入口代码共同保留返回所需状态；此时仍属于 A，尚未切换到 B。' : '用户现场记录回到用户态时需要恢复的状态。内核上下文记录进程在内核中执行到哪里，以便切回该进程后继续执行内核代码。'}</p>`;
     root.querySelector('#lde-stage-index').textContent = stage + 1;
     root.querySelector('#lde-executing').textContent = snapshot.owner === 'user' ? `${snapshot.context} 的用户代码` : '内核代码';
     root.querySelector('#lde-mode').textContent = snapshot.mode;

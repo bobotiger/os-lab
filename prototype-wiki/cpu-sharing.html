@@ -36,8 +36,8 @@ main :is(h1, h2, h3, h4) { text-wrap: balance; }
 <header>
 <div class="eyebrow">CPU 虚拟化实验 · 任务一 · CPU 共享</div>
 <h1>一个 CPU，两个计算进程</h1>
-<p class="lead">本实验比较两种条件：A 单独计算，以及 A、B 在同一个逻辑 CPU 上计算。每个进程的计算量相同，比较它们的完成进度、耗时和最终结果。</p>
-<p class="lead">第二种条件不等 A 结束就启动 B，两个进程的运行时段重叠，称为并发运行。同一个逻辑 CPU 在同一时刻只能执行一个线程；A、B 都是单线程进程，通过调度轮流执行。</p>
+<p class="lead">先让 A 单独计算，再让 A 和 B 在同一个逻辑 CPU 上运行。每个进程都执行相同的计算。比较 A 做完用了多久，以及同一时刻各自算到了哪里。</p>
+<p class="lead">第二次运行时，在 A 结束前启动 B。两者在同一段时间内都能推进，这叫并发（concurrency）。本实验把它们绑定到同一个逻辑处理器（logical processor），两条线程轮流执行。</p>
 <div class="conditions"><span>每个进程：24 段相同计算</span><span>每段：4,000 万次迭代</span><span>单独与并发运行：绑定同一个 CPU</span></div>
 </header>
 <nav class="section-links" aria-label="实验章节"><a href="#setup-heading">准备程序</a><a href="#reading-heading">记录说明</a><a href="#practice-heading">实验步骤</a><a href="#result-heading">实测对照</a><a href="#why-heading">机制解释</a><a href="#guide-heading">程序说明</a></nav>

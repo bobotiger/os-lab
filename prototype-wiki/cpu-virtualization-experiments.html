@@ -41,7 +41,7 @@
 <header>
 <p class="experiment-topic">Ubuntu 实践</p>
 <h1>CPU 虚拟化实验</h1>
-<div class="cpu-practice-paths"><div><strong>网页中理解机制</strong><p>在<a href="index.html">进程</a>、<a href="limited-direct-execution.html">受限直接执行</a>和 <a href="cpu-scheduling.html">CPU 调度基础</a>中，逐步观察简化模型的状态变化。</p></div><div><strong>Linux 中观察实际运行</strong><p>下方五项实验在 Ubuntu 或 WSL 中编译、运行程序。结合 PID、状态和时间记录解释实际现象；运行次序与耗时可能变化。</p></div></div>
+<div class="cpu-practice-paths"><div><strong>网页中理解机制</strong><p>在<a href="index.html">进程</a>、<a href="limited-direct-execution.html">受限直接执行</a>和 <a href="cpu-scheduling.html">CPU 调度基础</a>中，可以分别观察进程（process）如何切换状态、内核如何取得控制权，以及 CPU 调度（CPU scheduling）如何分配处理器时间。</p></div><div><strong>Linux 中观察实际运行</strong><p>下面五项实验都可以在 Ubuntu 或 WSL 中编译、运行。每项实验先给出可复现的操作，再说明从进程编号、状态或时间记录的哪一项判断结果。实际运行的次序和耗时可能不同。</p></div></div>
 <nav class="experiment-index" aria-label="任务目录"><a href="#sharing">任务一：CPU 共享</a><a href="#states">任务二：进程状态</a><a href="#fork">任务三：fork 与变量</a><a href="#exec">任务四：程序替换与进程回收</a><a href="#syscalls">任务五：系统调用与内核控制</a><a href="#environment">实验环境需求</a></nav>
 </header>
 <section id="sharing" aria-labelledby="sharing-heading">
@@ -102,7 +102,7 @@
 <footer><span>相关知识：</span><a href="index.html">进程</a><a href="cpu-scheduling.html">CPU 调度基础</a><a href="process-api.html">进程 API</a></footer>
 </main>
 </div>
-<script src="knowledge-pages.js?v=20261028-ai"></script>
+<script src="knowledge-pages.js?v=20261104-terms"></script>
 <script>
 document.querySelector('#navigation').innerHTML = wikiHeader('cpuExperiments', [{href:'#sharing',title:'实验任务'},{href:'#environment',title:'实验环境需求'}]);
 document.title = 'CPU 虚拟化实验 · OSLab';

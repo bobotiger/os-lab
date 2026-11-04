@@ -32,7 +32,7 @@ main :is(h1, h2, h3, h4) { text-wrap: balance; }
 <div class="eyebrow">CPU 虚拟化实验 · 任务四</div>
 <h1>程序替换与进程回收</h1>
 <p class="lead">上一个任务用 fork() 创建了子进程。这次让子进程装入另一个程序：执行的程序换了，进程编号会不会也换？子进程已经退出，父进程为什么还要等待它？</p>
-<p class="lead">进程编号称为 PID。exec 系列接口替换调用进程的程序映像，也就是它执行的代码和程序内存内容；waitpid() 用来等待指定子进程，并收集退出状态。下面用成功和失败两次运行，观察它们分别改变了什么。</p>
+<p class="lead">进程标识符（process ID，PID）用于识别进程。<code>exec</code> 系列函数成功后，原进程的程序映像（program image）被替换。<code>waitpid()</code> 可以等待指定的子进程，取得它的退出状态（exit status）。下面分别观察装入程序成功和失败时的结果。</p>
 <dl class="conditions"><dt>两次都相同</dt><dd>父进程创建一个子进程。子进程尝试替换程序；父进程先观察子进程退出后的状态，再用 waitpid() 回收。</dd><dt>两次的区别</dt><dd>第一次使用编译好的目标程序，第二次使用不存在的目标路径。</dd></dl>
 </header>
 <nav class="section-links" aria-label="实验章节"><a href="#setup">准备程序</a><a href="#replacement">比较程序替换</a><a href="#reaping">比较退出与回收</a><a href="#mechanism">过程与原因</a><a href="#transfer">判断退出码</a><a href="#guide">程序说明</a></nav>
@@ -103,7 +103,7 @@ second waitpid: ECHILD</pre>
 <section id="transfer" aria-labelledby="transfer-heading">
 <h2 id="transfer-heading">退出码是 7，能说明 exec 失败了吗？</h2>
 <p>第一次运行中，父进程取得退出码 7，而不是 0。有人据此认为目标程序没有成功装入。哪些输出可以支持或反驳这个判断？父进程得到的 7，是目标程序的变量值吗？</p>
-<details><summary>参考答案</summary><div><p>不能只用退出码判断 exec 是否成功。第一次运行已经有 target 的输出，PID 与替换前相同，原程序也没有继续输出 after failed exec，说明目标程序已经装入并执行。7 是目标程序明确设定的退出码。</p><p>目标程序的变量值是 300。父进程收到的是退出码 7，不是变量 value 的内容。与上一个任务相同，等待子进程不会把它的普通私有变量传给父进程。</p></div></details>
+<details><summary>参考答案</summary><div><p>先看有没有目标程序的输出，再看输出中的 PID 是否和替换前相同。第一次运行已经有 target 的输出，PID 与替换前相同，原程序也没有继续输出 after failed exec，说明目标程序已经装入并执行。7 是目标程序明确设定的退出码。</p><p>目标程序的变量值是 300。父进程收到的是退出码 7，不是变量 value 的内容。与上一个任务相同，等待子进程不会把它的普通私有变量传给父进程。</p></div></details>
 </section>
 <section id="guide" aria-labelledby="guide-heading">
 <h2 id="guide-heading">程序说明</h2>

@@ -9,7 +9,7 @@ function renderReplacementImplementation(host, M) {
   let selected='clock';
   host.classList.add('replacement-implementation');
   host.innerHTML=`
-    <header class="lesson-intro"><h2>Clock 算法与置换开销</h2><p>精确 LRU 要在每次访问时维护使用次序。Clock 只记录“清零后是否用过”，把寻找候选的工作留到回收时。</p></header><div class="impl-responsibility"><div><b>硬件 · 访问时</b><span>读写将 R 置 1；写入还将 D 置 1。</span></div><span aria-hidden="true">→</span><div><b>OS · 回收时</b><span>检查 R，清零或选择淘汰；D 决定是否写回。</span></div></div>
+    <header class="lesson-intro"><h2>Clock 算法与置换开销</h2><p>精确 LRU 要在每次访问时更新使用次序。时钟置换算法（clock algorithm）只用访问位（reference bit）记录一页自该位清零后是否被访问，直到需要置换时才扫描候选页。</p></header><div class="impl-responsibility"><div><b>硬件 · 访问时</b><span>读写将 R 置 1；写入还将 D 置 1。</span></div><span aria-hidden="true">→</span><div><b>OS · 回收时</b><span>检查 R，清零或选择淘汰；D 决定是否写回。</span></div></div>
     <div class="subtopics" role="group" aria-label="Clock 的实现取舍"><button type="button" data-implementation="clock" aria-pressed="true">访问位与循环扫描</button><button type="button" data-implementation="dirty" aria-pressed="false">脏页与写回代价</button></div>
     <div class="impl-conditions"><span>已完成</span><b>写页 0</b><span>→</span><b>读页 1</b><span>→</span><b>写页 2</b><strong>现在读页 3</strong></div>
     <section id="impl-clock" aria-label="Clock 循环扫描">

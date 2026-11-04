@@ -54,14 +54,14 @@ main :is(h1, h2, h3, h4) { text-wrap: balance; }
 <header>
 <div class="eyebrow">CPU 虚拟化实验 · 任务二 · 进程状态</div>
 <h1>计算、等待与<span class="read-keep">暂停</span>：观察进程状态</h1>
-<p class="lead">本实验在 Ubuntu 中观察进程的三种状态：可以执行计算、等待数据、被信号暂停。每次只改变一个条件，再比较改变前后的状态记录。</p>
-<p class="lead">运行参考程序后，终端中的控制程序会创建两个进程 A、B：</p>
+<p class="lead">本实验在 Ubuntu 中启动两个进程。一个先开始计算，另一个等到收到数据才开始计算。接着单独暂停并恢复第一个进程，对照两者的状态和 CPU 时间。</p>
+<p class="lead">运行参考程序后，控制程序会创建进程 A 和进程 B。</p>
 <dl class="intro-processes">
 <dt>进程 A</dt><dd>启动后持续执行计算。</dd>
 <dt>进程 B</dt><dd>启动后等待管道中的数据，收到一个字节后开始持续计算。</dd>
 </dl>
-<p class="lead">管道是进程之间传递数据的通道。本实验把一个字节的数据作为通知，用来让 B 开始计算。</p>
-<p class="lead">A、B 使用同一个逻辑 CPU。实验过程中，可以单独暂停和恢复 A，B 的计算或等待条件不受这些命令影响。</p>
+<p class="lead">管道（pipe）可以在进程之间传递数据。本实验向管道写入一个字节。B 读到这个字节后，才开始计算。</p>
+<p class="lead">A、B 绑定到同一个逻辑 CPU。两个进程都能运行时，会轮流使用它。</p>
 </header>
 <nav class="section-links" aria-label="实验章节">
 <a href="#setup-heading">准备程序</a><a href="#reading-heading">输出说明</a><a href="#practice-heading">实验步骤</a><a href="#stages-heading">实测对照</a><a href="#meaning-heading">状态与恢复条件</a><a href="#guide-heading">程序说明</a>
@@ -96,11 +96,11 @@ state&gt;</pre>
 <tr><td>CPU_DELTA(s)</td><td>本次观察中，CPU 为该进程执行指令所用的时间，单位为秒。例如 0.530 表示用了 0.530 秒 CPU 时间。</td></tr>
 <tr><td>elapsed</td><td>本次观察实际经过的秒数，通常略大于一秒。</td></tr>
 </tbody></table></div>
-<p>CPU 时间不包含进程等待数据或等待分配 CPU 的时间。它与实际经过的时间不是同一个数值。</p>
+<p>如果观察持续约一秒，B 一直在等管道数据，它用掉的 CPU 时间仍可能是零。经过的时间照常增加，CPU 时间只在 CPU 为该进程工作时累计。</p>
 <div class="table-scroll"><table class="state-guide"><thead><tr><th>状态</th><th>Linux 含义</th><th>本实验中的条件</th></tr></thead><tbody>
-<tr><td><code>R</code></td><td>正在运行，或已经就绪、等待 CPU。</td><td>进程有计算可做，并且没有被暂停。</td></tr>
-<tr><td><code>S</code></td><td>可被信号中断的睡眠。</td><td>B 的管道中没有数据，读取操作正在等待。</td></tr>
-<tr><td><code>T</code></td><td>被暂停。</td><td>A 收到了 SIGSTOP 暂停信号。</td></tr>
+<tr><td><code>R</code></td><td>正在运行（running），或已经就绪（runnable）、等待 CPU。</td><td>进程有计算可做，并且没有被暂停。</td></tr>
+<tr><td><code>S</code></td><td>可中断睡眠（interruptible sleep）。</td><td>B 的管道中没有数据，读取操作正在等待。</td></tr>
+<tr><td><code>T</code></td><td>收到信号后停止（stopped）。</td><td>A 收到了 SIGSTOP 暂停信号。</td></tr>
 </tbody></table></div>
 <p>R 不保证采样的那个瞬间正在执行。判断一个进程是否在观察期间用过 CPU，还要看 CPU_DELTA(s) 是否大于零。0.000 表示本次采样没有记录到它使用 CPU 的时间。</p>
 </section>
@@ -115,7 +115,7 @@ state&gt;</pre>
 <div class="command"><button class="copy" aria-label="复制初始观察命令" title="复制初始观察命令"><span></span></button><pre>observe
 observe</pre></div>
 <h4>观察什么</h4>
-<ul><li>在每次输出中，比较 A、B 两行的 AFTER 列和 CPU_DELTA(s) 列。</li><li>两次观察之间没有发送数据。B 的状态和 CPU 时间读数是否保持一致？</li></ul>
+<ul><li>先看两次输出中 B 的 <code>AFTER</code> 列，它是否一直是 <code>S</code>？</li><li>再看两行的 <code>CPU_DELTA(s)</code>。A 用了多少 CPU 时间？B 有没有用到 CPU？</li></ul>
 <div class="reference-answer"><h4>参考结果与原因</h4>
 <p>观察结束时，A 的状态为 R，CPU 时间大于零；B 的状态为 S，CPU 时间为 0.000 秒。</p>
 <p>B 正在等待管道中的数据，不能执行读取之后的计算。再等一秒并不会产生数据，所以第二次观察时它仍然等待。</p>
@@ -124,14 +124,14 @@ observe</pre></div>
 
 <article class="exercise" id="send-exercise">
 <h3>2. 发送通知，观察 B 开始计算</h3>
-<p>只改变 B 的数据条件，A 仍然持续计算。<code>send</code> 向管道写入一个字节，随后再观察：</p>
+<p>先输入 <code>send</code>，向管道写入一个字节。再用 <code>observe</code> 查看 B 读到数据后有什么变化。</p>
 <div class="command"><button class="copy" aria-label="复制发送与观察命令" title="复制发送与观察命令"><span></span></button><pre>send
 observe</pre></div>
 <h4>观察什么</h4>
 <ul><li>比较上一步与本次观察的 AFTER 列，B 的状态是否从 S 变为 R？本次使用的 CPU 时间是否大于零？</li><li>A 那一行的 CPU 时间是否也大于零？</li></ul>
 <div class="reference-answer"><h4>参考结果与原因</h4>
 <p>观察结束时，A、B 的状态均为 R，两者在本次观察中都用过 CPU。</p>
-<p>管道有了数据，B 的读取操作可以完成，它随后进入计算。A、B 使用同一个逻辑 CPU，通过调度轮流执行；两行都有 CPU 时间，不表示两个进程在同一时刻执行指令。</p>
+<p>B 读到数据后开始计算。A、B 轮流使用同一个逻辑 CPU，所以在这一轮观察中，两行都可能记下 CPU 时间。</p>
 </div>
 </article>
 

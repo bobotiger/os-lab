@@ -94,7 +94,7 @@ document.querySelector('#root').innerHTML = `
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow">CPU 虚拟化 / 进程 / 作业</p>
         <h1 id="page-title">进程作业 <span>Process Homework</span></h1>
-        <p class="lead">推演计算和 I/O 过程中进程状态与 CPU 的使用情况，观察计算与 I/O 如何重叠。</p>
+        <p class="lead">两个进程共用一个 CPU。当一个进程等待输入/输出（input/output，I/O）时，另一个能否用这段时间计算？先按题目给出的规则排出执行顺序，再数出 CPU 忙了多少个时间单位，算出 CPU 利用率（CPU utilization）。</p>
         <dl class="hw-meta"><div><dt>运行环境</dt><dd>Ubuntu 22.04 · Python 3</dd></div><div><dt>依赖</dt><dd>Python 标准库</dd></div></dl>
         <p class="hw-back"><a class="inline-link" href="index.html">进程：状态转换与上下文切换</a></p>
       </section>

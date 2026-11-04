@@ -1,8 +1,8 @@
 (() => {
   const U = OSLabConcurrencyStage2UI, M = OSLabConcurrentStructures, transport = OSLabConcurrencyUI.transport;
   U.shell('concurrentStructures', [{href: '#granularity', title: '锁的粒度'}, {href: '#design', title: '保护范围'}, {href: '#approximation', title: '近似计数（拓展）'}], `
-    <section class="intro"><p class="eyebrow">并发 / 数据结构</p><h1>并发数据结构</h1><p class="lead">并发数据结构既要保证多个线程<span class="read-keep">共同操作</span>时结果正确，也要控制<span class="read-keep">同步开销</span>。</p><p class="definition">用一把锁保护整个结构，是清楚、易验证的起点。当锁竞争成为瓶颈时，可以考虑分别保护独立的数据，或减少对全局共享数据的更新。这些改进都需要保持结果正确。</p></section>
-    <section class="cc-section" id="granularity"><h2>锁的粒度</h2><p class="cc-intro-text">锁的粒度是指一把锁保护的数据范围。哈希表按键把数据分到不同的组，称为“桶”。整表共用一把锁时，访问不同桶也会相互等待；每桶分别加锁时，不同线程可以同时操作不同的桶。</p>
+    <section class="intro"><p class="eyebrow">并发 / 数据结构</p><h1>并发数据结构</h1><p class="lead">并发数据结构（concurrent data structure）要保证多个线程同时操作时仍能得到正确结果，同时尽量降低同步开销。</p><p class="definition">可以先用一把锁保护整个结构，这种做法容易检查。若线程频繁争用同一把锁，再考虑按数据范围分别加锁，或减少对全局共享数据的更新。</p></section>
+    <section class="cc-section" id="granularity"><h2>锁的粒度</h2><p class="cc-intro-text">锁的粒度（lock granularity）指一把锁保护的数据范围。哈希表（hash table）按键把数据分到不同的组，每组称为一个桶（bucket）。整表共用一把锁时，访问不同桶也会相互等待；每桶分别加锁时，不同线程可以同时操作不同的桶。</p>
       <div class="cc-preset" role="group" aria-label="哈希表访问分布"><span>两个线程的访问位置</span><button data-hash="separate" aria-pressed="true">不同的桶</button><button data-hash="hot" aria-pressed="false">同一个桶</button></div>
       <p class="cc-conditions" id="hash-conditions"></p>
       <div id="hash-demo"><div class="c2-hash-comparison">${['table','bucket'].map((id, i) => `<section class="c2-hash-panel"><h3>${i ? '每个桶一把锁' : '整张表一把锁'}</h3><div id="hash-${id}"></div><p class="c2-panel-log" id="hash-log-${id}" aria-live="polite"></p></section>`).join('')}</div>${transport('hash')}<p class="cc-result" id="hash-result"></p></div>
@@ -15,7 +15,7 @@
       <div id="approx-demo"><div class="c2-counter-layout"><div class="c2-local-counters" id="approx-locals"></div><div class="c2-transfer"><span aria-hidden="true">→</span><span>达到阈值后合并</span></div><div class="c2-global-counter"><span>读取全局计数得到</span><strong id="approx-global">0</strong><span id="approx-lag"></span></div></div>
       <div class="c2-stat-row"><div><span>实际已完成的更新</span><strong id="approx-total">0 / 12</strong></div><div><span>每次更新全局计数</span><strong id="approx-direct">0 次全局加锁</strong></div><div><span>本地累计后合并</span><strong id="approx-merges">0 次全局加锁</strong></div></div>
       <div class="cc-log" role="status"><span id="approx-action"></span><p id="approx-log"></p></div>${transport('approx')}<p class="cc-result" id="approx-result"></p></div>
-      <details class="cc-details"><summary>计数没有丢失，读数仍可能不精确</summary><p>本例实际总数等于全局计数加上两个本地计数。每次本地更新仍使用本地锁，合并还需要全局锁；减少的是全局锁的竞争，并非完全取消同步。两个数之间的转移作为一个合并步骤展示。</p><p>阈值为 4 时，每个 CPU 完成 6 次更新后，会留下 2 次尚未合并的本地更新。全局读数为 8，实际总数为 12。停止更新后可以汇总剩余值；如果更新仍在进行，精确读取需要额外协调，不能随意读取各处数值就声称得到了同一时刻的总数。</p></details>
+      <details class="cc-details"><summary>计数没有丢失，读数仍可能不精确</summary><p>本例实际总数等于全局计数加上两个本地计数。每次本地更新仍使用本地锁，合并还需要全局锁；减少的是全局锁的竞争，并非完全取消同步。图中把本地计数加到全局，并把本地计数清零，合在同一步展示。</p><p>阈值为 4 时，每个 CPU 完成 6 次更新后，会留下 2 次尚未合并的本地更新。全局读数为 8，实际总数为 12。停止更新后可以汇总剩余值；如果更新仍在进行，精确读取需要额外协调，不能随意读取各处数值就声称得到了同一时刻的总数。</p></details>
     </section>
 `);
   let workload = 'separate', threshold = 4;

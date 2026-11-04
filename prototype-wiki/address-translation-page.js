@@ -9,7 +9,7 @@ function renderAddressTranslationPage(root) {
   </div>`;
   root.innerHTML = `<div class="page tx-page" id="top"><a class="tx-skip" href="#main-content">跳到主要内容</a>${wikiHeader('addressTranslation', [])}
     <main id="main-content" tabindex="-1"><header class="tx-intro"><p class="tx-kicker">内存虚拟化 / 基址与界限</p><h1>地址转换 <span>Address Translation</span></h1>
-      <p class="tx-lead">程序给出<strong>虚拟地址</strong>，硬件找到<strong>物理位置</strong>。</p><p>先从整段连续存放的方案开始：程序的地址空间从 0 开始，可以装入不同物理位置。一对基址与界限负责整个地址空间的转换与保护。</p>
+      <p class="tx-lead">程序给出<strong>虚拟地址（virtual address）</strong>，硬件算出对应的<strong>物理地址（physical address）</strong>。这个过程叫地址转换（address translation）。</p><p>先从整段连续存放的方案开始：程序的地址空间从 0 开始，可以装入不同物理位置。基址（base）指出进程在物理内存中的起始位置，界限（bound）限定它可以使用的地址范围。</p>
     </header>
     <section id="demo" class="tx-lab" aria-labelledby="tx-lab-title">
       <header class="tx-lab-head"><div><h2 id="tx-lab-title">基址重定位与地址范围检查</h2><p>执行访存指令时，取指令与访问数据分别进行地址转换。</p></div><span class="tx-mode" id="tx-mode">用户态</span></header>
@@ -61,7 +61,7 @@ function renderAddressTranslationPage(root) {
         </div>
       </details>
       <details id="exercise" class="tx-detail" name="translation-detail"><summary><span><small>练习解析</small><strong>请解释什么是重定位？为什么要重定位？</strong></span><span class="tx-expand" aria-hidden="true">＋</span></summary>
-        <div class="tx-detail-body"><p class="tx-detail-lead"><strong>重定位</strong>是根据程序的实际装入位置，将程序中的逻辑地址转换或修正为相应物理地址的过程。</p>
+        <div class="tx-detail-body"><p class="tx-detail-lead"><strong>重定位（relocation）</strong>根据程序实际装入的位置，把程序使用的地址转换为相应的物理地址。在这个例子中，操作系统把进程的内容搬到新位置后，更新基址寄存器。程序仍然使用原来的虚拟地址。</p>
           <figure class="tx-binding"><figcaption><h3>装入位置改变后的地址转换</h3><span>buffer 的逻辑地址始终为 <b>6</b></span></figcaption><div id="tx-binding-cases"></div>
             <p class="tx-insight">同一个逻辑地址 6，需要随装入位置对应到 30 或 46。重定位使程序能够装入不同的可用区域，并正确访问自己的指令与数据。</p><p id="tx-old-explanation" aria-live="polite">物理地址 30 只对应第一种装入结果。</p>
           </figure>
