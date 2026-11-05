@@ -13,7 +13,8 @@ function createReplacementAccessDetail(host) {
     $('[data-detail-scope]').textContent='回放第 '+count+' 次访问 · 每格按物理框号固定排列；两组分别按自身处理步骤推进。';
     $('.access-detail-panels').innerHTML=traces.map((t,i)=>{
       const pos=Math.min(index,t.length-1),s=t[pos],r=runs[i],done=s.phase==='access';
-      return '<section data-detail-group="'+i+'"><header><b>'+names[r.policy]+' · '+r.capacity+' 框</b><span>'+ (pos+1)+' / '+t.length+' 步</span></header><h4 class="access-detail-action">'+describe(s,r)+'</h4><div class="access-detail-frames">'+s.frames.map((f,j)=>'<div data-detail-frame="'+j+'" data-page="'+(f.page??'')+'" class="'+(f.page===null?'is-empty':'')+(s.selected===j?' is-active':'')+'"><small>框 '+j+'</small><b>'+(f.page===null?'空闲':'页 '+f.page)+'</b></div>').join('')+'</div><p class="access-detail-reason">'+s.reason+'</p><p class="access-detail-count">已完成 '+(done?count:count-1)+' 次 · 累计缺页 '+s.faults+' 次'+(done?' · 本组读取完成':'')+'</p></section>';
+      const reason=s.phase==='select'&&r.capacity===1?'只有一个页框，必须淘汰其中的页 '+s.victim+'，才能载入当前请求的页。':s.reason;
+      return '<section data-detail-group="'+i+'"><header><b>'+names[r.policy]+' · '+r.capacity+' 框</b><span>'+ (pos+1)+' / '+t.length+' 步</span></header><h4 class="access-detail-action">'+describe(s,r)+'</h4><div class="access-detail-frames">'+s.frames.map((f,j)=>'<div data-detail-frame="'+j+'" data-page="'+(f.page??'')+'" class="'+(f.page===null?'is-empty':'')+(s.selected===j?' is-active':'')+'"><small>框 '+j+'</small><b>'+(f.page===null?'空闲':'页 '+f.page)+'</b></div>').join('')+'</div><p class="access-detail-reason">'+reason+'</p><p class="access-detail-count">已完成 '+(done?count:count-1)+' 次 · 累计缺页 '+s.faults+' 次'+(done?' · 本组读取完成':'')+'</p></section>';
     }).join('');controls();
   }
   function seek(n){pause();index=Math.max(0,Math.min(limit(),n));paint();announce();}

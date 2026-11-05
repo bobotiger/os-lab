@@ -1,7 +1,7 @@
 (() => {
   const U = OSLabConcurrencyStage2UI, M = OSLabConditionVariables;
   U.shell('conditionVariables', [{href:'#condition',title:'条件与等待'},{href:'#cooperation',title:'队列协作'},{href:'#contract',title:'使用规则'}], `
-    <section class="intro"><p class="eyebrow">并发 / 条件同步</p><h1>条件变量</h1><p class="lead">互斥锁保护共享数据。线程发现条件还不满足时，可以通过条件变量（condition variable）等待通知，醒来后再检查条件。</p><p class="definition">线程持锁检查条件。不满足时，调用 <code>wait</code>，以原子方式释放锁并进入等待。线程被唤醒后，要重新取得同一把锁，<code>wait</code> 才会返回。接着再次检查条件，决定是继续工作还是再等一次。</p></section>
+    <section class="intro"><p class="eyebrow">并发 / 条件同步</p><h1>条件变量</h1><p class="lead">消费者拿到任务队列的互斥锁后，仍可能发现队列为空。它需要等生产者放入任务，并在等待时释放锁，让生产者能够修改队列。条件变量（condition variable）用于协调这类等待与通知。</p><p class="definition">消费者持锁检查队列；队列为空时，调用 <code>wait</code>，以原子方式释放锁并进入等待。生产者放入任务后发出通知。被唤醒的消费者重新取得同一把锁后，<code>wait</code> 才会返回；此时仍要检查队列是否非空，因为通知并不保证任务还在。</p></section>
     <section class="cc-section" id="condition"><h2>条件检查与等待流程</h2><p class="cc-intro-text">生产者放入任务，消费者取走任务。本例队列最多放 2 项，count 表示当前任务数。互斥锁能防止队列修改相互冲突，但消费者仍要等到有任务，生产者仍要等到有空位。</p>
       <p class="cc-intro-text">条件变量 notEmpty 管理等待任务的消费者，notFull 管理等待空位的生产者。signal 通知对应的等待者，提醒它重新检查条件。</p>
       <div class="c2-code-pair"><div><h3>消费者：有任务才能取</h3><p>继续条件：<code>count &gt; 0</code></p><pre><code>lock(mutex);
@@ -31,7 +31,13 @@ unlock(mutex);</code></pre></div></div>
       <details class="cc-details"><summary>signal、broadcast 与锁的关系</summary><p>有等待者时，POSIX 的 signal 至少唤醒其中一个，broadcast 唤醒所有等待者；本演示每次 signal 选择一个等待者。若不同线程等待不同的资源需求，随意唤醒一个线程可能无法推进，广播后让各线程重新检查条件是一种处理方式；代价是更多线程被唤醒并竞争锁。</p><p>本页统一在持锁修改共享状态后发出通知，便于检查操作次序。POSIX 并不要求所有 signal 都必须持有互斥锁，但任何写法都必须避免共享状态检查与等待登记之间的竞态。通知不会自动释放当前线程持有的锁。</p></details>
     </section>`);
   let scenario = 'empty', variant = 'safe';
-  const purposes = {empty:'消费者先运行，但队列里还没有任务。观察 wait 如何释放锁，让生产者能够入队并通知消费者。',full:'生产者先运行，但两个位置都已占用。观察消费者取走任务后，怎样使生产者恢复入队。',barging:'C1 等待任务并被通知后，C2 抢先获得锁并取走唯一的任务。比较 C1 重新获锁后，检查条件与直接取任务的不同结果。',gap:'消费者检查到空队列后，如果先解锁、稍后才登记等待，生产者可能在这段间隙放入任务并发出通知。比较正确 wait 与分开操作的结果。'};
+  const purposes = {empty:'消费者先运行，但队列里还没有任务。观察消费者调用 wait 释放锁后，生产者如何获得锁、放入任务并通知消费者。',full:'生产者先运行，但两个位置都已占用。观察消费者取走任务并通知生产者后，生产者怎样重新获得锁并放入新任务。',barging:'C1 等待任务并被通知后，C2 抢先获得锁并取走唯一的任务。比较 C1 重新获锁后，检查条件与直接取任务的不同结果。',gap:'消费者检查到空队列后，如果先解锁、稍后才登记等待，生产者可能在这段间隙放入任务并发出通知。比较正确 wait 与分开操作的结果。'};
+  const observationHints = {
+    empty:'先看消费者怎样释放锁并等待任务，再看生产者入队、发出通知后，消费者怎样重新获锁并检查队列。',
+    full:'先看生产者怎样释放锁并等待空位，再看消费者取走任务、发出通知后，生产者怎样重新获锁并检查空位。',
+    barging:'观察 C2 抢先取走任务后，C1 重新获锁时队列是否仍有任务，以及它会重新等待还是继续取任务。',
+    gap:'比较条件检查与等待登记之间是否留有间隙，再看生产者发出通知时，消费者是否已经开始等待。',
+  };
   const operationNames = {start:'初始状态',lock:'获取互斥锁',check:'检查共享状态',wait:'释放锁并等待',unlock:'释放互斥锁',put:'放入任务',take:'取走任务',signal:'通知等待者',unsafeSleep:'错过通知后才等待'};
   function settings() {
     document.getElementById('cv-purpose').textContent=purposes[scenario];
@@ -77,7 +83,7 @@ unlock(mutex);</code></pre></div></div>
     document.getElementById('cv-produced').textContent=s.produced;
     document.getElementById('cv-consumed').textContent=s.consumed;
     const result=document.getElementById('cv-result'); result.classList.toggle('cc-error-result',s.error||s.lost);
-    result.textContent=index===frames.length-1?(s.error?'只检查一次的 if 不足以保证取任务时队列仍然非空。需要在重新获得锁后，用 while 检查当前状态。':s.lost?'队列有任务，消费者却在等待。本例错过了通知：共享状态与等待登记之间出现了不受保护的间隙。':scenario==='barging'?'C1 重新检查后发现队列为空，安全地再次等待。被唤醒不等于已经获得任务；还需要生产者放入新任务并通知。':scenario==='full'?'消费者取走一项任务，释放出位置；生产者被通知、重新获得锁并检查空位后，完成新的入队。':'消费者在等待时释放锁；生产者入队并通知后，消费者重新获得锁、确认非空，才取走任务。'):'先看生产者什么时候把任务放进队列。再看等待的消费者什么时候收到通知，以及什么时候重新拿到锁。';
+    result.textContent=index===frames.length-1?(s.error?'只检查一次的 if 不足以保证取任务时队列仍然非空。需要在重新获得锁后，用 while 检查当前状态。':s.lost?'队列有任务，消费者却在等待。本例错过了通知：共享状态与等待登记之间出现了不受保护的间隙。':scenario==='barging'?'C1 重新检查后发现队列为空，安全地再次等待。被唤醒不等于已经获得任务；还需要生产者放入新任务并通知。':scenario==='full'?'消费者取走一项任务，释放出位置；生产者被通知、重新获得锁并检查空位后，完成新的入队。':'消费者在等待时释放锁。生产者放入任务并发出通知后，消费者重新获得锁，确认队列非空，才取走任务。'):observationHints[scenario];
   });
   U.choose('[data-cv-scene]',b=>{scenario=b.dataset.cvScene;variant='safe';settings();player.reload();});
   U.choose('[data-cv-variant]',b=>{variant=b.dataset.cvVariant;player.reload();}); settings();

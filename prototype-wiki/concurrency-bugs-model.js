@@ -16,7 +16,7 @@
         if(s.lock) {s.states[who]=`等待 ${s.lock} 释放锁`;s.log=`${who} 等待互斥锁，不能进入受保护的操作。`;frames.push(copy(s));continue;}
         s.lock=who;s.states[who]='持有锁';s.log=`${who} 获得锁。${variant==='safe'?'检查与取走处于同一个临界区。':'本次只保护单独一次访问。'}`;
       } else if(op==='unlock') {
-        s.lock=null;s.states[who]='已释放锁';s.log=`${who} 释放锁。${s.pc[who]===2?'检查结果被记住，但队列随后仍可能被别人修改。':'本次队列操作结束。'}`;
+        s.lock=null;s.states[who]='已释放锁';s.log=`${who} 释放锁。${s.pc[who]===2?'线程保存了这次检查结果，但其他线程随后仍可能修改队列。':'本次队列操作结束。'}`;
         for(const other of ['A','B'])if(s.states[other].startsWith('等待'))s.states[other]='锁已空闲，待重新获取';
       } else if(op==='check') {
         s.checked[who]=s.queue.length>0;s.log=`${who} 检查到队列${s.checked[who]?'非空，记下“可以取任务”':'为空，记下“跳过取任务”'}。`;

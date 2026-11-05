@@ -23,7 +23,7 @@ pthread_mutex_unlock(&amp;mutex);</code></pre><div><h3>两个线程遵守同一�
 }
 /* 临界区：读取、计算并写回 count。 */
 atomic_store(&amp;flag, 0);</code></pre><p>flag 初值为 0。A 交换时写入 1、得到旧值 0，因此获取成功；B 随后交换，得到旧值 1，继续等待。只有 A 释放锁、把 flag 设回 0 后，其他线程才可能获取成功。这里用伪代码解释互斥；实际实现还需要正确的内存顺序，保证临界区中的数据对后续持锁者可见。</p><p>演示按简化的顺序执行模型推演。错误锁与无锁版本用于展示反例，不是可直接使用的 C 同步实现。</p></details>
-        <p class="cc-takeaway">如果读标志和设标志分成两步，A、B 都可能以为锁是空的。原子操作只让其中一个线程拿到锁。拿到锁之后，还要把它持有到写回结束，另一个线程才能读到更新后的值。</p>
+        <p class="cc-takeaway">如果读取和设置锁标志分成两步，A、B 就可能先后读到“空闲”，随后都把标志设为“占用”。原子操作只让其中一个线程拿到锁。拿到锁之后，还要把它持有到写回结束，另一个线程才能读到更新后的值。</p>
       </section>
       <section class="cc-section" id="waiting" aria-labelledby="waiting-title"><h2 id="waiting-title">自旋与阻塞</h2>
         <p class="cc-intro-text">自旋等待会反复检查锁，在运行时持续消耗 CPU。阻塞等待使线程进入阻塞状态，等待期间不参与 CPU 调度；被唤醒后重新就绪，等待获得 CPU 并继续获取锁。登记等待、唤醒和调度也有成本，持锁时间与 CPU 数量会影响两种方式的取舍。</p>
@@ -61,7 +61,7 @@ atomic_store(&amp;flag, 0);</code></pre><p>flag 初值为 0。A 交换时写入 
     document.getElementById('wait-progress').textContent = `${index} / ${length() - 1} 时间单位`;
     const a = traces.spin.at(-1), b = traces.block.at(-1);
     document.getElementById('wait-result').textContent = index === length() - 1
-      ? (cores === 1 ? (hold === 1 ? `短暂持锁时，本模型自旋用 ${a.time} 单位完成，阻塞用 ${b.time} 单位。等待很短，阻塞与唤醒的固定成本反而更明显。` : `本模型自旋用 ${a.time} 单位完成，阻塞用 ${b.time} 单位。单核上 B 的反复尝试占用了 A 本可推进工作的时间；B 阻塞后，A 可以连续运行。`) : `双核上，自旋用 ${a.time} 单位完成，阻塞用 ${b.time} 单位。A 可以持续运行，自旋不再抢走 A 的 CPU，但 B 消耗了 ${a.failed} 单位 CPU 用于失败尝试；阻塞还需等待唤醒。`)
+      ? (cores === 1 ? (hold === 1 ? `短暂持锁时，本模型自旋用 ${a.time} 单位完成，阻塞用 ${b.time} 单位。等待很短，阻塞与唤醒的固定成本反而更明显。` : `本模型自旋用 ${a.time} 单位完成，阻塞用 ${b.time} 单位。单核上 B 的反复尝试占用了 A 本可推进工作的时间；B 阻塞后，A 可以连续运行。`) : `双核上，自旋用 ${a.time} 单位完成，阻塞用 ${b.time} 单位。A 和 B 使用不同的核心，因此 B 自旋不会占用 A 的 CPU 时间。但 B 仍消耗了 ${a.failed} 单位 CPU 用于失败尝试；阻塞还需等待唤醒。`)
       : '两组完成相同的临界区工作。观察 B 等待期间是否占用 CPU，以及 A 释放锁后 B 还需要经过哪些步骤。';
     player?.paint();
   }

@@ -70,7 +70,7 @@
         area.dataset.ready = String(!atomic && s.ready);
         $('source-label').textContent = atomic ? '共享队列' : '共享配置';
         $('empty').textContent = moving && phase.motion !== 'read' ? phase.motion === 'take' ? '取走中' : '写入中' : atomic ? s.queue.length ? '' : '空' : s.ready ? '' : '未初始化';
-        $('source-note').textContent = atomic ? moving ? '同一项任务正在移交' : s.queue.length ? '只有 1 项任务' : '任务 1 已在 A 手中' : 'ready = ' + s.ready;
+        $('source-note').textContent = atomic ? moving ? '同一项任务正在移交' : s.queue.length ? '只有 1 项任务' : '任务 1 已被 A 取走' : 'ready = ' + s.ready;
         $('token').textContent = atomic ? '任务 1' : '42';
         $('lock').querySelector('span').textContent = s.lock ? s.lock + ' 持有共同的锁' : '共同的锁：空闲';
         $('lock').dataset.owner = s.lock || '';
@@ -78,7 +78,7 @@
         for (const who of ['A','B']) {
           const memory = $('memory-' + who), lastCheck = [...story.frames.slice(0,frame + 1)].reverse().find(f => f.actor === who && f.op === 'check');
           $('role-' + who).textContent = atomic ? '线程 ' + who : who === 'A' ? 'A · 使用配置' : 'B · 初始化';
-          memory.querySelector('span').textContent = atomic ? s.checked[who] === null ? '检查结果' : '检查时看到' : who === 'A' ? '完成条件' : '初始化';
+          memory.querySelector('span').textContent = atomic ? s.checked[who] === null ? '检查结果' : '此前检查结果' : who === 'A' ? '完成条件' : '初始化';
           memory.querySelector('strong').textContent = atomic ? s.checked[who] === null ? '尚未检查' : s.checked[who] ? '有任务' : '没有任务' : who === 'A' ? !safe ? '未检查' : !lastCheck ? '尚未检查' : lastCheck.ready ? '已完成' : '未完成' : s.ready ? '已写好' : moving && phase.motion === 'write' ? '写入中' : '尚未写入';
           const stale = atomic && s.checked[who] === true && !s.queue.length && !s.taken.includes(who);
           memory.classList.toggle('bug-movie-stale', stale);

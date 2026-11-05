@@ -10,10 +10,10 @@
     let scenes;
     if (atomic) {
       scenes = [scene('start', 0, 1100, '只有一项任务，A 和 B 都准备取走', safe ? '检查和取走连续持锁，另一个线程必须在外等待。' : '每次检查、取走都加锁，但两次操作之间会释放锁。', 'queue')];
-      scenes.push(scene('check-a', find('A','check'), 1600, safe ? 'A 检查时有任务，继续持锁取走' : 'A 看到了任务，但还没有取走', safe ? '锁仍由 A 持有，B 暂时不能检查队列。' : '检查后会释放锁，B 随后也可以检查队列。', 'A'));
-      if (!safe && first) scenes.push(scene('check-b', find('B','check'), 1900, 'B 也看到同一项任务，记下“有任务”', 'A、B 记住的是同一项任务，并没有各自得到一项。', 'B'));
-      scenes.push(scene('take-a', find('A','take'), 2400, !safe && first ? '任务已到 A 手中，B 的旧判断失效' : '唯一的任务已交给 A', safe ? 'A 完成取走之前一直持锁，B 尚未检查队列。' : first ? '队列已经空了，B 保存的“有任务”却没有随之改变。' : 'B 还没有检查；A 先完成了取走。', 'transfer', 'take'));
-      scenes.push(scene('result', last, 0, !safe && first ? 'B 取走失败：唯一的任务已在 A 手中' : 'B 检查到空队列，跳过取走', safe ? '把检查和取走放在同一个临界区内，判断不会被中途插入的修改破坏。' : first ? 'B 虽然重新拿到了锁，用的却是旧判断。解锁的间隙让 A 拿走了任务。' : '这次 B 检查得晚，所以没有出错；交替执行仍会暴露分别加锁的漏洞。', !safe && first ? 'error' : 'B'));
+      scenes.push(scene('check-a', find('A','check'), 1600, safe ? 'A 检查时有任务，继续持锁取走' : 'A 检查到队列有任务，但尚未取走', safe ? '锁仍由 A 持有，B 暂时不能检查队列。' : '检查后会释放锁，B 随后也可以检查队列。', 'A'));
+      if (!safe && first) scenes.push(scene('check-b', find('B','check'), 1900, 'B 也检查到队列有任务，保存检查结果', 'A、B 检查到的是队列中的同一项任务；此时两个线程都还没有取走任务。', 'B'));
+      scenes.push(scene('take-a', find('A','take'), 2400, !safe && first ? 'A 已取走任务，B 的旧判断失效' : '唯一的任务已交给 A', safe ? 'A 完成取走之前一直持锁，B 尚未检查队列。' : first ? '队列已经空了，B 保存的“有任务”却没有随之改变。' : 'B 还没有检查；A 先完成了取走。', 'transfer', 'take'));
+      scenes.push(scene('result', last, 0, !safe && first ? 'B 取任务失败：唯一的任务已被 A 取走' : 'B 检查到空队列，跳过取走', safe ? '把检查和取走放在同一个临界区内，判断不会被中途插入的修改破坏。' : first ? 'B 释放锁后，A 获得锁并取走了任务。B 随后重新获得锁，却仍按先前的检查结果尝试取任务。' : '这次 B 检查得晚，所以没有出错；交替执行仍会暴露分别加锁的漏洞。', !safe && first ? 'error' : 'B'));
     } else {
       scenes = [scene('start', 0, 1100, 'B 负责准备配置，A 需要读取配置', safe ? 'A 会先检查完成条件：没准备好就释放锁并等待。' : 'A、B 使用同一把锁，但没有约定谁先完成。', 'queue')];
       if (first && !safe) {

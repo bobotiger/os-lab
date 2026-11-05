@@ -36,7 +36,7 @@ function buildSegmentAccess(address = 20, operation = 'read') {
   } else {
     const rawOffset = address % 16;
     const offset = segment.direction === 1 ? rawOffset : rawOffset - 16;
-    add('计算段内偏移', segment.direction === 1 ? `从${segment.name}选择区间起点算偏移` : '栈从上边界向下计算负偏移', segment.direction === 1 ? `${address} − ${segmentID * 16} = ${offset}。偏移相对这个段，不相对整个地址空间。` : `${address} − 64 = ${offset}。64 是虚拟栈不包含在段内的上边界；低 4 位 ${rawOffset} 在向下增长模式中解释为 ${rawOffset}−16=${offset}，不能直接加成正偏移。`, () => { state.rawOffset = rawOffset; state.offset = offset; });
+    add('计算段内偏移', segment.direction === 1 ? `从${segment.name}选择区间起点算偏移` : '栈从上边界向下计算负偏移', segment.direction === 1 ? `${address} − ${segmentID * 16} = ${offset}。偏移相对这个段，不相对整个地址空间。` : `${address} − 64 = ${offset}。虚拟栈的上边界是 64，地址 64 本身不属于该段。低 4 位 ${rawOffset} 在向下增长模式中解释为 ${rawOffset}−16=${offset}，不能直接加成正偏移。`, () => { state.rawOffset = rawOffset; state.offset = offset; });
     const boundsOK = segment.direction === 1 ? offset >= 0 && offset < segment.bounds : offset >= -segment.bounds && offset < 0;
     const permissionsOK = segment.permissions.includes(operation);
     add('检查界限与权限', boundsOK && permissionsOK ? '段内范围与访问权限都通过' : !boundsOK ? '已确定段号，但偏移超出段长' : '地址在段内，但操作权限不允许', `${segment.direction === 1 ? `0 ≤ offset < ${segment.bounds}` : `−${segment.bounds} ≤ offset < 0`}：${boundsOK ? '通过' : '拒绝'}。${segment.name}段的${SEGMENT_OPERATIONS[operation]}权限：${permissionsOK ? '允许' : '不允许'}。范围与操作权限必须同时满足；它们不检查每个 C 对象的生命周期与边界。`, () => { state.boundsOK = boundsOK; state.permissionsOK = permissionsOK; state.checked = boundsOK && permissionsOK; });

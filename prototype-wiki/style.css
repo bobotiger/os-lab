@@ -599,6 +599,7 @@ input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); ou
 .rr-tradeoff { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 20px; max-width: 850px; }
 .rr-tradeoff h3 { font-size: 17px; font-weight: 500; margin-bottom: 10px; }
 .rr-tradeoff p { color: var(--muted); font-size: 14px; }
+body[data-page="schedulingBasics"] .rr-tradeoff p + p { margin-top: 12px; }
 .mlfq-demo { border-top: 1px solid var(--line); padding-top: 26px; }
 .mlfq-page [hidden] { display: none; }
 .mlfq-page .intro { padding-top: 30px; padding-bottom: 24px; }

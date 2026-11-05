@@ -80,7 +80,7 @@ function renderAddressSpacePage(root) {
     }
     $('#as-isolation-result').textContent=[
       '初始值均为 10。先从 A 的地址写入，再查看 B 的读取结果。',
-      'A 已写入 99。私有场景只有 A 的对象改变；共享场景的一份对象已改变。B 尚未读取。',
+      'A 已写入 99。私有场景中，只有 A 的对象改变；共享场景中，A、B 共同访问的那份数据已改变。B 尚未读取。',
       'B 读取：私有映射得到 10，共享映射得到 99。决定结果的是映射到哪份存储。'
     ][comparisonStage];
   };

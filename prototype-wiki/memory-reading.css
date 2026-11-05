@@ -1,0 +1,200 @@
+/* Reading hierarchy shared by the ten memory lessons.
+   Match the Wiki's CPU/concurrency pages; preserve each mechanism's geometry. */
+body.memory-reading {
+  --memory-title-size: 44px;
+  --memory-section-size: 26px;
+  --memory-lead-size: 22px;
+}
+
+.memory-reading .page {
+  --ink: #22292a;
+  --muted: #637071;
+  --tx-ink: var(--ink); --tx-muted: var(--muted);
+  --se-ink: var(--ink); --se-muted: var(--muted);
+  --fm-ink: var(--ink); --fm-muted: var(--muted);
+  --pg-ink: var(--ink); --pg-muted: var(--muted);
+  --tc-ink: var(--ink); --tc-muted: var(--muted);
+  --mt-ink: var(--ink); --mt-muted: var(--muted);
+  --pf-ink: var(--ink); --pf-muted: var(--muted);
+  color: var(--ink);
+  font-family: var(--wiki-font-text);
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.memory-reading .page .site-header {
+  min-height: 84px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* A consistent top-to-bottom introduction, including the former split header. */
+.memory-reading .page main > :is(.intro, .tx-intro, .mi-intro, .se-intro,
+  .fm-intro, .pg-intro, .tc-intro, .mt-intro, .pf-intro) {
+  display: block;
+  max-width: none;
+  padding: 40px 0 32px;
+  margin: 0;
+}
+.memory-reading .page main h1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 20px;
+  font-size: var(--memory-title-size);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -.02em;
+  margin: 0 0 20px;
+  color: var(--ink);
+}
+.memory-reading .page main h1 span {
+  display: inline;
+  margin: 0;
+  font: 400 18px/1.5 var(--wiki-font-text);
+  letter-spacing: 0;
+  color: var(--muted);
+}
+.memory-reading .page main p {
+  font-size: 16px;
+  line-height: 1.9;
+}
+.memory-reading .page main figcaption {
+  font-size: 14px;
+  line-height: 1.8;
+}
+.memory-reading .page main > :is(.intro, .tx-intro, .mi-intro, .se-intro,
+  .fm-intro, .pg-intro, .tc-intro, .mt-intro, .pf-intro) > p:first-of-type:not(.tx-kicker),
+.memory-reading .page main > .tx-intro > .tx-lead {
+  max-width: 850px;
+  margin: 0 0 14px;
+  color: var(--ink);
+  font-size: var(--memory-lead-size);
+  line-height: 1.65;
+}
+.memory-reading .page .tx-intro > p:last-child {
+  max-width: 850px;
+  font-size: 16px;
+  line-height: 1.9;
+}
+.memory-reading .page main h2 {
+  font-size: var(--memory-section-size);
+  line-height: 1.5;
+  letter-spacing: 0;
+  margin: 0 0 16px;
+}
+.memory-reading .page main h3 {
+  font-size: 18px;
+  line-height: 1.6;
+}
+.memory-reading .page :is(.as-lead, .mi-lead, .se-section-head, .pg-section-head,
+  .mt-section-heading, .pf-section-heading, .lesson-intro, .compare-heading) {
+  margin-bottom: 24px;
+}
+.memory-reading .page :is(.as-lead, .mi-lead, .se-section-head, .pg-section-head,
+  .mt-section-heading, .pf-section-heading, .lesson-intro, .compare-heading) p {
+  max-width: 850px;
+  margin-top: 10px;
+  color: var(--ink);
+}
+
+/* Supporting prose stays readable without competing with the main explanation. */
+.memory-reading .page main :is(.as-reference, .tx-register-note, .tx-node-note,
+  .mi-caption, .se-note, .se-map-caption, .fm-note, .pg-note, .tc-note,
+  .mt-note, .pf-note, .opt-definition, .condition, .thrash-cost-note) {
+  font-size: 14px;
+  line-height: 1.8;
+}
+.memory-reading .page main :is(#mi-setup, #opt-benchmark-scope, #tc-handler-note, #se-segment-note) {
+  font-size: 14px;
+  line-height: 1.8;
+}
+.memory-reading .page main #mi-reason {
+  font-size: 16px;
+  line-height: 1.9;
+  /* Reserve the longest explanation so stepping does not move the controls. */
+  min-height: 2lh;
+}
+.memory-reading .page main :is(.mi-detail, .se-detail, .fm-detail, .pg-detail,
+  .tc-detail, .mt-detail, .pf-details, .tx-detail) > p + p {
+  margin-top: 12px;
+}
+.memory-reading .page main summary {
+  font-size: 15px;
+  line-height: 1.8;
+  min-height: 44px;
+}
+.memory-reading .page main :is(.tc-chapter, .mt-chapter) > summary strong {
+  font-size: var(--memory-section-size);
+  line-height: 1.5;
+}
+.memory-reading .page main .fm-chapter > summary h2 { margin: 0; }
+.memory-reading .page main :is(.tc-chapter, .mt-chapter) > summary small,
+.memory-reading .page main .fm-chapter > summary > span {
+  font-size: 14px;
+  line-height: 1.8;
+  margin-top: 8px;
+}
+.memory-reading .page main :is(button, select, input) {
+  font-family: var(--wiki-font-text);
+}
+.memory-reading .page main :is(.as-topics, .mi-workflow, .se-topics,
+  .pg-views, .topic-tabs) button {
+  font-size: 15px;
+  line-height: 1.6;
+  text-wrap: balance;
+}
+.memory-reading .page main :is(.tx-controls, .mi-controls, .se-controls,
+  .fm-controls, .pg-controls, .tc-controls, .mt-controls, .pf-controls, .transport)
+  :is(button, select, label) {
+  font-size: 14px;
+}
+
+/* The address-space layout has its own scoped type rules. */
+body.memory-reading .as-page .as-layout-module {
+  --asl-ink: var(--ink);
+  --asl-muted: var(--muted);
+}
+body.memory-reading .as-page .as-layout-module .as-layout-heading h2 {
+  font-size: var(--memory-section-size);
+}
+body.memory-reading .as-page .as-layout-module .as-layout-heading p {
+  font-size: 16px;
+  line-height: 1.9;
+}
+
+/* These teaching dialogs sit outside main; the navigation drawer is excluded. */
+.memory-reading .page :is(#pf-location, #tc-walk, #mt-inspector) p {
+  font-size: 16px;
+  line-height: 1.9;
+}
+.memory-reading .page :is(#pf-location, #tc-walk, #mt-inspector) :is(.pf-note, .tc-note, .mt-note) {
+  font-size: 14px;
+  line-height: 1.8;
+}
+.memory-reading .page :is(#pf-location, #tc-walk, #mt-inspector) h2 {
+  font-size: var(--memory-section-size);
+  line-height: 1.5;
+}
+.memory-reading .page :is(#pf-location, #tc-walk, #mt-inspector) h3 {
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+@media (max-width: 760px) {
+  body.memory-reading {
+    --memory-title-size: 32px;
+    --memory-section-size: 23px;
+    --memory-lead-size: 19px;
+  }
+  .memory-reading .page .site-header { min-height: 70px; }
+  .memory-reading .page main > :is(.intro, .tx-intro, .mi-intro, .se-intro,
+    .fm-intro, .pg-intro, .tc-intro, .mt-intro, .pf-intro) {
+    padding: 30px 0 26px;
+  }
+  .memory-reading .page main h1 { gap: 6px 14px; margin-bottom: 18px; }
+  .memory-reading .page main h1 span { font-size: 16px; }
+}
+
+@media (max-width: 600px) {
+  .memory-reading .page main #mi-reason { min-height: 3lh; }
+}

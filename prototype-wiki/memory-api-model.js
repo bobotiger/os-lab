@@ -14,7 +14,7 @@ const MEMORY_API_ERRORS = Object.freeze({
   uninitialized: {title: '读取未初始化内容', code: 'int *p = malloc(2 * sizeof *p);\nint value = p[0];', reason: '假设申请成功，但 malloc 没有初始化内容；读取这个 int 没有可依赖的确定值。先写入，或者使用适用的初始化方式。', kind: '无可依赖结果'},
   bounds: {title: '越界访问', code: 'int *p = malloc(2 * sizeof *p);\np[2] = 30;', reason: '假设申请成功；两个元素的合法索引是 0 和 1，索引 2 已在对象之外。旁边看起来有空白，不意味着程序拥有那部分空间。', kind: '未定义行为'},
   leak: {title: '丢失最后一个引用', code: 'int *p = malloc(2 * sizeof *p);\np = NULL;', reason: '假设申请成功且没有其他引用。清空 p 没有释放对象，程序丢失了用于后续访问和释放的引用。这是资源管理错误，不是这一赋值本身的未定义行为。', kind: '内存泄漏'},
-  useAfterFree: {title: '释放后继续使用', code: 'free(p);\nint value = p[0];', reason: '对象生命周期已经结束。旧地址的历史记录不是仍可访问的活对象，底层字节未清零也不能让原对象恢复有效。', kind: '未定义行为'},
+  useAfterFree: {title: '释放后继续使用', code: 'free(p);\nint value = p[0];', reason: '对象生命周期已经结束。图中保留的是对象释放前的地址记录。即使原位置的字节还没有清零，程序也不能通过旧指针访问这个对象。', kind: '未定义行为'},
   doubleFree: {title: '重复释放', code: 'free(p);\nfree(p);', reason: '同一分配已经释放，再次释放不合法。free(NULL) 是允许的，但不能把它和再次释放旧对象混为一谈。', kind: '未定义行为'},
   invalidFree: {title: '释放对象内部地址', code: 'int *p = malloc(2 * sizeof *p);\nfree(p + 1);', reason: '假设申请成功；free 需要匹配尚未释放的分配起始指针，不能使用对象内部地址，也不能释放栈变量地址。', kind: '未定义行为'},
 });

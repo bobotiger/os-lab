@@ -29,7 +29,7 @@
         if (s.lock !== actor) throw new Error('Queue access without lock');
         if (op === 'put') {
           if (s.queue.length === 2) throw new Error('Queue full');
-          const item = `任务 ${s.nextItem++}`; s.queue.push(item); s.produced++; s.log = `${who}放入${item}。队列变为非空；接下来通知等待任务的线程。`;
+          const item = `任务 ${s.nextItem++}`; s.queue.push(item); s.produced++; s.log = `${who}放入${item}，队列现有 ${s.queue.length} 项任务。接下来发出 notEmpty 通知，让等待任务的消费者有机会继续。`;
         } else if (s.queue.length) {
           const item = s.queue.shift(); s.consumed++; s.log = `${who}取走${item}，队列剩余 ${s.queue.length} 项。${actor === 'C2' ? 'C1 虽然已被唤醒，却还没有重新获得锁。' : '实际处理任务可在释放队列锁之后进行。'}`;
         } else {
@@ -39,7 +39,7 @@
       } else if (op === 'signal') {
         if (s.lock !== actor) throw new Error('This example signals while holding the mutex');
         const target = s.waiting[channel].shift();
-        if (target) { s.states[target] = '已通知，等待重新获锁'; s.log = `${who}通知 ${names[target]}。${who}仍持有锁；被通知者尚未从 wait 返回，也没有预留任何任务。`; }
+        if (target) { s.states[target] = '已通知，等待重新获锁'; s.log = `${who}通知 ${names[target]}。${who}仍持有锁；被通知者尚未从 wait 返回，通知也没有为它预留${channel === 'notFull' ? '空位' : '任务'}。`; }
         else s.log = `${who}发出 ${channel} 通知，但当前没有线程等待该条件变量。通知不会保存为供以后使用的许可；队列内容仍会保留。`;
       } else if (op === 'unsafeSleep') {
         if (s.lock) throw new Error('Unsafe gap expected after unlock');

@@ -132,7 +132,7 @@ function buildFreeSpaceBuddy(request=7){
   while(size/2>=request){const half=size/2;blocks=[{start:0,size:half,owner:null},{start:half,size:half,owner:null},...blocks.slice(1)];size=half;add('二分',`将 ${size*2} 分为两个 ${size}`,`两个子块来自同一次二分，互为伙伴；继续检查低地址子块。`,{start:0,size:size*2});}
   blocks[0]={...blocks[0],owner:'N'};allocated=true;
   add('分配',`申请 ${request}，实际占用 ${size}`,size===request?'请求恰好填满该块，没有内部碎片。':`块内有 ${size-request} 单位未被请求使用，暂时不能分给其他对象。这是内部碎片。`,{start:0,size});
-  blocks[0]={...blocks[0],owner:null};allocated=false;add('释放','释放对象，检查同级伙伴','只有同一次二分产生、大小相同且都空闲的两个块才能重新合并。',{start:0,size});
+  blocks[0]={...blocks[0],owner:null};allocated=false;add('释放','释放对象，检查同级伙伴','合并的两个块必须来自同一次二分，大小相同，并且都已空闲。满足这些条件，才能合并回原来的大块。',{start:0,size});
   while(size<32){const buddy=blocks.find(b=>b.start===size&&b.size===size&&b.owner===null);if(!buddy)break;blocks=[{start:0,size:size*2,owner:null},...blocks.filter(b=>b.start>=size*2)];size*=2;add('合并',`两个伙伴合为 ${size} 单位`,size===32?'连续合并恢复了最初的 32 单位块。合并只更新管理记录，未搬动其他对象。':'合并后继续检查上一层伙伴；若伙伴仍在使用，就停止合并。',{start:0,size});}
   return frames.map((f,i)=>({...f,complete:i===frames.length-1}));
 }

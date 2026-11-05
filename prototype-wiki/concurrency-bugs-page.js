@@ -59,7 +59,7 @@
     document.getElementById('bug-action').textContent=`${s.actor?s.actor+' · ':''}${returning?'重新获得锁，wait 返回':s.op==='lock'&&s.lock!==s.actor?'获取锁失败，等待':names[s.op]}`;
     document.getElementById('bug-log').textContent=index===0?(kind==='atomicity'?'两个线程尚未检查队列，互斥锁空闲。':'配置尚未初始化，互斥锁空闲。'):returning?'A 在原来的 wait 调用中重新获得锁并返回，接着重新检查 ready。':kind==='atomicity'&&s.error?`${s.actor} 检查时有任务，但任务已被 ${s.taken[0]} 取走。检查与使用之间释放了锁，检查记录已失效。`:s.log;
     document.getElementById('bug-result').hidden=index!==frames.length-1;
-    document.getElementById('bug-result').textContent=s.error?(kind==='atomicity'?'检查结果已经过期。修正需要把检查和使用放入同一个临界区，防止中间插入破坏条件的修改。':'互斥没有保证初始化在使用之前完成。需要检查共享完成条件，并在条件不成立时等待。'):index===frames.length-1?(variant==='unsafe'?'这个次序没有触发错误。改用另一种次序，检查方案是否仍然成立。':kind==='atomicity'?'只有一个线程取走任务，另一个在线程间共享的锁内检查到队列为空，安全地跳过操作。':'无论 A 还是 B 先运行，A 都在确认初始化完成之后使用配置。'):(kind==='atomicity'?'高亮行对应本步解说；检查后释放锁时，留意其他线程能否改变队列。':'高亮行对应本步操作。wait 释放锁并等待，重新获锁后仍从这个调用返回，再检查 ready。');
+    document.getElementById('bug-result').textContent=s.error?(kind==='atomicity'?'检查结果已经过期。修正需要把检查和使用放入同一个临界区，防止中间插入破坏条件的修改。':'互斥没有保证初始化在使用之前完成。需要检查共享完成条件，并在条件不成立时等待。'):index===frames.length-1?(variant==='unsafe'?'这个次序没有触发错误。改用另一种次序，检查方案是否仍然成立。':kind==='atomicity'?'只有一个线程取走任务。另一个线程获得同一把锁后，检查到队列为空，因此跳过取任务的操作。':'无论 A 还是 B 先运行，A 都在确认初始化完成之后使用配置。'):(kind==='atomicity'?'高亮行对应本步解说；检查后释放锁时，留意其他线程能否改变队列。':'高亮行对应本步操作。wait 释放锁并等待，重新获锁后仍从这个调用返回，再检查 ready。');
   });
   document.getElementById('bug-next').classList.add('cc-primary');
   document.getElementById('bug-play').classList.remove('cc-primary');

@@ -3,7 +3,7 @@ function renderProcessApiPage(root) {
   root.innerHTML = `<div class="page rr-page lde-page api-page" id="top">
     ${wikiHeader('processApi', [{href: '#demo', title: '创建与替换'}, {href: '#separation', title: 'Shell 命令'}, {href: '#contract', title: '接口说明'}, {href: '#practice', title: '参考实践'}])}
     <main>
-      <section class="intro" aria-labelledby="page-title"><p class="eyebrow">CPU 虚拟化 / UNIX 接口</p><h1 id="page-title">进程 API <span>Process API</span></h1><p class="lead"><code>fork()</code> 创建子进程，<code>exec</code> 系列函数让原进程执行另一个程序，<code>wait()</code> 等待子进程并取得它的退出状态（exit status）。</p><p class="definition">调用 <code>exec</code> 成功后，原进程开始执行新程序，进程标识符（process ID，PID）保持不变。被换掉的是程序映像（program image），包括原来的代码、数据和用户栈。</p></section>
+      <section class="intro" aria-labelledby="page-title"><p class="eyebrow">CPU 虚拟化 / UNIX 接口</p><h1 id="page-title">进程 API <span>Process API</span></h1><p class="lead"><code>fork()</code> 创建子进程，<code>exec</code> 系列函数让原进程执行另一个程序，<code>wait()</code> 等待子进程并取得它的退出状态（exit status）。</p><p class="definition">调用 <code>exec</code> 成功后，原进程开始执行新程序，进程标识符（process ID，PID）保持不变。被换掉的是程序映像（program image），包括原来的代码、数据和用户栈。<code>exec</code> 可以直接用于当前进程，无须先调用 <code>fork</code>。</p></section>
       <section class="lde-demo" id="demo" aria-labelledby="api-basics-title">
         <div class="section-heading"><div><h2 id="api-basics-title">创建进程、替换程序与等待退出</h2></div></div>
         <div id="api-basic-mount"><div id="api-example"><h3 id="demo-title" class="api-scenario-title"></h3>
@@ -24,7 +24,7 @@ function renderProcessApiPage(root) {
         <details class="api-reference"><summary>exec 后，哪些文件描述符会保留？</summary><p>本例的标准描述符未设置 close-on-exec，因此保留。设置该标志的描述符会在成功 exec 时关闭；不是所有资源都原样保留。PID 保持，但 exec 仍可能改变其他进程属性。</p></details>
         <details class="api-reference"><summary>fork 是否立即复制全部物理内存？</summary><p>Linux 通常通过写时复制（copy-on-write，COW）实现这类私有内存的复制。父子进程起初可以共用物理页，等某一方写入时，再为它准备私有副本。显式共享映射则遵循共享内存的语义。</p></details>
         <details class="api-reference"><summary>fork 与 exec 分开，还能准备什么？能否使用组合接口？</summary><p>exec 前的准备代码仍是 Shell 的代码，但运行在子进程中。除重定向外，还可以接入管道、改变工作目录或准备环境。若在父 Shell 中重定向，它自身的输出也会受影响，需要另行保存与恢复。</p><p><code>posix_spawn()</code> 等接口可以组合创建与装载，并通过文件动作、属性等配置提供准备能力。fork／exec 的价值是可组合性，不是唯一设计；现代系统也关注 fork 在多线程与性能上的限制。</p></details>
-        <details class="api-reference"><summary>创建、装载与 CPU 调度有什么区别？</summary><p>fork 产生新的进程身份，exec 决定当前进程运行哪个程序，调度器决定何时给它 CPU。<a href="limited-direct-execution.html" class="inline-link">受限直接执行</a>涉及进入内核与恢复执行的机制。单独调用 exec 也有用途，例如启动包装程序把自己替换成最终程序。</p></details>
+        <details class="api-reference"><summary>创建、装载与 CPU 调度有什么区别？</summary><p><code>fork</code> 创建新进程，<code>exec</code> 替换当前进程执行的程序；调度器负责选择哪个就绪进程使用 CPU。因此，创建了子进程，并不意味着子进程会立即先于父进程运行。</p><p>操作系统如何取得 CPU 的控制权并恢复进程执行，见<a href="limited-direct-execution.html" class="inline-link">受限直接执行</a>。</p></details>
       </section>
       <section class="lde-entry-section" id="practice" aria-labelledby="api-practice-title"><div class="section-heading"><div><h2 id="api-practice-title">进程 API 的运行结果与分析</h2></div></div><p class="process-homework-link"><a class="inline-link" href="process-api-homework.html">进程 API 作业：进程树与接口编程</a></p></section>
       ${wikiRelated('processApi')}

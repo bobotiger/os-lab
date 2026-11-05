@@ -1,7 +1,7 @@
 (function () {
   const modes = {
     replace: {pid:'25621', program:'exec-reap-target', value:'300', exit:'7', title:'成功替换：PID 不变，开始执行目标程序', reason:'子进程装入目标程序，使用它的代码和内存。原程序不再继续执行 exec 后的语句。', evidence:'target: pid=25621 value=300'},
-    missing: {pid:'25661', program:'exec-reap-work', value:'100', exit:'127', title:'替换失败：PID 不变，原程序继续执行', reason:'目标路径不存在，exec 返回 ENOENT。子进程仍执行原程序，value 仍为 100。', evidence:'exec failed: ENOENT\nafter failed exec: pid=25661 value=100'},
+    missing: {pid:'25661', program:'exec-reap-work', value:'100', exit:'127', title:'替换失败：PID 不变，原程序继续执行', reason:'目标路径不存在，exec 返回 -1，并将 errno 设为 ENOENT。子进程仍执行原程序，value 仍为 100。', evidence:'exec failed: ENOENT\nafter failed exec: pid=25661 value=100'},
   };
   const text = (id, value) => { document.getElementById(id).textContent = value; };
   function render() {

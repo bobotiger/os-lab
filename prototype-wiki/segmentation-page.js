@@ -109,7 +109,7 @@ function renderSegmentationPage(root) {
     if(index===0)text='先从地址中识别段号，再选择该段的基址、段长、增长方向与权限。';
     else if(index===1)text=segment?`段号 ${frame.segmentID} 选择${segment.name}段。它当前的段长为 ${segment.bounds}，不等于整个 16 单位选址区间。`:'高 2 位为 10，选择槽 2；本例没有为该槽配置段，不能继续转换。';
     else if(frame.fault)text=frame.fault==='unmapped'?'没有对应段设置，本次没有物理地址和访问结果。硬件触发异常后，由 OS 决定后续处置。':frame.fault==='bounds'?'偏移超出当前段长，目标内存未被访问。硬件触发保护异常，交由 OS 处置。':'地址在段内，但这项操作没有权限。硬件阻止访问并触发保护异常，交由 OS 处置。';
-    else if(index===2)text=segment.direction===1?`${frame.address} − ${segment.id*16} = ${frame.offset}。参与基址加法的是段内偏移 ${frame.offset}，不是完整虚拟地址 ${frame.address}。`:`低 4 位编码为 ${frame.rawOffset}，按向下增长解释为 ${frame.rawOffset} − 16 = ${frame.offset}。等价于从虚拟上边界 64 向低地址偏移 ${Math.abs(frame.offset)}。`;
+    else if(index===2)text=segment.direction===1?`${frame.address} − ${segment.id*16} = ${frame.offset}。先得到段内偏移，通过范围与权限检查后，再将它与该段的物理基址相加。`:`低 4 位编码为 ${frame.rawOffset}，按向下增长解释为 ${frame.rawOffset} − 16 = ${frame.offset}。等价于从虚拟上边界 64 向低地址偏移 ${Math.abs(frame.offset)}。`;
     else if(index===3)text=frame.checked?'范围和权限同时通过；尚未生成物理地址。':!frame.boundsOK?'确定了段号，仍可能超出该段当前的有效范围。不能只检查地址是否在 0–63 内。':`${segment.name}段允许${segment.permissions.map(op=>operations[op]).join("、")}，不允许${operations[operation]}。位置在段内与操作获准是两项独立条件。`;
     else if(index===4)text=`${segment.base} ${frame.offset<0?'− '+Math.abs(frame.offset):'+ '+frame.offset} = ${frame.physicalAddress}。物理地址已生成，目标内存尚未读取或写入。`;
     else text=operation==='read'?`已读取物理地址 ${frame.physicalAddress} 的内容，程序仍使用虚拟地址 ${frame.address}。`:operation==='write'?'段允许此次写入，物理地址已生成；目标内容尚未写入。':'段允许此次取指，物理地址已生成；目标指令尚未读取或执行。';

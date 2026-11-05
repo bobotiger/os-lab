@@ -46,7 +46,7 @@ function renderMemoryApiPage(root) {
   };
   root.innerHTML = `<div class="page mi-page" id="top">${wikiHeader('memoryApi', [])}
     <a class="mi-skip" href="#mi-main">跳到主要内容</a>
-    <main id="mi-main" tabindex="-1"><header class="mi-intro"><h1>内存分配接口 <span>Memory API</span></h1><p>在本页的 C 示例中，栈（stack）上的局部变量随函数调用建立和销毁。堆（heap）上的对象由程序通过动态内存分配（dynamic memory allocation）申请，使用完后要主动释放。<br><strong>指针变量和它指向的对象各占一份空间。</strong></p></header>
+    <main id="mi-main" tabindex="-1"><header class="mi-intro"><h1>内存分配接口 <span>Memory API</span></h1><p>本页用局部指针 <code>p</code> 保存动态内存分配（dynamic memory allocation）得到的地址。示例中，<code>p</code> 位于栈（stack），它指向的对象位于堆（heap），<strong>两者的生命周期不同。</strong></p><p>函数返回后，局部变量 <code>p</code> 不再存在，堆对象却不会因此自动释放；程序需要在使用结束后调用 <code>free</code> 释放它。因此，声明指针、申请空间和释放对象是不同的操作。</p></header>
     <nav class="mi-workflow" aria-label="选择内存操作">${Object.entries(groups).map(([id,g])=>`<button type="button" data-group="${id}" aria-pressed="false"><span>${g.name}</span><code>${g.api}</code></button>`).join('')}</nav>
     <section id="demo" class="mi-lesson" aria-labelledby="mi-title">
       <div class="mi-lead"><h2 id="mi-title"></h2><p id="mi-lead"></p></div>

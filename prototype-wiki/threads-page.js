@@ -24,7 +24,7 @@
           <div class="cc-address-space"><span class="cc-space-label">共同的地址空间</span><div class="cc-space-regions"><div><strong>代码</strong><span>两个线程都可执行</span></div><div><strong>全局数据与堆</strong><span>保存共享对象</span></div><div class="cc-stack-a"><strong>A 的栈</strong><span>A 的函数调用</span></div><div class="cc-stack-b"><strong>B 的栈</strong><span>B 的函数调用</span></div></div></div>
           <p class="cc-caption">两个栈都在同一个地址空间中。只要拿到有效指针，A 也能访问 B 的栈上仍然有效的对象。</p>
         </figure>
-        <p class="cc-takeaway">一个线程等待磁盘时，其他就绪线程仍可运行；有多个核心时，可拆分的计算还能并行执行。<strong>两个线程都要修改一份数据时，要协调它们的访问顺序。</strong>核心与硬件线程的区别见<a href="cpu-foundations.html#parallel">现代 CPU 的工作原理</a>。</p>
+        <p class="cc-takeaway">一个线程等待磁盘时，其他就绪线程仍可运行；有多个核心时，可拆分的计算还能并行执行。线程共享数据，也带来了同步要求：<strong>两个线程都要修改一份数据时，需要协调它们的访问顺序。</strong></p><p class="cc-caption">核心与硬件线程怎样支持软件线程执行，见<a href="cpu-foundations.html#parallel">现代 CPU 的工作原理</a>。</p>
       </section>
       <section class="cc-section" id="lifecycle" aria-labelledby="lifecycle-title">
         <h2 id="lifecycle-title">线程的创建与等待</h2>

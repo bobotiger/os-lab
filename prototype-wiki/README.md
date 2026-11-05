@@ -10,6 +10,8 @@ OSLab 是面向操作系统课程的知识演示与参考实践网站，内容�
 
 `heading-typography.js` 负责中文标题断行，页面字体由 CSS 决定。旧作业记录与 PDF 导出仍有历史实现和测试，当前参考实践页的资源以各自 HTML 入口为准。
 
+内存虚拟化的十个知识页在页面专用样式之后加载 [memory-reading.css](memory-reading.css)，沿用 CPU 与并发栏目的阅读层级：桌面页标题 44px、小节标题 26px、正文 16px、补充说明 14px；窄屏相应调整标题和导语，正文保持 16px。入口的 `memory-reading` 类限定这些规则的作用范围；页首、段距和展开说明由此统一，机制图的空间关系与状态颜色仍由各页维护。
+
 Wiki 的 GitHub Pages 工作流仅发布 `prototype-wiki/`。课件从 [course-slides](../course-slides/README.md) 的入口独立打开与打包，使用课件目录内的样式、播放器和字体。
 
 ## 并发栏目

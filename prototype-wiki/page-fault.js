@@ -32,7 +32,7 @@ function makeStory(){const all=M.access({kind,supply,cached,otherReady}).snapsho
 function groupFor(s){if(['request','miss','pte','fault','exception'].includes(s.phase))return 'check';if(['victim','invalidate','reserve','reclaim'].includes(s.phase))return 'frame';if(s.phase.startsWith('write'))return 'write';if(s.phase.startsWith('read'))return 'read';return 'retry';}
 function describe(s){const data={
 request:['A 准备读取 VA 70',kind==='absent'?'页 1 的内容在交换块 0。原读取需要的值是 42，但页面还没有驻留。':kind==='resident'?'页 1 已驻留在页框 1，可以按映射读取物理内存。':'先检查地址是否有效，以及当前访问是否被允许。'],
-miss:['TLB 未命中，转而查页表','缺少缓存转换并不等于缺页，还要查看页表中的有效性、权限和驻留状态。'],
+miss:['TLB 未命中，转而查页表','TLB 中没有所需映射，并不等于目标页不在内存中。硬件还要查看页表中的有效性、权限和驻留状态。'],
 pte:['读取页表项',!s.pages[1].valid?'V = 0：该虚拟页无效。':!s.pages[1].allowed?'页面有效，但读取权限被禁止。':s.pages[1].present?'V = 1、P = 1：页面合法且已驻留。':'V = 1、P = 0：页面合法，但未驻留。'],
 fault:['合法页未驻留，硬件触发缺页异常','控制转入 OS 的缺页处理程序。原读取尚未完成，OS 需要先为页 1 准备物理页框。'],
 reserve:['OS 保留空闲页框 1','该页框将用于 A 的页 1；内容还未调入，驻留位仍是 P = 0。'],
@@ -47,7 +47,7 @@ reclaim:['页框 1 已可复用',supply==='dirty'?'B 页 2 的修改已经写回
 'read-done':['内容已经读入，驻留映射尚待更新','页 1 已进入页框 1；此时页表仍是 P = 0，原指令也还没有读到 42。'],
 map:['OS 更新映射，A 变为就绪','页表改为 P = 1、页框号 1。A 需要重新获得 CPU，原读取尚未完成。'],
 resume:['A 重新获得 CPU，重试原指令','程序仍读取 VA 70，页号和偏移保持不变。此时目标页已经驻留。'],
-'retry-miss':['重试时，TLB 仍然未命中','页表已更新，而缓存转换尚未填入。硬件再次读取页表，不需要再次调页。'],
+'retry-miss':['重试时，TLB 仍然未命中','页表已更新，但 TLB 中还没有这条映射。硬件再次读取页表即可取得映射，不需要再次调入页面。'],
 'retry-pte':['再次查表，取得页框号 1','驻留位现在是 P = 1。此次查表可以得到可用的地址转换。'],
 fill:['把页 1 → 页框 1 填入 TLB','缓存转换已就绪，接下来重新执行原读取。'],
 retry:['再次执行同一条读取','内部重试没有增加程序要读取的数据次数，原指令仍未完成。'],
@@ -61,7 +61,7 @@ text('#pf-access-title',kind==='absent'?'缺页处理与指令重试':kind==='re
 text('#pf-actor',s.actor==='A'?'进程 A':s.actor==='硬件'?'硬件':s.actor==='OS'?'操作系统':otherReady?'磁盘 I/O · B 运行':'磁盘 I/O');text('#pf-action',info[0]);text('#pf-reason',info[1]);$('#pf-access-log').classList.toggle('is-error',Boolean(s.exception));
 const groups=[...new Set(story.map(groupFor))],current=groupFor(s),labels={check:'检查映射',frame:'准备页框',write:'写回修改',read:'调入页面',retry:'继续读取'};$('#pf-stages').innerHTML=groups.map(g=>`<button type="button" data-stage="${g}" aria-pressed="${g===current}">${labels[g]}</button>`).join('');
 text('#pf-process-state',s.processState);$('#pf-process-state').dataset.state=s.processState;text('#pf-register',s.register===null?'尚未取得':String(s.register));text('#pf-read-state',s.completed?'原指令已完成':s.exception?'原读取未完成：访问被拒绝':'原指令尚未完成');$('.pf-result').classList.toggle('is-complete',Boolean(s.completed));
-$('#pf-bits').innerHTML=metric('有效 V',Number(t.valid))+metric('驻留 P',t.valid?Number(t.present):'—');text('#pf-cpu',s.cpu==='空闲'?'暂时空闲':s.cpu==='B'?'进程 B':s.mode==='内核态'?'OS 处理程序':'进程 A');text('#pf-other-work',s.completed?'原指令已完成':s.bWork?'B 已完成 '+s.bWork+' 个示意计算时段':s.cpu==='空闲'?'没有其他就绪进程':s.cpu==='B'?'A 等待重新获得 CPU':'本次读取的程序位置保持不变');
+$('#pf-bits').innerHTML=metric('有效 V',Number(t.valid))+metric('驻留 P',t.valid?Number(t.present):'—');text('#pf-cpu',s.cpu==='空闲'?'暂时空闲':s.cpu==='B'?'进程 B':s.mode==='内核态'?'OS 处理程序':'进程 A');text('#pf-other-work',s.completed?'原指令已完成':s.bWork?'B 已完成 '+s.bWork+' 个示意计算时段':s.cpu==='空闲'?'没有其他就绪进程':s.cpu==='B'?(s.processState==='阻塞'?'A 因缺页而阻塞，等待 I/O 完成':'A 已就绪，等待重新获得 CPU'):'本次读取的程序位置保持不变');
 s.frames.forEach(f=>{const node=$('#pf-frame-'+f.frame);node.className='pf-block is-'+f.state+(f.frame===1?' is-target':'');node.dataset.state=f.state;node.dataset.page=f.page??'';node.querySelector('b').textContent=f.page?f.page.replace(':',' · 页 '):f.state==='free'?'空闲':'已保留';node.querySelector('small').textContent=f.page==='A:1'?(f.state==='loaded'?'待更新映射':'偏移 6：42'):f.page==='B:2'?'内容标记 '+f.value:f.page?'已驻留':f.state==='free'?'可分配':'等待目标页';});
 s.disk.forEach(d=>{const node=$('#pf-disk-'+d.block);node.hidden=d.block===2&&(kind!=='absent'||supply==='free');node.className='pf-block pf-disk-block'+(d.page?'':' is-free');node.dataset.page=d.page??'';node.querySelector('b').textContent=d.page?d.page.replace(':',' · 页 '):'空闲';node.querySelector('small').textContent=d.page==='A:1'?'偏移 6：'+d.value:d.page?'内容标记 '+d.value:'没有内容';});
 const io=s.io,activeIO=/^(read|write)-(start|wait|done)$/.test(s.phase);text('#pf-transfer-note',activeIO?(io.kind==='read'?'读入 64 B':'写回 64 B')+' · '+io.progress+' / '+io.total:s.phase==='map'?'页表已更新':s.phase==='translated'?'PA 70 → 页框 1，偏移 6':s.completed?'从物理内存读取完成':'');$('#pf-transfer-note').dataset.kind=activeIO?io.kind:'';if(activeIO)$('#pf-transfer-note').innerHTML='<span>'+(io.kind==='read'?'读入 64 B':'写回 64 B')+'</span><small>时段 '+io.progress+' / '+io.total+'</small>';

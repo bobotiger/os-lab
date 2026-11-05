@@ -26,7 +26,7 @@
   }
   function counterTrace(threshold = 4) {
     if (![1, 2, 4].includes(threshold)) throw new Error('Invalid threshold');
-    const s = {total: 0, global: 0, locals: [0, 0], merges: 0, cpu: null, phase: 'start', log: '两个 CPU 各累计 6 次更新。本地计数达到阈值时，合并到全局计数。'};
+    const s = {total: 0, global: 0, locals: [0, 0], merges: 0, cpu: null, phase: 'start', log: '当前尚未更新；两个 CPU 接下来各执行 6 次更新。本地计数达到阈值时，合并到全局计数。'};
     const frames = [structuredClone(s)];
     for (let n = 0; n < 12; n++) {
       const cpu = n % 2; s.cpu = cpu; s.total++; s.locals[cpu]++; s.phase = 'local';
