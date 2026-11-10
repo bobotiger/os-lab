@@ -129,8 +129,7 @@
       semaphores: [['threads-sema.pdf','第 31 章：许可计数与生产者—消费者']],
       concurrencyBugs: [['threads-bugs.pdf','第 32 章：违反原子性与执行顺序']],
       deadlock: [['threads-bugs.pdf','第 32 章 §32.3：死锁的条件与处理']],
-      events: [['threads-events.pdf','第 33 章：事件循环、异步 I/O 与状态保存']],
-      concurrencyExperiments: [['threads-intro.pdf','第 26 章：共享更新'],['threads-bugs.pdf','第 32 章：同步范围与死锁']]
+      events: [['threads-events.pdf','第 33 章：事件循环、异步 I/O 与状态保存']]
     };
     const links = (chapters[page] || []).map(([file,title]) => `<li><a href="${base + file}">OSTEP · ${title}</a></li>`).join('');
     const posix = page === 'conditionVariables' ? '<li><a href="https://www.man7.org/linux/man-pages/man3/pthread_cond_broadcast.3p.html">POSIX · signal 与 broadcast 的语义（标准文本转载）</a></li>' : '';

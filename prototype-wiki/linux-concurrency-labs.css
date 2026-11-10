@@ -1,0 +1,55 @@
+/* 沿用 Wiki 字体、颜色和目录；长任务按参数、操作、提交材料依次阅读。 */
+.linux-labs-page main { max-width: 960px; margin-inline: auto; }
+.linux-labs-page .intro { max-width: none; }
+.linux-labs-page main p { margin: 0 0 16px; line-height: 1.9; }
+.linux-labs-page .intro .eyebrow, .linux-labs-page .lab > .eyebrow { margin-bottom: 8px; }
+.linux-labs-page .intro .lead { margin: 20px 0 20px; }
+.linux-labs-page .lab-index { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin-top: 28px; border-top: 1px solid var(--line); }
+.lab-index a { display: block; padding: 17px 0; border-bottom: 1px solid var(--line); font-size: 17px; }
+.lab-index a span { display: block; margin-bottom: 4px; font-size: 13px; color: var(--muted); }
+.linux-labs-page main a { color: var(--accent); text-underline-offset: 4px; }
+.linux-labs-page main a:hover { text-decoration: underline; }
+.linux-labs-page a:focus-visible, .linux-labs-page button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.linux-labs-page .cc-section { padding-block: 36px 44px; }
+.linux-labs-page .lab > h2 { max-width: 36em; }
+.linux-labs-page h3 { font-size: 22px; margin: 30px 0 14px; }
+.linux-labs-page h4 { font-size: 18px; line-height: 1.6; margin: 24px 0 12px; font-weight: 600; }
+.lab-downloads { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0 16px; }
+.lab-downloads a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); font-size: 15px; }
+.lab-downloads a:hover { background: var(--accent-soft); border-color: var(--accent); }
+.linux-labs-page .lab-package-note { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+.lab-parameters { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 20px 0; font-size: 15px; line-height: 1.8; }
+.lab-parameters caption { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+.lab-parameters .param-name { width: 24%; }
+.lab-parameters .param-range { width: 22%; }
+.lab-parameters th, .lab-parameters td { text-align: left; vertical-align: top; padding: 14px 14px 14px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.lab-parameters thead th { font-weight: 500; font-size: 14px; color: var(--muted); border-top: 1px solid var(--line); }
+.lab-parameters tbody th { font-weight: 500; }
+.lab-parameters th:last-child, .lab-parameters td:last-child { padding-right: 0; }
+.lab-parameters code { font-size: 14px; }
+.lab-command { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 16px; padding: 12px 16px; margin: 16px 0 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; }
+.lab-command pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lab-command button { background: white; }
+.copy-status { grid-column: 1/-1; font-size: 14px; color: var(--accent); }
+.copy-status:empty { display: none; }
+.linux-labs-page ol { padding-left: 1.6em; margin: 12px 0 24px; }
+.linux-labs-page li { padding-left: 5px; margin-bottom: 14px; line-height: 1.95; }
+.linux-labs-page .knowledge-related h3 { margin: 0; }
+@media (max-width: 760px) {
+  .linux-labs-page .intro { padding-top: 28px; }
+  .linux-labs-page .intro .lead { font-size: 20px; }
+  .linux-labs-page .lab-index { grid-template-columns: 1fr; }
+  .linux-labs-page h2 { font-size: 24px; }
+  .linux-labs-page h3 { font-size: 21px; }
+  .lab-parameters colgroup, .lab-parameters thead { display: none; }
+  .lab-parameters, .lab-parameters tbody, .lab-parameters tr, .lab-parameters td, .lab-parameters th { display: block; width: 100%; }
+  .lab-parameters tr { padding: 15px 0; border-bottom: 1px solid var(--line); }
+  .lab-parameters tr:first-child { border-top: 1px solid var(--line); }
+  .lab-parameters th, .lab-parameters td { padding: 3px 0; border: 0; }
+  .lab-parameters tbody th { font-weight: 600; }
+  .lab-parameters td::before { content: attr(data-label) '：'; color: var(--muted); font-size: 14px; }
+  .lab-command { gap: 8px; padding: 12px; }
+  .lab-command button { padding: 8px 10px; }
+  .linux-labs-page .lab-downloads { gap: 10px; }
+  .linux-labs-page .lab-downloads a { padding-inline: 12px; }
+}

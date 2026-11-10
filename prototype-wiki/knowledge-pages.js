@@ -31,7 +31,8 @@ const WIKI_PAGES = Object.freeze({
   concurrencyBugs: {title: '并发错误', english: 'Concurrency Bugs', theme: '并发', href: 'concurrency-bugs.html', description: '哪些操作必须一起完成，哪些操作必须按规定的顺序执行。', related: [{id: 'locks', reason: '每次访问加锁不等于保护了完整的逻辑操作。'}, {id: 'conditionVariables', reason: '检查完成条件并等待，可以保证初始化与使用的次序。'}, {id: 'deadlock', reason: '同步方案还需要避免线程相互等待，无法继续。'}]},
   deadlock: {title: '死锁', english: 'Deadlock', theme: '并发', href: 'deadlock.html', description: '锁的获取次序、资源依赖、四个必要条件与处理取舍。', related: [{id: 'locks', reason: '获取锁可能等待，等待期间还需要考察持有的资源。'}, {id: 'semaphores', reason: '持锁等待空位可能阻止消费者释放空位。'}, {id: 'concurrencyBugs', reason: '保证数据正确与保证线程能够继续，需要分别检查。'}]},
   events: {title: '事件驱动并发', english: 'Event-based Concurrency', theme: '并发', href: 'events.html', description: '事件循环怎样处理异步 I/O、保存请求状态，以及为什么长时间计算会拖慢其他请求。', related: [{id: 'threads', reason: '并发不要求同时执行，多个请求也可以在单线程内交错推进。'}, {id: 'conditionVariables', reason: '线程等待与返回事件循环是不同的协作方式。'}, {id: 'pageFault', reason: '事件循环线程若因页面调入而阻塞，也会暂停处理其他请求。'}]},
-  concurrencyExperiments: {title: '并发参考实践', english: 'Concurrency Practice', theme: '并发', href: 'concurrency-experiments.html', description: '用可下载脚本复现更新丢失、锁的相互等待和事件循环的响应差异。', related: [{id: 'threads', reason: '追踪每个线程读取、计算和写回的次序。'}, {id: 'conditionVariables', reason: '观察被通知后重新检查共享条件的必要性。'}, {id: 'semaphores', reason: '比较许可预留与实际队列内容的变化。'}, {id: 'events', reason: '用同一工作量比较等待与请求响应。'}]},
+  linuxConcurrencyLabs: {title: 'Linux 并发验证实验', english: 'Linux Concurrency Labs', theme: '并发', href: 'linux-concurrency-labs.html', description: '在 Ubuntu 中改变配置、复现问题，比较互斥锁、条件变量、信号量和事件驱动的已有实现。', related: [{id: 'locks', reason: '比较分别加锁与保护完整操作的差别。'}, {id: 'conditionVariables', reason: '区分收到通知与队列中有任务。'}, {id: 'semaphores', reason: '跟踪许可的取得、归还和逐轮变化。'}, {id: 'events', reason: '区分等待读取与处理消息造成的延迟。'}]},
+  exercises: {title: '操作系统习题', english: 'Exercises', theme: '综合练习', href: 'exercises.html', description: '进程、调度、同步、内存和文件系统习题与参考解答。', related: []},
 });
 const WIKI_SCHEDULING_POLICIES = Object.freeze(['fcfs', 'sjf', 'srtf', 'roundRobin']);
 const WIKI_TOPIC_STATE_KEY = 'oslab.knowledge-nav.expanded.v1';
@@ -140,7 +141,7 @@ function wikiRelated(pageId) {
     semaphores: {id: 'concurrencyBugs', reason: '掌握同步工具之后，检查它们是否保护了正确的逻辑范围，并建立了必要的先后关系。'},
     concurrencyBugs: {id: 'deadlock', reason: '数据操作正确还不够，资源的相互等待也可能使所有相关线程停住。'},
     deadlock: {id: 'events', reason: '在多线程协作之外，还可以用单个事件循环交错处理请求。下一页作为拓展，讨论这种组织方式的收益与限制。'},
-    events: {id: 'concurrencyExperiments', reason: '用固定执行次序复现共享更新、资源等待和请求响应，再改变条件分析结果。'},
+    events: {id: 'linuxConcurrencyLabs', reason: '在 Ubuntu 中调整消息发送时间和处理耗时，比较不同方案下快消息要等多久。实验页还提供互斥锁、条件变量和信号量实验。'},
     locks: {id: 'concurrentStructures', reason: '锁保证互斥之后，还要判断保护范围是否让独立操作产生了不必要的等待。'},
     concurrentStructures: {id: 'conditionVariables', reason: '队列即使能被正确修改，空队列上的消费者仍需要等待任务到来。条件变量用于组织这种等待。'},
     conditionVariables: {id: 'semaphores', reason: '条件变量通知不累计；信号量通过保留可用许可，提供另一种协调资源与执行次序的方式。'},

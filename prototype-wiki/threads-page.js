@@ -12,7 +12,7 @@
           <div><dt>数据结构与协作</dt><dd><a href="concurrent-structures.html">并发数据结构</a>讨论锁的范围和开销；<a href="condition-variables.html">条件变量</a>与<a href="semaphores.html">信号量</a>处理等待和资源分配。</dd></div>
           <div><dt>正确性与死锁</dt><dd><a href="concurrency-bugs.html">并发错误</a>检查操作是否完整、次序是否正确；<a href="deadlock.html">死锁</a>分析相互等待怎样阻止程序继续。</dd></div>
           <div><dt>另一种组织方式</dt><dd><a href="events.html">事件驱动并发</a>介绍单个线程怎样交错处理请求，以及这种方式的适用范围。</dd></div>
-          <div><dt>实践与检验</dt><dd><a href="concurrency-experiments.html">并发参考实践</a>用可重复的执行次序复现现象，再改变条件检验理解。</dd></div>
+          <div><dt>实践与检验</dt><dd>在<a href="linux-concurrency-labs.html#seats">Linux 并发验证实验</a>中，从抢座程序入手，比较分别加锁和保护完整操作的结果。</dd></div>
         </dl></details>
       </section>
       <section class="cc-section" id="resources" aria-labelledby="resources-title">

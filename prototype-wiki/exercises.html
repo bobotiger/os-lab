@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>操作系统习题 · OSLab</title><link rel="stylesheet" href="typography.css"><link rel="stylesheet" href="style.css?v=20261104-typography"><link rel="stylesheet" href="exercises.css?v=20261105-reader"></head><body data-page="exercises"><div class="page"><div id="exercise-navigation"></div><main class="exercise-page"><h1>操作系统习题</h1><nav class="exercise-topics" aria-label="习题分类"><a href="#process">进程与线程</a><a href="#scheduling">处理机调度</a><a href="#sync">同步与死锁</a><a href="#memory">内存管理</a><a href="#storage">文件与 I/O</a></nav><section class="exercise-section" id="process"><h2>进程与线程</h2>
+<article class="exercise" id="question-1"><h3><span class="exercise-number">01</span>线程池与服务器</h3><div class="question"><p>说明线程池是什么。与为每个请求临时创建线程相比，服务器使用线程池有哪些好处？</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>工作方式</h4><p>线程池维持一组可复用的工作线程，请求进入任务队列，由空闲线程取出执行。任务完成后线程继续等待下一项工作。</p></div><div class="answer-section"><h4>使用收益</h4><ul class="answer-points"><li>复用线程，减少创建与销毁开销。</li><li>限制线程数量，控制内存和调度成本。</li><li>使用任务队列，暂存突发请求。</li></ul></div><div class="answer-section"><h4>容量与负载</h4><p>池太小会增加等待，太大可能加剧竞争；队列也应有容量或拒绝策略。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-2"><h3><span class="exercise-number">02</span>引入线程的目的</h3><div class="question"><p>操作系统引入线程的主要目的是什么？结合进程内多个执行任务说明。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>资源与执行的分工</h4><p>把资源拥有与执行调度分开，使同一进程中的多个执行流并发推进。线程共享地址空间和进程资源，各自保存程序计数器、寄存器和栈等执行状态，创建和切换通常比独立进程更轻量。</p></div><div class="answer-section"><h4>编辑器中的应用</h4><p>例如编辑器用不同线程处理界面、文件读取和后台检查。单核上交错执行改善响应，多核上可真正并行；共享数据仍须同步。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-28"><h3><span class="exercise-number">03</span>线程的共享资源</h3><div class="question"><p>同一进程中的线程是否共享代码与数据？各线程的用户栈是否独立？说明理由。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>共享资源与独立现场</h4><p>线程通常共享进程的代码、全局数据、堆及其他地址空间映射；每个线程有自己的用户栈、寄存器状态和栈指针，用于保存自己的调用帧和执行进度。</p></div><div class="answer-section"><h4>栈的访问边界</h4><p><strong>各自使用栈，不等于栈具有跨线程内存隔离。</strong>栈仍位于共享地址空间中；一个线程若取得另一个线程栈上对象的有效地址，通常可以访问它。此时必须处理同步及对象生命周期。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-33"><h3><span class="exercise-number">04</span>中断向量表的数据结构</h3><div class="question"><p>需要根据中断号迅速定位服务程序。在数组、队列、单链表和双向链表中，应选择哪种结构组织中断向量表？</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>数组。</p></div><div class="answer-section"><h4>定位方式</h4><p>中断号可作索引，按“表基址＋编号×表项大小”直接定位，访问代价为 O(1)。</p></div><div class="answer-section"><h4>与其他结构比较</h4><p>链表通常需遍历，队列主要支持按顺序出入。</p></div><div class="answer-section"><h4>实际表项</h4><p>实际表项可能保存入口地址或描述符，具体格式依硬件体系结构而定。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-39"><h3><span class="exercise-number">05</span>进程切换与系统状态</h3><div class="question"><p>分页虚拟存储系统进行进程上下文切换时，通用寄存器、页表基址、程序计数器与内核中断向量表基址中，哪一项通常不因切换而更新？</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>内核中断向量表基址。</p></div><div class="answer-section"><h4>状态归属</h4><p>通常在同一内核和同一 CPU 上共用中断入口，切换进程不需要换一套中断表。寄存器与程序计数器属于执行现场；切换到不同地址空间时通常还要更新页表基址。</p></div><div class="answer-section"><h4>切换时的具体情况</h4><p>这不表示每次切换后这些寄存器的数值必然不同。同一地址空间内线程切换可能无需更换页表；题目考查的是状态归属。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-43"><h3><span class="exercise-number">06</span>进程内线程的堆与栈</h3><div class="question"><p>同一进程中的线程是否共享堆？各线程的栈是否独立？结合执行过程说明。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>堆与栈的分工</h4><p>同一进程的线程通常共享堆。一个线程动态分配对象后，其他线程也可以通过有效指针访问它。访问时必须保证对象仍然有效，并对并发访问进行正确同步。每个线程有自己的栈和栈指针，保存自己的函数参数、局部对象与返回信息。</p></div><div class="answer-section"><h4>调用过程与访问边界</h4><p>线程 A 调用函数不会把调用帧压到线程 B 当前使用的栈上，但两者的栈仍在同一地址空间内。独立执行栈不是内存权限隔离；向其他线程传递栈对象地址时，必须保证对象尚未失效。</p></div>
+
+</div></details></article>
+</section>
+<section class="exercise-section" id="scheduling"><h2>处理机调度</h2>
+<article class="exercise" id="question-3"><h3><span class="exercise-number">07</span>分时系统的时间片</h3><div class="question"><p>100 个就绪进程每轮各运行一个时间片。忽略切换开销，要求完整一轮不超过 2 秒。时间片上限是多少？</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>20 ms。</p></div><div class="answer-section"><h4>计算过程</h4><div class="answer-calculation"><div class="calculation-row"><span>一轮所需时间</span><strong>100q</strong></div><div class="calculation-row"><span>一轮不超过 2 秒</span><strong>100q ≤ 2000 ms</strong></div><div class="calculation-row"><span>时间片上限</span><strong>q ≤ 20 ms</strong></div></div><p>q 表示每个进程的时间片。</p></div><div class="answer-section"><h4>计入开销时</h4><p>有切换开销时，应先从总预算中扣除开销。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-12"><h3><span class="exercise-number">08</span>调度层次</h3><div class="question"><p>比较作业调度、内存调度与进程调度的目标、关系和执行频率。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>三层调度对比</h4><div class="table-scroll" tabindex="0"><table><thead><tr><th scope="col">层次</th><th scope="col">决定</th><th scope="col">通常频率</th></tr></thead><tbody><tr><td>作业调度（高级）</td><td>接纳哪些后备作业，控制多道程序程度</td><td>较低</td></tr><tr><td>内存调度（中级）</td><td>挂起或恢复哪些进程，调整内存负载</td><td>取决于内存压力</td></tr><tr><td>进程调度（低级）</td><td>从就绪进程中选择 CPU 使用者</td><td>最高</td></tr></tbody></table></div></div><div class="answer-section"><h4>层次之间的关系</h4><p>作业先被接纳，才成为进程调度候选；挂起进程需恢复驻留并就绪才能运行。这是经典分层模型，并非每个现代系统都实现独立的三级调度器。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-14"><h3><span class="exercise-number">09</span>调度算法比较</h3><div class="question"><p>P1～P4 到达时刻为 0、1、2、3，CPU 时间为 6、5.5、3、4.5。无 I/O，忽略切换开销。分别用最短剩余时间优先、非抢占式最短作业优先、时间片 2 的轮转法，列执行区间与平均等待时间。同刻新到达者先入队，再让时间片耗尽者回队；剩余时间相等不抢占。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>等待时间的计算</h4><p>等待时间 = 完成时刻 − 到达时刻 − CPU 时间；区间左闭右开。</p></div><div class="answer-section"><h4>各算法的执行顺序</h4><div class="answer-schedules"><figure class="answer-schedule"><figcaption>最短剩余时间优先（SRTF）</figcaption><ol class="answer-sequence"><li><span class="sequence-owner">P1</span><span class="sequence-range">0–2</span></li><li><span class="sequence-owner">P3</span><span class="sequence-range">2–5</span></li><li><span class="sequence-owner">P1</span><span class="sequence-range">5–9</span></li><li><span class="sequence-owner">P4</span><span class="sequence-range">9–13.5</span></li><li><span class="sequence-owner">P2</span><span class="sequence-range">13.5–19</span></li></ol></figure><figure class="answer-schedule"><figcaption>最短作业优先（SJF）</figcaption><ol class="answer-sequence"><li><span class="sequence-owner">P1</span><span class="sequence-range">0–6</span></li><li><span class="sequence-owner">P3</span><span class="sequence-range">6–9</span></li><li><span class="sequence-owner">P4</span><span class="sequence-range">9–13.5</span></li><li><span class="sequence-owner">P2</span><span class="sequence-range">13.5–19</span></li></ol></figure><figure class="answer-schedule"><figcaption>时间片轮转（RR）</figcaption><ol class="answer-sequence"><li><span class="sequence-owner">P1</span><span class="sequence-range">0–2</span></li><li><span class="sequence-owner">P2</span><span class="sequence-range">2–4</span></li><li><span class="sequence-owner">P3</span><span class="sequence-range">4–6</span></li><li><span class="sequence-owner">P1</span><span class="sequence-range">6–8</span></li><li><span class="sequence-owner">P4</span><span class="sequence-range">8–10</span></li><li><span class="sequence-owner">P2</span><span class="sequence-range">10–12</span></li><li><span class="sequence-owner">P3</span><span class="sequence-range">12–13</span></li><li><span class="sequence-owner">P1</span><span class="sequence-range">13–15</span></li><li><span class="sequence-owner">P4</span><span class="sequence-range">15–17</span></li><li><span class="sequence-owner">P2</span><span class="sequence-range">17–18.5</span></li><li><span class="sequence-owner">P4</span><span class="sequence-range">18.5–19</span></li></ol></figure></div></div><div class="answer-section"><h4>等待时间比较</h4><div class="table-scroll" tabindex="0"><table class="answer-table-wide"><thead><tr><th scope="col">算法</th><th scope="col">P1 等待</th><th scope="col">P2 等待</th><th scope="col">P3 等待</th><th scope="col">P4 等待</th><th scope="col">平均</th></tr></thead><tbody><tr><td>SRTF</td><td>3</td><td>12.5</td><td>0</td><td>6</td><td>5.375</td></tr><tr><td>SJF</td><td>0</td><td>12.5</td><td>4</td><td>6</td><td>5.625</td></tr><tr><td>RR</td><td>9</td><td>12</td><td>8</td><td>11.5</td><td>10.125</td></tr></tbody></table></div></div><div class="answer-section"><h4>关键调度时刻</h4><p>SRTF 在时刻 1 不抢占，因为 P1 还需 5，小于 5.5；时刻 2 改选 P3。RR 在时刻 2 的等待队列为 P2、P3、P1。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-17"><h3><span class="exercise-number">10</span>I/O 与处理机并行调度</h3><div class="question"><p>单 CPU、独占设备 I1 和 I2 可并行工作。Q1 使用 10 ms 时间片轮转；Q2 使用抢占式优先级，Job1 高于 Job2 高于 Job3。Q1 抢占 Q2；新建或完成 I/O 的进程进入 Q1；一个时间片用完而当前 CPU 段未结束则降至 Q2。三作业在 0 ms 投入。</p><div class="table-scroll" tabindex="0"><table><thead><tr><th scope="col">作业</th><th scope="col">执行步骤</th></tr></thead><tbody><tr><td>Job1</td><td>I2 30 → CPU 20 → I1 45 → CPU 20（ms）</td></tr><tr><td>Job2</td><td>I1 20 → CPU 20 → I2 20 → CPU 20（ms）</td></tr><tr><td>Job3</td><td>CPU 30 → I1 15 → CPU 20（ms）</td></tr></tbody></table></div><p>设备等待先来先服务，不计切换开销。列资源使用区间，求完成时刻以及从 0 到全部完成期间 CPU、I1 利用率。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>Job1、Job2、Job3 分别于 125、130、140 ms 完成。</p></div><div class="answer-section"><h4>资源使用顺序</h4><div class="answer-schedules"><figure class="answer-schedule"><figcaption>CPU · ms</figcaption><ol class="answer-sequence"><li><span class="sequence-owner">Job3</span><span class="sequence-range">0–20</span></li><li><span class="sequence-owner">Job2</span><span class="sequence-range">20–30</span></li><li><span class="sequence-owner">Job1</span><span class="sequence-range">30–50</span></li><li><span class="sequence-owner">Job2</span><span class="sequence-range">50–60</span></li><li><span class="sequence-owner">Job3</span><span class="sequence-range">60–70</span></li><li class="sequence-idle"><span class="sequence-owner">空闲</span><span class="sequence-range">70–80</span></li><li><span class="sequence-owner">Job2</span><span class="sequence-range">80–95</span></li><li><span class="sequence-owner">Job1</span><span class="sequence-range">95–110</span></li><li><span class="sequence-owner">Job3</span><span class="sequence-range">110–120</span></li><li><span class="sequence-owner">Job1</span><span class="sequence-range">120–125</span></li><li><span class="sequence-owner">Job2</span><span class="sequence-range">125–130</span></li><li><span class="sequence-owner">Job3</span><span class="sequence-range">130–140</span></li></ol></figure><figure class="answer-schedule"><figcaption>I1 · ms</figcaption><ol class="answer-sequence"><li><span class="sequence-owner">Job2</span><span class="sequence-range">0–20</span></li><li class="sequence-idle"><span class="sequence-owner">空闲</span><span class="sequence-range">20–50</span></li><li><span class="sequence-owner">Job1</span><span class="sequence-range">50–95</span></li><li><span class="sequence-owner">Job3</span><span class="sequence-range">95–110</span></li><li><span>之后空闲</span></li></ol></figure><figure class="answer-schedule"><figcaption>I2 · ms</figcaption><ol class="answer-sequence"><li><span class="sequence-owner">Job1</span><span class="sequence-range">0–30</span></li><li class="sequence-idle"><span class="sequence-owner">空闲</span><span class="sequence-range">30–60</span></li><li><span class="sequence-owner">Job2</span><span class="sequence-range">60–80</span></li><li><span>之后空闲</span></li></ol></figure></div></div><div class="answer-section"><h4>关键事件</h4><p>相邻同作业区间已合并。例如 Job3 在 0–10 位于 Q1，10–20 位于 Q2。Job3 在 70 ms 申请 I1，须等到 95 ms；110 ms 完成 I/O 回到 Q1，抢占 Job1。</p></div><div class="answer-section"><h4>完成时刻与利用率</h4><div class="answer-calculation"><div class="calculation-row"><span>CPU 忙碌时间</span><strong>40 + 40 + 50 = 130 ms</strong></div><div class="calculation-row"><span>CPU 利用率</span><strong>130 / 140 ≈ 92.86%</strong></div><div class="calculation-row"><span>I1 忙碌时间</span><strong>20 + 45 + 15 = 80 ms</strong></div><div class="calculation-row"><span>I1 利用率</span><strong>80 / 140 ≈ 57.14%</strong></div></div></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-22"><h3><span class="exercise-number">11</span>批处理的平均周转时间</h3><div class="question"><p>一批作业在单道系统同时到达，已知各自运行时间，无 I/O 和切换开销。哪种调度策略使平均周转时间最短？说明理由。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>最短作业优先。</p></div><div class="answer-section"><h4>交换相邻作业</h4><p>按运行时间从短到长执行。设相邻两项时长 a&gt;b，先长后短对它们完成时间之和的贡献为 2a+b；交换后为 2b+a，减少 a−b，而后续作业的开始时间不变。不断消除这种逆序，即得到最小总周转时间。</p></div><div class="answer-section"><h4>适用条件</h4><p>不同到达时刻、未知时长或有其他约束时不能直接套用这一结论。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-23"><h3><span class="exercise-number">12</span>时间片轮转的极端情形</h3><div class="question"><p>时间片足够大，使进程每次运行都在时间片耗尽前完成或自行阻塞。轮转调度与哪种基本算法相近？说明前提。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>先来先服务（FCFS）。</p></div><div class="answer-section"><h4>时间片不再触发抢占</h4><p>时间片不再引起抢占，就绪队首一直执行到完成或阻塞，然后选择下一个。</p></div><div class="answer-section"><h4>成立条件</h4><p>假定无其他抢占规则、就绪进程按入队顺序选择。若有 I/O，应按每次进入就绪队列的顺序理解，而不是按整个作业的最初到达顺序执行到底。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-31"><h3><span class="exercise-number">13</span>抢占式优先级调度</h3><div class="question"><p>优先级数值越小越高。采用抢占式优先级调度，无 I/O，不计切换开销。求全部完成前的执行序列及 CPU 派发次数（计初次派发，不计最后转入空闲）。</p><div class="table-scroll" tabindex="0"><table><thead><tr><th scope="col">进程</th><th scope="col">到达 ms</th><th scope="col">优先级</th><th scope="col">CPU ms</th></tr></thead><tbody><tr><td>P0</td><td>0</td><td>15</td><td>100</td></tr><tr><td>P1</td><td>10</td><td>20</td><td>60</td></tr><tr><td>P2</td><td>10</td><td>10</td><td>20</td></tr><tr><td>P3</td><td>15</td><td>6</td><td>10</td></tr></tbody></table></div></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>派发 6 次，进程之间实际切换 5 次。</p></div><div class="answer-section"><h4>执行顺序</h4><ol class="answer-sequence"><li><span class="sequence-owner">P0</span><span class="sequence-range">0–10</span></li><li><span class="sequence-owner">P2</span><span class="sequence-range">10–15</span></li><li><span class="sequence-owner">P3</span><span class="sequence-range">15–25</span></li><li><span class="sequence-owner">P2</span><span class="sequence-range">25–40</span></li><li><span class="sequence-owner">P0</span><span class="sequence-range">40–130</span></li><li><span class="sequence-owner">P1</span><span class="sequence-range">130–190</span></li></ol></div><div class="answer-section"><h4>派发次数的统计</h4><p>10 ms 时 P2 抢占 P0；15 ms 时 P3 抢占 P2；P3 完成后 P2 继续剩余 15 ms，再由 P0 运行剩余 90 ms。统计口径必须明确，不能混淆派发和进程间切换。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-35"><h3><span class="exercise-number">14</span>抢占式调度与周转时间</h3><div class="question"><p>优先级数值越大越高，采用抢占式优先级调度。无 I/O，不计切换开销，求平均周转时间。</p><div class="table-scroll" tabindex="0"><table><thead><tr><th scope="col">进程</th><th scope="col">到达 ms</th><th scope="col">优先级</th><th scope="col">CPU ms</th></tr></thead><tbody><tr><td>P1</td><td>0</td><td>1</td><td>60</td></tr><tr><td>P2</td><td>20</td><td>10</td><td>42</td></tr><tr><td>P3</td><td>30</td><td>100</td><td>13</td></tr></tbody></table></div></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>平均周转时间为 61 ms。</p></div><div class="answer-section"><h4>执行顺序与完成时刻</h4><ol class="answer-sequence"><li><span class="sequence-owner">P1</span><span class="sequence-range">0–20</span></li><li><span class="sequence-owner">P2</span><span class="sequence-range">20–30</span></li><li><span class="sequence-owner">P3</span><span class="sequence-range">30–43</span></li><li><span class="sequence-owner">P2</span><span class="sequence-range">43–75</span></li><li><span class="sequence-owner">P1</span><span class="sequence-range">75–115</span></li></ol><p>完成时刻分别为 115、75、43 ms。</p></div><div class="answer-section"><h4>周转时间的计算</h4><div class="answer-calculation"><div class="calculation-row"><span>P1 的周转时间</span><strong>115 − 0 = 115 ms</strong></div><div class="calculation-row"><span>P2 的周转时间</span><strong>75 − 20 = 55 ms</strong></div><div class="calculation-row"><span>P3 的周转时间</span><strong>43 − 30 = 13 ms</strong></div><div class="calculation-row"><span>平均周转时间</span><strong>(115 + 55 + 13) / 3 = 61 ms</strong></div></div><p>周转包括运行与等待，不能再减去 CPU 时间。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-36"><h3><span class="exercise-number">15</span>时间片轮转的周转时间</h3><div class="question"><p>十个进程同时就绪，P 在队尾。时间片 5 ms，P 所需 CPU 时间最短，为 25 ms。进程完成前只在就绪态与运行态间转换，忽略开销。求 P 的周转时间。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>P 的周转时间为 250 ms。</p></div><div class="answer-section"><h4>需要多少轮</h4><p>P 需要 25/5=5 个时间片。</p></div><div class="answer-section"><h4>一轮需要多久</h4><p>其他进程至少也需 25 ms，所以 P 完成之前，每轮它前面的九个进程都各运行一个完整时间片。每轮 10×5=50 ms。</p></div><div class="answer-section"><h4>运行与等待</h4><p>P 共经历 5 轮，每轮 50 ms，因此周转时间为 5 × 50 = 250 ms。其中运行 25 ms，等待 225 ms。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-40"><h3><span class="exercise-number">16</span>优先级就绪队列的操作代价</h3><div class="question"><p>n 个就绪进程按优先级存于单链表，最高优先级在队首。分析新进程按优先级插入，以及取出最高优先级进程的时间复杂度。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>插入最坏 O(n)，取出队首 O(1)。</p></div><div class="answer-section"><h4>插入新进程</h4><p>插入需要沿链表找到适当位置，找到后改指针为 O(1)，但查找可能遍历全部 n 个节点。</p></div><div class="answer-section"><h4>取出队首</h4><p>取出最高优先级只需读队首并更新头指针。若只看候选而不移除，也为 O(1)。</p></div>
+
+</div></details></article>
+</section>
+<section class="exercise-section" id="sync"><h2>同步与死锁</h2>
+<article class="exercise" id="question-4"><h3><span class="exercise-number">17</span>电影院的进出协调</h3><div class="question"><p>电影院有 38 个座位、1 个入口和 2 个出口，每个入口或出口每次只允许一人通过。无座者在外等待，观众离开影院后归还座位许可。设计信号量初值及进出过程。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>信号量与初值</h4><div class="table-scroll answer-symbols" tabindex="0"><table><thead><tr><th scope="col">变量与初值</th><th scope="col">作用</th></tr></thead><tbody><tr><td><code>seats = 38</code></td><td>座位许可</td></tr><tr><td><code>entry = 1</code></td><td>入口互斥</td></tr><tr><td><code>exit[0] = exit[1] = 1</code></td><td>两个出口分别互斥</td></tr></tbody></table></div><p>P 原子地申请许可，无许可时等待；V 释放许可。</p></div><div class="answer-section"><h4>观众的进出过程</h4><div class="answer-code-group"><figure class="answer-code"><figcaption>信号量初始化与观众操作</figcaption><pre><code>semaphore seats = 38, entry = 1;
+semaphore exit[2] = {1, 1};
+观众：
+  P(seats);
+  P(entry); 通过入口; V(entry);
+  观看电影;
+  选择出口 k;  // k 为 0 或 1
+  P(exit[k]); 通过出口; V(exit[k]);
+  V(seats);</code></pre></figure></div></div><div class="answer-section"><h4>容量与互斥</h4><p>先申请座位再进入，保证人数上限。两个出口各用一个互斥量，允许同时各通过一人。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-5"><h3><span class="exercise-number">18</span>有限设备与死锁</h3><div class="question"><p>8 台打印机，每个进程最多需要 3 台。进程逐台申请，资源不可抢占，完成前不释放。可能发生死锁的最少竞争进程数是多少？构造一种分配情形。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>4 个。</p></div><div class="answer-section"><h4>少于四个为何不够</h4><p>每个尚不能完成的进程最多持有 2 台。3 个这样的进程最多持有 6 台，剩余资源足以让至少一个进程完成并释放。</p></div><div class="answer-section"><h4>四个进程的死锁情形</h4><p>4 个进程各占 2 台且都等待第 3 台，则全部停住。</p></div><div class="answer-section"><h4>一般条件</h4><p>一般地，m 个同类资源、n 个进程各最多需 k 个，m ≥ n(k−1)+1 可以保证不会因这些资源发生死锁，前提是获足资源的进程最终完成并释放。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-6"><h3><span class="exercise-number">19</span>自习室与保洁人员</h3><div class="question"><p>自习室最多容纳 100 名学生，进出刷卡并更新显示人数；无空位者离开。只有所有学生离开后保洁才能进入。假定只有一名保洁人员，保洁提出请求后至清洁结束期间拒绝新学生进入，已有学生可以离开。设计信号量方案。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>共享状态与初值</h4><div class="table-scroll answer-symbols" tabindex="0"><table><thead><tr><th scope="col">变量与初值</th><th scope="col">作用</th></tr></thead><tbody><tr><td><code>count = 0</code></td><td>已入室学生人数</td></tr><tr><td><code>closed = false</code></td><td>是否关闭新学生准入</td></tr><tr><td><code>mutex = 1</code></td><td>保护人数和准入状态</td></tr><tr><td><code>empty = 0</code></td><td>通知保洁最后一人已离开</td></tr></tbody></table></div></div><div class="answer-section"><h4>学生与保洁的操作</h4><div class="answer-code-group"><figure class="answer-code"><figcaption>学生进入</figcaption><pre><code>  P(mutex);
+  if (closed || count == 100) {
+    V(mutex); 离开; return;
+  }
+  刷卡入室; count++; 更新显示;
+  V(mutex);
+  自习;</code></pre></figure><figure class="answer-code"><figcaption>学生离开</figcaption><pre><code>  P(mutex);
+  刷卡出室; count--; 更新显示;
+  if (closed &amp;&amp; count == 0) V(empty);
+  V(mutex);</code></pre></figure><figure class="answer-code"><figcaption>保洁</figcaption><pre><code>  P(mutex);
+  closed = true;
+  needWait = (count &gt; 0);
+  V(mutex);
+  if (needWait) P(empty);
+  进入清洁，完成后离开;
+  P(mutex); closed = false; V(mutex);</code></pre></figure></div></div><div class="answer-section"><h4>同步关系</h4><p>关闭准入与检查人数在同一临界区完成。保洁等待时释放 mutex，学生才能离开。即使最后一人先于 P(empty) 离开，信号量的许可也会使后续 P 直接完成。假定已进入学生最终离开且互斥等待者最终能被调度。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-13"><h3><span class="exercise-number">20</span>理发师与等待顾客</h3><div class="question"><p>一名理发师、n 张等待椅（不含理发椅，n≥1）。无顾客时理发师睡眠；满座时顾客站立排队，不离开。按已入座队列顺序服务，空出的等待椅供站立顾客入座。设计信号量方案。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>信号量与初值</h4><div class="table-scroll answer-symbols" tabindex="0"><table><thead><tr><th scope="col">变量与初值</th><th scope="col">作用</th></tr></thead><tbody><tr><td><code>seats = n</code></td><td>等待椅许可</td></tr><tr><td><code>customers = 0</code></td><td>已入座排队的顾客数量</td></tr><tr><td><code>mutex = 1</code></td><td>保护 FIFO 等待队列</td></tr><tr><td><code>called[i] = 0</code></td><td>通知顾客 i 前来理发</td></tr><tr><td><code>ready[i] = 0</code></td><td>顾客 i 确认已坐到理发椅</td></tr><tr><td><code>done[i] = 0</code></td><td>通知顾客 i 理发结束</td></tr><tr><td><code>left[i] = 0</code></td><td>顾客 i 确认已离开理发椅</td></tr></tbody></table></div><p>每名顾客分别使用自己的通知信号量。</p></div><div class="answer-section"><h4>顾客与理发师的操作</h4><div class="answer-code-group code-pair"><figure class="answer-code"><figcaption>顾客 i</figcaption><pre><code>  P(seats); 坐到等待椅;
+  P(mutex); 入队(i); V(mutex);
+  V(customers);
+  P(called[i]);
+  离开等待椅; V(seats);
+  坐到理发椅; V(ready[i]);
+  P(done[i]);
+  离开理发椅; V(left[i]);</code></pre></figure><figure class="answer-code"><figcaption>理发师循环</figcaption><pre><code>  P(customers);
+  P(mutex); i = 出队(); V(mutex);
+  V(called[i]); P(ready[i]);
+  为 i 理发;
+  V(done[i]); P(left[i]);</code></pre></figure></div></div><div class="answer-section"><h4>通知与公平性</h4><p>独立通知避免其他顾客消费叫号或完成信号。理发师等顾客坐稳才开始，等其离椅才叫下一人。站立者若也必须严格 FIFO，seats 还需公平等待队列或显式票号；一般信号量不自动保证公平。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-18"><h3><span class="exercise-number">21</span>预防与避免死锁</h3><div class="question"><p>比较死锁预防和死锁避免的思路，以及各自依赖的限制或信息。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>死锁预防</h4><p>死锁预防预先破坏死锁必要条件之一，例如一次申请所有资源以破坏请求并保持、规定统一申请次序以破坏循环等待。它不必每次预测完成顺序，但限制较强，可能降低资源利用率。</p></div><div class="answer-section"><h4>死锁避免</h4><p>死锁避免在每次分配前判断分配后能否保持安全状态。银行家算法需要最大需求、已分配量和可用量等信息；只有仍存在能使全部进程完成的安全序列时才分配。避免不是等死锁发生后再处理，不安全也不等于已经死锁。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-21"><h3><span class="exercise-number">22</span>同类资源与死锁</h3><div class="question"><p>3 个进程共享 4 个同类资源，每个进程最多需要 2 个。资源逐个申请、不可抢占；获足资源后进程最终完成并释放。是否可能因这些资源死锁？</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>不会。</p></div><div class="answer-section"><h4>仍有资源时</h4><p>若三个进程都未获足资源，每个最多持有 1 个，总占用不超过 3，至少还有 1 个资源可让其中一个完成。它释放资源后，其他进程也能依次完成。</p></div><div class="answer-section"><h4>已有进程获足资源时</h4><p>如果某进程已持有 2 个，它已具备完成条件。</p></div><div class="answer-section"><h4>讨论范围</h4><p>这里不讨论其他锁或程序错误导致的阻塞。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-24"><h3><span class="exercise-number">23</span>银行家算法与安全状态</h3><div class="question"><p>资源 A、B、C 总量为 (10,5,7)。各进程的最大需求和已分配量如下。说明安全状态的含义、不安全是否必然死锁，并判断 P1 请求 (1,0,2) 能否获批。</p><div class="table-scroll" tabindex="0"><table><thead><tr><th scope="col">进程</th><th scope="col">最大需求</th><th scope="col">已分配</th></tr></thead><tbody><tr><td>P1</td><td>7,5,3</td><td>0,1,0</td></tr><tr><td>P2</td><td>3,2,2</td><td>2,0,0</td></tr><tr><td>P3</td><td>9,0,2</td><td>3,0,2</td></tr><tr><td>P4</td><td>2,2,2</td><td>2,1,1</td></tr><tr><td>P5</td><td>4,3,3</td><td>0,0,2</td></tr></tbody></table></div></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>拒绝此次分配，让 P1 等待，保留原分配。</p></div><div class="answer-section"><h4>安全状态的含义</h4><p>系统处于安全状态，意味着存在一个进程完成顺序。按这个顺序分配资源，即使各进程都申请其声明的最大资源量，系统仍能依次满足它们的需求，让它们完成并释放资源。不安全状态表示无法作出这一保证，并不代表此刻已经死锁。</p></div><div class="answer-section"><h4>计算尚需资源</h4><div class="table-scroll" tabindex="0"><table><thead><tr><th scope="col">进程</th><th scope="col">尚需 Need</th></tr></thead><tbody><tr><td>P1</td><td>7,4,3</td></tr><tr><td>P2</td><td>1,2,2</td></tr><tr><td>P3</td><td>6,0,0</td></tr><tr><td>P4</td><td>0,1,1</td></tr><tr><td>P5</td><td>4,3,1</td></tr></tbody></table></div></div><div class="answer-section"><h4>检查初始状态与请求</h4><p>初始 Available=(3,3,2)，例如 P2→P4→P1→P3→P5 是安全序列。P1 请求满足 Request≤Need 和 Request≤Available，但还须试分配。</p></div><div class="answer-section"><h4>试分配后的安全性</h4><p>试分配后 <strong>Available = (2,3,0)</strong>，P1 尚需 (6,4,1)，其余 Need 不变。</p><ul class="answer-points"><li>P1、P2、P4、P5 都还需要 C，但 C 的可用量为 0。</li><li>P3 需要 6 个 A，但 A 的可用量只有 2。</li></ul><p>没有任何进程能先完成，因此试分配状态不安全。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-25"><h3><span class="exercise-number">24</span>狭窄楼梯的双向通行</h3><div class="question"><p>一条楼梯允许多人同向通行，但有人上楼时不能有人下楼，反之亦然。设计信号量与 P/V 操作，并分析饥饿。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>共享状态与初值</h4><div class="table-scroll answer-symbols" tabindex="0"><table><thead><tr><th scope="col">变量与初值</th><th scope="col">作用</th></tr></thead><tbody><tr><td><code>stairs = 1</code></td><td>两个方向组之间的互斥</td></tr><tr><td><code>upMutex = 1</code></td><td>保护上楼方向人数</td></tr><tr><td><code>downMutex = 1</code></td><td>保护下楼方向人数</td></tr><tr><td><code>up = down = 0</code></td><td>两个方向组的初始人数</td></tr></tbody></table></div><p>第一名同向者申请楼梯，最后一名释放。</p></div><div class="answer-section"><h4>两个方向的操作</h4><div class="answer-code-group code-pair"><figure class="answer-code"><figcaption>上楼</figcaption><pre><code>  P(upMutex);
+  up++;
+  if (up == 1) P(stairs);
+  V(upMutex);
+  上楼通过;
+  P(upMutex);
+  up--;
+  if (up == 0) V(stairs);
+  V(upMutex);</code></pre></figure><figure class="answer-code"><figcaption>下楼</figcaption><pre><code>  P(downMutex);
+  down++;
+  if (down == 1) P(stairs);
+  V(downMutex);
+  下楼通过;
+  P(downMutex);
+  down--;
+  if (down == 0) V(stairs);
+  V(downMutex);</code></pre></figure></div></div><div class="answer-section"><h4>方向互斥</h4><p>同向者共享已获得的楼梯许可，反向第一人须等待；人数变量包括已加入该方向组但尚在等许可的人。上楼与下楼使用不同计数锁，因此正在楼梯上的一方能够退出并释放许可。</p></div><div class="answer-section"><h4>饥饿与改进</h4><p>此方案保证方向互斥，却可能饥饿：上楼者持续加入，up 始终不归零，下楼者就一直等待。若要有界等待，可在反向有人等待时关闭当前方向的新准入，待这一批离开后切换方向，并使用公平排队。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-26"><h3><span class="exercise-number">25</span>同类资源的安全上限</h3><div class="question"><p>9 个同类资源供 4 个进程竞争，每个进程最大需求相同，逐个申请且不可抢占，获足后最终完成释放。每个进程最大需求不超过多少，才能保证不发生资源死锁？</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>3 个。</p></div><div class="answer-section"><h4>推导最大需求</h4><p>设最大需求为 k。假设每个进程都还缺至少一个资源才能完成，那么每个进程最多持有 k−1 个资源，四个进程合计最多持有 4(k−1) 个。此时还需留有至少一个可用资源，才能让其中一个进程获得所需资源并完成。因此需要 9≥4(k−1)+1，得 k≤3。</p></div><div class="answer-section"><h4>超过上限的反例</h4><p>若 k=4，可分成 3、2、2、2，四者都未获足且无资源剩余，可能死锁。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-32"><h3><span class="exercise-number">26</span>银行家算法安全序列</h3><div class="question"><p>可用资源 (1,3,2)。三个进程的已分配与尚需资源如下。求安全序列数量并说明过程。</p><div class="table-scroll" tabindex="0"><table><thead><tr><th scope="col">进程</th><th scope="col">已分配</th><th scope="col">尚需</th></tr></thead><tbody><tr><td>P0</td><td>2,0,1</td><td>0,2,1</td></tr><tr><td>P1</td><td>0,2,0</td><td>1,2,3</td></tr><tr><td>P2</td><td>1,0,1</td><td>0,1,3</td></tr></tbody></table></div></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>共 2 种：P0→P1→P2，P0→P2→P1。</p></div><div class="answer-section"><h4>寻找可先完成的进程</h4><p>初始只有 P0 的尚需量不超过可用量，因此必须先完成 P0。它释放已分配资源后，Work=(1,3,2)+(2,0,1)=(3,3,3)。P1 和 P2 此时都能完成，顺序任选。</p></div><div class="answer-section"><h4>释放资源的计算口径</h4><p>安全性检查增加的是该进程原先已分配的资源，不能把它的最大需求或尚需量再额外加到 Work。</p></div>
+
+</div></details></article>
+</section>
+<section class="exercise-section" id="memory"><h2>内存管理</h2>
+<article class="exercise" id="question-7"><h3><span class="exercise-number">27</span>地址绑定</h3><div class="question"><p>解释地址绑定，比较编译时、装入时和运行时绑定的时机及适用情形。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>地址绑定的含义</h4><p>地址绑定把程序所用地址与实际存储位置建立对应关系。</p></div><div class="answer-section"><h4>三种绑定时机</h4><div class="table-scroll" tabindex="0"><table><thead><tr><th scope="col">时机</th><th scope="col">方法</th><th scope="col">条件与限制</th></tr></thead><tbody><tr><td>编译时</td><td>生成绝对地址</td><td>装入位置已知，位置改变通常需重新编译或链接</td></tr><tr><td>装入时</td><td>装入器调整可重定位地址</td><td>装入位置可变，装入后通常不能直接搬迁</td></tr><tr><td>运行时</td><td>访存时转换为物理地址</td><td>需硬件支持，允许改变映射，支撑分页和虚拟存储</td></tr></tbody></table></div></div><div class="answer-section"><h4>运行时的软硬件分工</h4><p>运行时绑定通常由硬件内存管理单元完成每次转换，操作系统负责维护映射。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-8"><h3><span class="exercise-number">28</span>请求分页与 LRU</h3><div class="question"><p>页面访问顺序为 2、3、2、1、5、2、4、5、3、2，分配 3 个页框，初始为空。采用最近最久未使用（LRU）置换，逐次列出内存页面并求缺页率。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>7 次缺页，缺页率 70%。</p></div><div class="answer-section"><h4>页面排列约定</h4><p>表内页面按最久未用 → 最近使用排列，不表示物理页框编号；命中也会更新顺序。</p></div><div class="answer-section"><h4>逐次访问与置换</h4><div class="table-scroll" tabindex="0"><table class="answer-table-wide answer-trace-table"><thead><tr><th scope="col">步骤</th><th scope="col">访问</th><th scope="col">驻留页面</th><th scope="col">结果</th><th scope="col">淘汰</th><th scope="col">累计缺页</th></tr></thead><tbody><tr><td>1</td><td>2</td><td>2</td><td class="is-fault">缺页</td><td>—</td><td>1</td></tr><tr><td>2</td><td>3</td><td>2 → 3</td><td class="is-fault">缺页</td><td>—</td><td>2</td></tr><tr><td>3</td><td>2</td><td>3 → 2</td><td class="is-hit">命中</td><td>—</td><td>2</td></tr><tr><td>4</td><td>1</td><td>3 → 2 → 1</td><td class="is-fault">缺页</td><td>—</td><td>3</td></tr><tr><td>5</td><td>5</td><td>2 → 1 → 5</td><td class="is-fault">缺页</td><td>3</td><td>4</td></tr><tr><td>6</td><td>2</td><td>1 → 5 → 2</td><td class="is-hit">命中</td><td>—</td><td>4</td></tr><tr><td>7</td><td>4</td><td>5 → 2 → 4</td><td class="is-fault">缺页</td><td>1</td><td>5</td></tr><tr><td>8</td><td>5</td><td>2 → 4 → 5</td><td class="is-hit">命中</td><td>—</td><td>5</td></tr><tr><td>9</td><td>3</td><td>4 → 5 → 3</td><td class="is-fault">缺页</td><td>2</td><td>6</td></tr><tr><td>10</td><td>2</td><td>5 → 3 → 2</td><td class="is-fault">缺页</td><td>4</td><td>7</td></tr></tbody></table></div></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-9"><h3><span class="exercise-number">29</span>缺页后的指令处理</h3><div class="question"><p>系统调用、缺页、DMA 结束及设备缺纸中，哪一种在成功处理后通常需要重新执行引发事件的指令？解释原因。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>可恢复的缺页异常。</p></div><div class="answer-section"><h4>缺页后的恢复</h4><p>该访问指令尚未成功完成。操作系统准备页面、更新映射后，恢复到原指令重试。非法或无权访问引发的异常不保证可恢复。</p></div><div class="answer-section"><h4>其他事件的区别</h4><p>系统调用通常继续执行后续指令；直接存储器访问（DMA）结束和设备缺纸通常是异步设备中断，不对应需要重试的当前用户指令。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-15"><h3><span class="exercise-number">30</span>多级页表的大小</h3><div class="question"><p>字节编址的三级页表系统，三级索引依次占 4、6、6 位，页内偏移 8 位，每项 4 B。求页大小、虚拟页数和每级单张页表占用的页数。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>页大小与虚拟页数</h4><div class="answer-calculation"><div class="calculation-row"><span>页大小</span><strong>2⁸ = 256 B</strong></div><div class="calculation-row"><span>虚拟地址空间</span><strong>2²⁴ B = 16 MiB</strong></div><div class="calculation-row"><span>虚拟页数</span><strong>2¹⁶ = 65 536</strong></div></div></div><div class="answer-section"><h4>每张页表的空间</h4><div class="table-scroll" tabindex="0"><table class="answer-table-wide"><thead><tr><th scope="col">单张页表</th><th scope="col">项数</th><th scope="col">有效内容</th><th scope="col">整页分配</th></tr></thead><tbody><tr><td>一级</td><td>16</td><td>64 B</td><td>1 页</td></tr><tr><td>二级</td><td>64</td><td>256 B</td><td>1 页</td></tr><tr><td>三级</td><td>64</td><td>256 B</td><td>1 页</td></tr></tbody></table></div></div><div class="answer-section"><h4>有效内容与实际分配</h4><p>一级表有效内容为 1/4 页，但按整页分配仍占 1 页框。全空间映射时需要 1 张一级表、16 张二级表和 1024 张三级表，不能把单张大小当作某一级全部表的大小。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-19"><h3><span class="exercise-number">31</span>虚拟存储的实现条件</h3><div class="question"><p>建立虚拟存储系统需要哪些硬件和软件支持？说明它们如何协作。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>硬件支持</h4><p>硬件需要地址转换与保护机制、记录映射及驻留状态的页表支持，以及缺页时进入内核并能恢复执行的异常机制。快表（TLB）用于加速地址转换，但不是虚拟存储概念上必需的条件。</p></div><div class="answer-section"><h4>软件支持</h4><p>操作系统维护地址空间和映射，处理缺页、分配页框、按需调页和必要的置换，并与文件或交换区等后备存储配合。</p></div><div class="answer-section"><h4>一次缺页的处理</h4><p>访问未驻留但合法的页面时，硬件触发缺页，内核准备页面、更新页表，进程恢复后重试。零填充或已缓存页面不一定需要磁盘读取。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-34"><h3><span class="exercise-number">32</span>页框位图占用空间</h3><div class="question"><p>物理内存 16 GiB，页框大小 4 KiB，每个页框用 1 位记录分配状态。位图占多少字节？</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>位图占 524 288 B，即 512 KiB。</p></div><div class="answer-section"><h4>先求页框数量</h4><div class="answer-calculation"><div class="calculation-row"><span>物理内存</span><strong>16 GiB = 2³⁴ B</strong></div><div class="calculation-row"><span>每个页框</span><strong>4 KiB = 2¹² B</strong></div><div class="calculation-row"><span>页框数量</span><strong>2³⁴ ÷ 2¹² = 2²²</strong></div></div></div><div class="answer-section"><h4>把位换算成字节</h4><div class="answer-calculation"><div class="calculation-row"><span>一位对应一个页框</span><strong>共 2²² 位</strong></div><div class="calculation-row"><span>每字节含 8 位</span><strong>2²² ÷ 8 = 2¹⁹ B</strong></div><div class="calculation-row"><span>换算为 KiB</span><strong>524 288 ÷ 1024 = 512 KiB</strong></div></div></div><div class="answer-section"><h4>单位换算要点</h4><p>注意先算页框数量，再把位换成字节。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-38"><h3><span class="exercise-number">33</span>伙伴系统的空闲块合并</h3><div class="question"><p>哪种动态内存管理方法通过合并伙伴空闲块形成更大块？为什么不能合并任意两个同样大小的空闲块？</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>伙伴系统。</p></div><div class="answer-section"><h4>合并条件</h4><p>伙伴系统使用大小为 2 的整数次幂的块。一个块可以拆成两个等大的伙伴块。释放后，两个块必须互为伙伴且都已空闲，才能合并回原来的大块；合并后的块仍可按同样规则继续向上合并。</p></div><div class="answer-section"><h4>伙伴地址与反例</h4><p>以区域起点为 0 的相对地址 b、块大小 s=2ᵏ 为例，伙伴地址为 b XOR s。同样大小甚至相邻也不一定是伙伴：大小为 s 的 [s,2s) 与 [2s,3s) 相邻，却来自不同的 2s 上级块，不能直接合并。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-41"><h3><span class="exercise-number">34</span>已有页面时的 LRU</h3><div class="question"><p>固定分配 3 个页框，采用局部 LRU，初始已装入 0、1、2。随后访问 0、1、2、0、5、1、4、3、0、2、3、2、0。求期间缺页次数并列过程。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>缺页 6 次。</p></div><div class="answer-section"><h4>初始状态与统计口径</h4><p>初始装入不计入本段缺页次数。前三次访问都命中，并在第一次置换前确定最近使用顺序，所以不需要另给初始 LRU 次序。表内按最久未用 → 最近使用排列。</p></div><div class="answer-section"><h4>逐次访问与置换</h4><div class="table-scroll" tabindex="0"><table class="answer-table-wide answer-trace-table"><thead><tr><th scope="col">步骤</th><th scope="col">访问</th><th scope="col">驻留页面</th><th scope="col">结果</th><th scope="col">淘汰</th><th scope="col">累计缺页</th></tr></thead><tbody><tr><td>1</td><td>0</td><td>1 → 2 → 0</td><td class="is-hit">命中</td><td>—</td><td>0</td></tr><tr><td>2</td><td>1</td><td>2 → 0 → 1</td><td class="is-hit">命中</td><td>—</td><td>0</td></tr><tr><td>3</td><td>2</td><td>0 → 1 → 2</td><td class="is-hit">命中</td><td>—</td><td>0</td></tr><tr><td>4</td><td>0</td><td>1 → 2 → 0</td><td class="is-hit">命中</td><td>—</td><td>0</td></tr><tr><td>5</td><td>5</td><td>2 → 0 → 5</td><td class="is-fault">缺页</td><td>1</td><td>1</td></tr><tr><td>6</td><td>1</td><td>0 → 5 → 1</td><td class="is-fault">缺页</td><td>2</td><td>2</td></tr><tr><td>7</td><td>4</td><td>5 → 1 → 4</td><td class="is-fault">缺页</td><td>0</td><td>3</td></tr><tr><td>8</td><td>3</td><td>1 → 4 → 3</td><td class="is-fault">缺页</td><td>5</td><td>4</td></tr><tr><td>9</td><td>0</td><td>4 → 3 → 0</td><td class="is-fault">缺页</td><td>1</td><td>5</td></tr><tr><td>10</td><td>2</td><td>3 → 0 → 2</td><td class="is-fault">缺页</td><td>4</td><td>6</td></tr><tr><td>11</td><td>3</td><td>0 → 2 → 3</td><td class="is-hit">命中</td><td>—</td><td>6</td></tr><tr><td>12</td><td>2</td><td>0 → 3 → 2</td><td class="is-hit">命中</td><td>—</td><td>6</td></tr><tr><td>13</td><td>0</td><td>3 → 2 → 0</td><td class="is-hit">命中</td><td>—</td><td>6</td></tr></tbody></table></div></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-42"><h3><span class="exercise-number">35</span>虚拟存储的软硬件分工</h3><div class="question"><p>地址转换、页表项管理与缺页响应分别由哪些软硬件机制承担？区分触发异常与处理异常。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>硬件触发异常</h4><p>常见硬件管理页表的系统中，内存管理单元（MMU）和 TLB 完成地址转换与权限检查；TLB 未命中后由硬件遍历页表。发现目标页面未驻留或权限不符时，硬件触发异常进入内核。</p></div><div class="answer-section"><h4>操作系统处理异常</h4><p>操作系统创建与维护映射、分配回收页框，决定是否允许该访问；对可恢复缺页准备页面、必要时执行 I/O，并更新映射后恢复程序。</p></div><div class="answer-section"><h4>体系结构的差异</h4><p>硬件可能自动更新访问位、脏位。部分体系结构由软件处理 TLB 未命中，因此不能把所有查表行为都绝对归为硬件，也不能把 TLB 未命中等同于缺页。</p></div>
+
+</div></details></article>
+</section>
+<section class="exercise-section" id="storage"><h2>文件与 I/O</h2>
+<article class="exercise" id="question-10"><h3><span class="exercise-number">36</span>位示图管理磁盘空间</h3><div class="question"><p>用位示图管理 512 个磁盘块，机器字长 32 位。需要多少个字？字、位和磁盘块均从 0 编号，建立对应关系并说明申请过程。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>16 个字，共 64 B。</p></div><div class="answer-section"><h4>容量计算</h4><div class="answer-calculation"><div class="calculation-row"><span>位示图总位数</span><strong>512 位</strong></div><div class="calculation-row"><span>所需机器字数</span><strong>512 ÷ 32 = 16 个字</strong></div><div class="calculation-row"><span>换算为字节</span><strong>512 ÷ 8 = 64 B</strong></div></div></div><div class="answer-section"><h4>编号换算</h4><div class="answer-calculation"><div class="calculation-row"><span>由字、位求块号</span><strong>k = 32w + b</strong></div><div class="calculation-row"><span>由块号求字号</span><strong>w = ⌊k / 32⌋</strong></div><div class="calculation-row"><span>由块号求字内位号</span><strong>b = k mod 32</strong></div></div><p>w 为字号，b 为字内位号，k 为磁盘块号，均从 0 编号。</p></div><div class="answer-section"><h4>空闲块的申请与释放</h4><p>约定 0 为空闲、1 为已分配。查找一个 0 位，互斥或原子地改为 1，返回块号；无 0 位则失败。释放时清零。位号应遵循约定的位序。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-11"><h3><span class="exercise-number">37</span>传统多阶段启动</h3><div class="question"><p>在传统 BIOS、MBR 启动模型中，安排 ROM 引导程序、磁盘主引导程序、分区引导程序和操作系统初始化程序的顺序；说明分区、逻辑格式化和安装系统的关系。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>启动顺序</h4><p>ROM 中固件引导程序 → 磁盘主引导程序 → 选中分区的引导程序 → 后续加载器装入内核 → 操作系统初始化。加载器可能有多个阶段。</p></div><div class="answer-section"><h4>安装前的准备</h4><p>空盘安装通常先分区确定区域，再逻辑格式化建立文件系统，随后安装系统文件与启动组件。安装器可自动执行这些步骤。UEFI 启动不能直接照搬这一传统路径。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-16"><h3><span class="exercise-number">38</span>多级索引文件的容量</h3><div class="question"><p>索引节点含 4 个直接地址、1 个一级间接地址、2 个二级间接地址。块大小 64 B，索引项 4 B。求最大文件长度。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>最大文件长度为 34 048 B（33.25 KiB）。</p></div><div class="answer-section"><h4>每个索引块的容量</h4><div class="answer-calculation"><div class="calculation-row"><span>每块可存的地址数</span><strong>64 ÷ 4 = 16</strong></div></div></div><div class="answer-section"><h4>可寻址的数据块</h4><div class="answer-calculation"><div class="calculation-row"><span>直接地址覆盖</span><strong>4 个数据块</strong></div><div class="calculation-row"><span>一级间接地址覆盖</span><strong>16 个数据块</strong></div><div class="calculation-row"><span>二级间接地址覆盖</span><strong>2 × 16² = 512 个数据块</strong></div><div class="calculation-row"><span>数据总长度</span><strong>(4 + 16 + 512) × 64 = 34 048 B</strong></div></div></div><div class="answer-section"><h4>容量的统计范围</h4><p>索引块本身的空间不算文件数据长度。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-20"><h3><span class="exercise-number">39</span>磁盘调度策略</h3><div class="question"><p>解释先来先服务和最短寻道时间优先的选择依据，比较优缺点与可能的等待问题。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>两种策略对比</h4><div class="table-scroll" tabindex="0"><table class="answer-table-wide"><thead><tr><th scope="col">算法</th><th scope="col">选择依据</th><th scope="col">优点</th><th scope="col">限制</th></tr></thead><tbody><tr><td>先来先服务（FCFS）</td><td>按请求到达顺序</td><td>规则简单，后来的请求不插队</td><td>磁头可能反复长距离移动</td></tr><tr><td>最短寻道时间优先（SSTF）</td><td>选择离当前磁头最近的请求</td><td>通常减少局部寻道距离</td><td>远处请求可能持续被附近请求推迟，出现饥饿</td></tr></tbody></table></div></div><div class="answer-section"><h4>适用范围与限制</h4><p>在请求持续到达的系统中，SSTF 不保证有界等待，也不保证全局最短移动路径。该比较针对有机械寻道成本的磁盘，不能直接套用于固态盘。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-27"><h3><span class="exercise-number">40</span>磁臂粘着</h3><div class="question"><p>比较 FCFS、SSTF、FSCAN 与 N-step-SCAN，分析哪种可能出现磁臂粘着及其成因。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>这些选项中是 SSTF。</p></div><div class="answer-section"><h4>磁臂停留的原因</h4><p>若当前磁道或附近不断有新请求，最近请求优先会反复选择它们，使磁头停留于局部区域，远处请求长期等待。</p></div><div class="answer-section"><h4>其他策略如何处理</h4><p>FCFS 不允许新请求无限插队。FSCAN 将当前扫描批次与新到请求分开，新请求留到下一批；N-step-SCAN 将队列分为至多 N 个请求的批次，扫描当前批次时不把新请求加入其中。这两种方式将新请求留到后续批次，因此当前批次不会因新请求持续到达而一直无法结束。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-29"><h3><span class="exercise-number">41</span>打开文件表</h3><div class="question"><p>进程打开文件表是否需要记录打开方式、当前读写位置及系统打开文件表入口？结合两级打开文件表解释。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-section"><h4>两级表的职责</h4><p>在常见的两级模型中，每个进程都有自己的打开文件表，以文件描述符为索引。表项主要保存对系统打开文件表项的引用，以及描述符自身的标志。系统打开文件表项另行记录当前偏移、访问方式、状态标志、引用计数及文件对象引用。因此，需要区分这两级表，不能说这些字段都记录在进程的打开文件表中。</p></div><div class="answer-section"><h4>共享与独立的读写位置</h4><p>dup 复制的描述符或 fork 后继承的描述符可指向同一系统打开文件表项，因而共享偏移；对同一文件分别 open 通常创建不同表项，偏移互不影响。应区分描述符表项、打开文件描述与磁盘文件本身。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-30"><h3><span class="exercise-number">42</span>系统初始化时建立的数据结构</h3><div class="question"><p>中断向量表、文件系统根目录、硬盘分区表和索引节点表中，哪一种通常由操作系统在初始化时建立？说明原因。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>中断向量表。</p></div><div class="answer-section"><h4>初始化时的工作</h4><p>操作系统初始化时配置中断或异常入口，使硬件事件能够转到相应处理程序。</p></div><div class="answer-section"><h4>持久结构的建立时机</h4><p>根目录和文件系统的索引节点结构通常在创建文件系统时建立，分区表在分区时写入，不能把启动时读取这些持久结构说成每次重新建立。具体硬件可能采用中断描述符表等形式。</p></div>
+
+</div></details></article>
+
+<article class="exercise" id="question-37"><h3><span class="exercise-number">43</span>C-SCAN 磁头移动</h3><div class="question"><p>磁道编号 0～399，磁头刚处理完 200，向编号减小方向移动。请求为 300、120、110、0、160、210、399。按循环扫描 C-SCAN 求处理完这些请求的总移动磁道数，计入从一端返回另一端的距离。</p></div>
+<details class="answer"><summary>参考解答</summary><div class="answer-body">
+
+<div class="answer-result"><span class="answer-label">结论</span><p>磁头总移动距离为 788 道。</p></div><div class="answer-section"><h4>磁头的服务顺序</h4><p>服务顺序：200 → 160 → 120 → 110 → 0 → 399 → 300 → 210。其中 0→399 是循环返回，返回途中不服务请求。</p></div><div class="answer-section"><h4>移动距离的计算</h4><div class="answer-calculation"><div class="calculation-row"><span>向小编号扫描：200 → 0</span><strong>200 道</strong></div><div class="calculation-row"><span>循环返回：0 → 399</span><strong>399 道</strong></div><div class="calculation-row"><span>继续扫描：399 → 210</span><strong>189 道</strong></div><div class="calculation-row"><span>总移动距离</span><strong>200 + 399 + 189 = 788 道</strong></div></div><p>最后一个请求在 210 完成，统计到此结束，不再额外走到 0。</p></div>
+
+</div></details></article>
+</section>
+</main></div><script src="knowledge-pages.js?v=20261104-exercises"></script><script src="exercises.js?v=20261105-reader"></script></body></html>

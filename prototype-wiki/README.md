@@ -4,6 +4,12 @@ OSLab 是面向操作系统课程的知识演示与参考实践网站，内容�
 
 使用时，在浏览器中直接打开 `index.html`，无需启动服务器。
 
+## 综合练习
+
+[操作系统习题](exercises.html) 提供 43 道题和可展开的参考解答，分为进程与线程、处理机调度、同步与死锁、内存管理、文件与 I/O。从左侧“综合练习”栏目进入，先选分类，再从题目目录选择单题阅读；窄屏使用下拉菜单选题。正文上下均可切换本分类的上一题／下一题，切回分类时保留本次访问的选题位置及解答展开状态。支持题目链接直达、浏览器前进／后退和离线打开，打印仅包含当前题目及其解答。题目及解答直接保存在 HTML 中，交互由 exercises.js 管理，局部样式为 exercises.css；禁用 JavaScript 时按分类连续显示全文。
+
+习题导航定向检查：从项目根目录运行 `node maintenance/prototype-wiki/scripts/check-exercises.mjs`，使用现有 Playwright 浏览器（必要时按下文配置 `PLAYWRIGHT_BROWSERS_PATH`）。覆盖 43 题在五种宽度下的单题显示、分类／目录／下拉选题、翻页边界、历史记录、锚点直达、键盘展开及打印恢复；截图保存在 `.tmp/exercises/`。
+
 ## 字体与站点边界
 
 本目录的页面统一加载 [typography.css](typography.css)。正文、标题、导航和一般控件使用同一组本机中文字体，代码和终端输出使用等宽字体，并沿用同一组中文回退。新增页面及局部样式时沿用这两种字体设置。浏览器根据系统已安装字体选择字形，离线打开时也采用同一规则。
@@ -15,6 +21,12 @@ OSLab 是面向操作系统课程的知识演示与参考实践网站，内容�
 Wiki 的 GitHub Pages 工作流仅发布 `prototype-wiki/`。课件从 [course-slides](../course-slides/README.md) 的入口独立打开与打包，使用课件目录内的样式、播放器和字体。
 
 ## 并发栏目
+
+[Linux 并发验证实验](linux-concurrency-labs.html)接在“事件驱动并发”之后，提供互斥锁抢座、条件变量队列、信号量资源池、事件驱动四项实验。页面按已确认的 Word 任务书转换，保留 21 项配置参数、每项实验的操作任务、提交材料和输出说明。学生在自己的 Ubuntu 中修改配置、切换已有实现，无需修改源码；网站不运行程序或收集提交。
+
+各实验提供独立 ZIP（源码、配置、运行脚本、使用说明），页首另有完整学生包下载，不单独提供 Word 任务书下载链接。下载资源位于 `downloads/linux-concurrency/`，会随 Wiki 发布目录一同提供；参考答案不放入网站或学生包。维护时，在工作区根目录用已有的、包含 python-docx 的 Python 运行 `maintenance/prototype-wiki/scripts/build-linux-concurrency-labs.py`，同步网页正文和下载资源。该脚本读取 `docs/teaching-artifacts/linux-concurrency-labs/adjustable/` 与 `delivery/参数说明版/Linux 并发机制验证实验任务书 任务与提交说明.docx`，不要改用同目录中旧的同名任务书。
+
+页面定向检查：`npx --no-install vitest run maintenance/prototype-wiki/tests/linux-concurrency-labs-page.test.js maintenance/prototype-wiki/tests/knowledge-navigation.test.js --exclude '**/.tmp/**'`。检查覆盖目录跳转、命令复制、实际下载、21 项参数与各实验任务的完整呈现，以及 320、390、760、1001、1440 px 的布局。2026-11-07 已在 WSL Ubuntu 22.04 中检查浏览器实际下载的 ZIP：四个独立包通过 12 组默认／修改配置后的对照运行；完整学生包通过 29 组运行与 4 组非法参数拒绝检查。截图和运行记录位于 `.tmp/concurrency-linux-web/`。
 
 入口新增 [现代 CPU 的工作原理](cpu-foundations.html)，作为线程与并发之前的硬件基础。正文按“电路与状态、指令与程序、速度与等待、并行与性能”分组，桌面端使用随滚动保留的页内目录，窄屏可展开目录定位内容；目录可直接打开 RISC-V 示例与页末资料。包含二进制与字符／灰度的联动、一位全加器、寄存器采样与波形、求和循环与结果保存、等待时间换算、分支预测的两种结果，以及主频与 IPC 的完成时间对比，并说明核心、线程、缓存、位宽和功耗。页面支持直接以 `file://` 打开；机制依据见页末资料，时间示例不代表本机测量。
 
@@ -28,9 +40,9 @@ Wiki 的 GitHub Pages 工作流仅发布 `prototype-wiki/`。课件从 [course-s
 
 第二阶段定向检查：`npx --no-install vitest run maintenance/prototype-wiki/tests/concurrency-stage2-model.test.js maintenance/prototype-wiki/tests/concurrency-stage2-page.test.js`。截图位于 `.tmp/concurrency-stage2/`。
 
-第三阶段新增 `concurrency-bugs.html`（并发错误）、`deadlock.html`（死锁）、`events.html`（基于事件的并发）和 `concurrency-experiments.html`（并发参考实践），接在“信号量”之后。参考实践提供可下载的 Python 确定性模拟器、Linux pthread 真实线程示例、命令和参考输出。Python 程序按指定次序推演；C 程序创建两个真实线程，比较锁的保护范围。页面不收集学生作答。
+“信号量”之后依次是 `concurrency-bugs.html`（并发错误）、`deadlock.html`（死锁）、`events.html`（事件驱动并发）和 `linux-concurrency-labs.html`（Linux 并发验证实验）。
 
-第三阶段定向检查：`npx --no-install vitest run maintenance/prototype-wiki/tests/concurrency-stage3-model.test.js maintenance/prototype-wiki/tests/concurrency-stage3-page.test.js`，需要现有 Python 3、Vitest、Playwright 与 Chromium。截图位于 `.tmp/concurrency-stage3/`。修改 `demos/concurrency/` 下的脚本或说明后，运行 `node maintenance/prototype-wiki/scripts/build-concurrency-downloads.mjs` 更新本地页面的下载资源；检查会核对下载文件与源文件一致。
+第三阶段定向检查：`npx --no-install vitest run maintenance/prototype-wiki/tests/concurrency-stage3-model.test.js maintenance/prototype-wiki/tests/concurrency-stage3-page.test.js`，需要现有 Python 3、Vitest、Playwright 与 Chromium。截图位于 `.tmp/concurrency-stage3/`。
 
 2026-11-03 内容复审覆盖 CPU 页之外的九页：线程页按资源、创建与等待、共享更新递进；锁页先解释完整临界区，再解释原子获取；数据结构页先明确保护范围，再进入近似计数拓展。条件变量与信号量的核心代码直接放在演示前；顺序错误演示显示初始化、等待和重新检查对应的代码。死锁处理与等待关系对照，事件页展示请求的待续状态，参考实践区分 Python 与 C 的运行条件。各页末尾可展开对应的 OSTEP／POSIX 资料。
 
@@ -53,7 +65,7 @@ Wiki 的 GitHub Pages 工作流仅发布 `prototype-wiki/`。课件从 [course-s
 | 死锁 | 锁交到实际持有者手中，等待箭头连接持有者；统一获取次序后可以继续并归还锁。 |
 | 基于事件的并发 | 同步展示两组的事件线程、B 的完成状态和相同的 I/O 进度；长计算对照保持相同工作量。 |
 
-共 14 处新动画（计数器在两页共用）；CPU 的位输入、全加器、时间比例与主频／IPC 滑块继续采用直接操作、立即反馈。参考实践页保留运行说明与下载，不新增动画。
+共 14 处新动画（计数器在两页共用）；CPU 的位输入、全加器、时间比例与主频／IPC 滑块继续采用直接操作、立即反馈。
 
 实现按机制分为 `concurrency-movies-core.js`、`concurrency-movies-compare.js`、`concurrency-movies-queues.js` 和 `concurrency-movies-cpu.js`；`concurrency-movies.js` 统一进入视口播放一次、暂停、拖动、中断和减少动态效果。搬运到达之前保留旧状态，读取副本保留来源。场景切换取消旧播放；核心画面完整进入视口后才自动开始。仅回查视图展开时不自动播放主动画。
 
