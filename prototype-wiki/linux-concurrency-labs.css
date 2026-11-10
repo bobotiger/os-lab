@@ -1,55 +1,123 @@
-/* 沿用 Wiki 字体、颜色和目录；长任务按参数、操作、提交材料依次阅读。 */
+/* 实验页沿用 Wiki 的字体和配色，按运行、观察、记录分组。 */
 .linux-labs-page main { max-width: 960px; margin-inline: auto; }
 .linux-labs-page .intro { max-width: none; }
-.linux-labs-page main p { margin: 0 0 16px; line-height: 1.9; }
+.linux-labs-page main p { margin: 0 0 16px; line-height: 1.85; }
 .linux-labs-page .intro .eyebrow, .linux-labs-page .lab > .eyebrow { margin-bottom: 8px; }
-.linux-labs-page .intro .lead { margin: 20px 0 20px; }
-.linux-labs-page .lab-index { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; margin-top: 28px; border-top: 1px solid var(--line); }
-.lab-index a { display: block; padding: 17px 0; border-bottom: 1px solid var(--line); font-size: 17px; }
-.lab-index a span { display: block; margin-bottom: 4px; font-size: 13px; color: var(--muted); }
+.linux-labs-page .intro .lead { margin: 18px 0; }
+.linux-labs-page .lab-prerequisite {
+  border-inline-start: 3px solid var(--accent);
+  background: var(--surface);
+  padding: 12px 16px;
+  margin-bottom: 22px;
+}
+.lab-index {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 28px;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 24px;
+}
+.lab-index a { display: block; padding: 12px 0 14px; border-bottom: 1px solid var(--line); }
+.lab-index a span { display: block; margin-bottom: 4px; font-size: 14px; color: var(--muted); }
+.lab-index a strong { font-size: 17px; font-weight: 600; }
 .linux-labs-page main a { color: var(--accent); text-underline-offset: 4px; }
 .linux-labs-page main a:hover { text-decoration: underline; }
-.linux-labs-page a:focus-visible, .linux-labs-page button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
-.linux-labs-page .cc-section { padding-block: 36px 44px; }
-.linux-labs-page .lab > h2 { max-width: 36em; }
-.linux-labs-page h3 { font-size: 22px; margin: 30px 0 14px; }
-.linux-labs-page h4 { font-size: 18px; line-height: 1.6; margin: 24px 0 12px; font-weight: 600; }
-.lab-downloads { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0 16px; }
-.lab-downloads a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); font-size: 15px; }
-.lab-downloads a:hover { background: var(--accent-soft); border-color: var(--accent); }
-.linux-labs-page .lab-package-note { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
-.lab-parameters { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 20px 0; font-size: 15px; line-height: 1.8; }
-.lab-parameters caption { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
-.lab-parameters .param-name { width: 24%; }
-.lab-parameters .param-range { width: 22%; }
-.lab-parameters th, .lab-parameters td { text-align: left; vertical-align: top; padding: 14px 14px 14px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
-.lab-parameters thead th { font-weight: 500; font-size: 14px; color: var(--muted); border-top: 1px solid var(--line); }
-.lab-parameters tbody th { font-weight: 500; }
-.lab-parameters th:last-child, .lab-parameters td:last-child { padding-right: 0; }
-.lab-parameters code { font-size: 14px; }
-.lab-command { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 16px; padding: 12px 16px; margin: 16px 0 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; }
+.linux-labs-page a:focus-visible, .linux-labs-page button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.linux-labs-page .cc-section { padding-block: 34px 40px; }
+.linux-labs-page .cc-section > :last-child { margin-bottom: 0; }
+.linux-labs-page h3 { font-size: 22px; margin: 28px 0 12px; }
+.linux-labs-page h4 { font-size: 18px; line-height: 1.6; margin: 0 0 12px; font-weight: 600; }
+.linux-labs-page :is(#prepare, #compare, #report) > :is(p, ol) { max-width: 49em; }
+.linux-labs-page .lab-note { font-size: 15px; color: var(--muted); }
+.lab-downloads { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; margin: 18px 0; }
+.linux-labs-page .lab-downloads p { flex: 1 1 18em; margin: 0; font-size: 15px; }
+.lab-downloads a, .lab-download {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  font-size: 15px;
+}
+.lab-downloads a:hover, .lab-download:hover { background: var(--accent-soft); border-color: var(--accent); }
+
+.linux-labs-page .lab-intro { max-width: 49em; }
+.lab-run {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px 16px;
+  margin-top: 20px;
+}
+.linux-labs-page .lab-run p { margin-bottom: 8px; font-size: 15px; }
+.lab-command {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 16px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
 .lab-command pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .lab-command button { background: white; }
 .copy-status { grid-column: 1/-1; font-size: 14px; color: var(--accent); }
 .copy-status:empty { display: none; }
-.linux-labs-page ol { padding-left: 1.6em; margin: 12px 0 24px; }
-.linux-labs-page li { padding-left: 5px; margin-bottom: 14px; line-height: 1.95; }
+
+.lab-parameters { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 14px 0; font-size: 15px; line-height: 1.75; }
+.lab-parameters caption { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); }
+.lab-parameters .param-name { width: 25%; }
+.lab-parameters .param-range { width: 21%; }
+.lab-parameters th, .lab-parameters td {
+  text-align: left;
+  vertical-align: top;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.lab-parameters thead th { font-weight: 600; background: var(--surface); border-top: 1px solid var(--line); }
+.lab-parameters tbody th { font-weight: 500; }
+.lab-parameters code { font-size: 14px; }
+
+.linux-labs-page ol { padding-left: 1.6em; margin: 12px 0 20px; }
+.linux-labs-page li { padding-left: 4px; margin-bottom: 12px; line-height: 1.85; }
+.linux-labs-page li:last-child { margin-bottom: 0; }
+.lab-steps li::marker { color: var(--accent); font-weight: 600; }
+.linux-labs-page .lab-steps li p { margin: 2px 0 0; }
+.lab-analysis { display: grid; gap: 20px; margin-top: 18px; }
+.lab-analysis > div { min-width: 0; }
+.lab-output { padding-top: 16px; border-top: 1px solid var(--line); }
+.linux-labs-page .lab-output p { font-size: 15px; margin-bottom: 12px; }
+.linux-labs-page .lab-analysis ol, .linux-labs-page .lab-output p:last-child { margin-bottom: 0; }
+.lab-submission { border-top: 1px solid var(--line); padding-top: 18px; margin-top: 22px; }
+.linux-labs-page .lab-submission ol { margin-bottom: 0; }
 .linux-labs-page .knowledge-related h3 { margin: 0; }
+
+@media (min-width: 1180px) {
+  .lab-analysis { grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 28px; }
+  .lab-output { padding: 0 0 0 22px; border-top: 0; border-inline-start: 1px solid var(--line); }
+}
 @media (max-width: 760px) {
   .linux-labs-page .intro { padding-top: 28px; }
   .linux-labs-page .intro .lead { font-size: 20px; }
   .linux-labs-page .lab-index { grid-template-columns: 1fr; }
   .linux-labs-page h2 { font-size: 24px; }
   .linux-labs-page h3 { font-size: 21px; }
+  .lab-run { grid-template-columns: 1fr; justify-items: start; }
+  .lab-run > div { width: 100%; min-width: 0; }
   .lab-parameters colgroup, .lab-parameters thead { display: none; }
   .lab-parameters, .lab-parameters tbody, .lab-parameters tr, .lab-parameters td, .lab-parameters th { display: block; width: 100%; }
-  .lab-parameters tr { padding: 15px 0; border-bottom: 1px solid var(--line); }
+  .lab-parameters tr { padding: 12px 0; border-bottom: 1px solid var(--line); }
   .lab-parameters tr:first-child { border-top: 1px solid var(--line); }
-  .lab-parameters th, .lab-parameters td { padding: 3px 0; border: 0; }
+  .lab-parameters th, .lab-parameters td { padding: 2px 0; border: 0; }
   .lab-parameters tbody th { font-weight: 600; }
-  .lab-parameters td::before { content: attr(data-label) '：'; color: var(--muted); font-size: 14px; }
-  .lab-command { gap: 8px; padding: 12px; }
+  .lab-parameters td[data-label="取值"]::before { content: '取值 '; color: var(--muted); font-size: 14px; }
+  .lab-command { gap: 8px; }
   .lab-command button { padding: 8px 10px; }
-  .linux-labs-page .lab-downloads { gap: 10px; }
-  .linux-labs-page .lab-downloads a { padding-inline: 12px; }
 }

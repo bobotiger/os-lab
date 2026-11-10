@@ -1,9 +1,8 @@
 (() => {
   'use strict';
   document.getElementById('navigation').innerHTML = wikiHeader('linuxConcurrencyLabs', [
-    {href: '#prepare', title: '实验准备'}, {href: '#seats', title: '互斥锁'},
-    {href: '#queue', title: '条件变量'}, {href: '#pool', title: '信号量'},
-    {href: '#events', title: '事件驱动'}
+    {href: '#lab-index', title: '实验目录'}, {href: '#prepare', title: '运行准备'},
+    {href: '#compare', title: '对照方法'}, {href: '#report', title: '报告要求'}
   ]);
   document.getElementById('related').innerHTML = wikiRelated('linuxConcurrencyLabs');
   document.querySelectorAll('[data-copy-command]').forEach(button => {

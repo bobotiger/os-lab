@@ -24,7 +24,7 @@ Wiki 的 GitHub Pages 工作流仅发布 `prototype-wiki/`。课件从 [course-s
 
 [Linux 并发验证实验](linux-concurrency-labs.html)接在“事件驱动并发”之后，提供互斥锁抢座、条件变量队列、信号量资源池、事件驱动四项实验。页面按已确认的 Word 任务书转换，保留 21 项配置参数、每项实验的操作任务、提交材料和输出说明。学生在自己的 Ubuntu 中修改配置、切换已有实现，无需修改源码；网站不运行程序或收集提交。
 
-各实验提供独立 ZIP（源码、配置、运行脚本、使用说明），页首另有完整学生包下载，不单独提供 Word 任务书下载链接。下载资源位于 `downloads/linux-concurrency/`，会随 Wiki 发布目录一同提供；参考答案不放入网站或学生包。维护时，在工作区根目录用已有的、包含 python-docx 的 Python 运行 `maintenance/prototype-wiki/scripts/build-linux-concurrency-labs.py`，同步网页正文和下载资源。该脚本读取 `docs/teaching-artifacts/linux-concurrency-labs/adjustable/` 与 `delivery/参数说明版/Linux 并发机制验证实验任务书 任务与提交说明.docx`，不要改用同目录中旧的同名任务书。
+各实验提供独立 ZIP（源码、配置、运行脚本、使用说明），页首另有完整学生包下载，不单独提供 Word 任务书下载链接。下载资源位于 `downloads/linux-concurrency/`，会随 Wiki 发布目录一同提供；参考答案不放入网站或学生包。维护时，在工作区根目录用已有的、包含 python-docx 的 Python 运行 `maintenance/prototype-wiki/scripts/build-linux-concurrency-labs.py`，同步网页正文和下载资源。只改网页时可传入 `--page-only`。该脚本读取 `docs/teaching-artifacts/linux-concurrency-labs/adjustable/` 与 `delivery/参数说明版/Linux 并发机制验证实验任务书 对照实验说明.docx`，不要改用同目录中旧的同名任务书。
 
 页面定向检查：`npx --no-install vitest run maintenance/prototype-wiki/tests/linux-concurrency-labs-page.test.js maintenance/prototype-wiki/tests/knowledge-navigation.test.js --exclude '**/.tmp/**'`。检查覆盖目录跳转、命令复制、实际下载、21 项参数与各实验任务的完整呈现，以及 320、390、760、1001、1440 px 的布局。2026-11-07 已在 WSL Ubuntu 22.04 中检查浏览器实际下载的 ZIP：四个独立包通过 12 组默认／修改配置后的对照运行；完整学生包通过 29 组运行与 4 组非法参数拒绝检查。截图和运行记录位于 `.tmp/concurrency-linux-web/`。
 

@@ -2,12 +2,12 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="在 Ubuntu 中改变配置、复现问题，并比较互斥锁、条件变量、信号量和事件驱动的已有实现。每个实验均提供源码、配置和运行脚本下载。">
+<meta name="description" content="在 Linux 上运行互斥锁、条件变量、信号量和事件驱动四个验证程序，比较不同实现并分析程序输出。">
 <title>Linux 并发验证实验 · OSLab</title>
 <link rel="stylesheet" href="typography.css">
 <link rel="stylesheet" href="style.css?v=20261104-typography">
 <link rel="stylesheet" href="concurrency.css?v=20261104-typography">
-<link rel="stylesheet" href="linux-concurrency-labs.css?v=20261107">
+<link rel="stylesheet" href="linux-concurrency-labs.css?v=20261111">
 </head>
 <body data-page="linuxConcurrencyLabs">
 <div class="page cc-page linux-labs-page" id="top">
@@ -16,190 +16,253 @@
 <section class="intro">
 <p class="eyebrow">并发 / Linux 实验</p>
 <h1>Linux 并发验证实验</h1>
-<p class="lead">自己改变条件，复现问题，再用相同条件比较不同实现。</p>
-<p>四个实验分别使用互斥锁、条件变量、信号量和事件驱动机制。你只需修改 <code>config.sh</code> 中的参数、切换程序已有的实现，并比较结果，不要求修改或提交源码。</p>
-<nav class="lab-index" aria-label="实验目录">
-<a href="#seats"><span>实验一 · 互斥锁</span>测出抢座程序的问题</a>
-<a href="#queue"><span>实验二 · 条件变量</span>通知发出后会发生什么</a>
-<a href="#pool"><span>实验三 · 信号量</span>为什么可用资源越来越少</a>
-<a href="#events"><span>实验四 · 事件驱动</span>程序为什么延迟处理快消息</a>
+<p class="lead">阅读四个验证程序，改变运行条件，再用程序输出解释不同实现的表现。</p>
+<p class="lab-prerequisite"><strong>你必须有一个能运行全部四个验证程序的 Linux 环境。</strong> 可以使用 Ubuntu 或 WSL 中的 Ubuntu。</p>
+<nav class="lab-index" id="lab-index" aria-label="实验目录">
+<a href="#seats"><span>实验一 · 互斥锁</span><strong>测出抢座程序的问题</strong></a>
+<a href="#queue"><span>实验二 · 条件变量</span><strong>通知发出后会发生什么</strong></a>
+<a href="#pool"><span>实验三 · 信号量</span><strong>为什么可用资源越来越少</strong></a>
+<a href="#events"><span>实验四 · 事件驱动</span><strong>程序为什么延迟处理快消息</strong></a>
 </nav>
 </section>
 <section class="cc-section" id="prepare" aria-labelledby="prepare-title">
-<h2 id="prepare-title">开始实验</h2>
-<p>使用 Ubuntu 或 WSL 中的 Ubuntu。前三个实验需要 Bash、支持 pthread 的 C 编译器（<code>cc</code>）；第四个需要 Bash 和 Python 3，无需第三方 Python 包。运行脚本还会调用 Ubuntu 中的 <code>timeout</code>，限制单次运行时间。</p>
-<p>可下载完整学生包，也可在下面各实验处下载独立运行包。解压后保留目录结构，在包含 <code>run.sh</code> 的目录打开终端。用文本编辑器修改对应的 <code>config.sh</code> 并保存，再运行该实验给出的命令。脚本会读取当前配置，并按需编译 C 源码。</p>
-<div class="lab-downloads"><a href="downloads/linux-concurrency/linux-concurrency-student.zip" download>下载完整学生包（ZIP）</a></div>
-<p>先运行默认配置，再自行调整参数。每次只改一项，运行前先写下预测，并保留完整配置和程序输出。比较不同实现时，保持人数、任务量和时间等输入条件相同。</p>
-<p>独立提交一份实验记录，注明 Ubuntu、编译器和 Python 的版本；具体任务和需提交的材料列在各实验中。如果结果与预测不一致，请如实记录，并说明下一次准备怎样调整配置、检验自己的想法。</p>
-<p>这些程序使用真实线程、POSIX 同步接口或本地套接字。等待、线程同步和打印信息都会影响执行顺序与耗时；时间戳用于分析本次运行，不能据此评价程序的一般性能。遇到编译错误、参数错误或超时，请保留提示并检查配置。</p>
+<h2 id="prepare-title">运行准备</h2>
+<p>四项实验都用 Bash。前三项还需要支持 pthread 的 C 编译器（<code>cc</code>），第四项需要 Python 3。</p>
+<div class="lab-downloads"><a href="downloads/linux-concurrency/linux-concurrency-student.zip" download>下载完整学生包（ZIP）</a><p>包含四个实验的源码、配置、运行脚本和使用说明。各实验也提供独立运行包。</p></div>
+<p>解压后保留目录结构，在含有 <code>run.sh</code> 的目录打开终端。找到对应的 <code>config.sh</code>，修改参数并保存，再运行该实验的命令。配置可以切换程序已有的实现，不要求修改或提交源码。</p>
+</section>
+<section class="cc-section" id="compare" aria-labelledby="compare-title">
+<h2 id="compare-title">怎样做对照并判断结果</h2>
+<ol class="lab-steps">
+<li><strong>找出问题出现的条件</strong><p>先用默认配置运行。保持当前实现不变，每次只改一个输入参数。运行前写下预测和判断依据，运行后记下完整配置和相关输出。</p></li>
+<li><strong>在同一组输入下比较实现</strong><p>用出现过问题的配置做对照。保持人数、任务量、延迟等输入不变，只切换实现。对比两次输出中的同一项数据。</p></li>
+<li><strong>用输出检验判断</strong><p>根据实验要求核对结果。例如，抢座实验的出票数加余票数应等于初始座位数。用同一组配置重复运行，再换几组输入。一次输出符合预期，只说明这次没有观察到问题。</p></li>
+</ol>
+<p class="lab-note">线程调度会影响事件的先后和耗时。用输出中的时间戳分析本次运行的经过。</p>
+</section>
+<section class="cc-section" id="report" aria-labelledby="report-title">
+<h2 id="report-title">记录与提交</h2>
+<p>提交<strong>一份 Word 报告</strong>，记录你阅读、测试和分析四个验证程序的过程。对每个程序，说明它要处理什么问题、用了什么机制，以及哪些运行结果支持你的判断。把各实验末尾列出的材料一并放进这份报告。</p>
+<p>可以借助 AI 了解程序用到的机制和系统调用。请结合源码和自己的测试结果核实解释，并用自己的话写进报告。</p>
+<h3>课程目标</h3>
+<p>报告应体现你在以下两项课程目标上达到的水平。</p>
+<ol class="report-goals">
+<li>你能认识到解决问题有多种可选方案，会通过文献研究寻求可替代的解决方案，并能分析复杂软件工程问题求解过程中的影响因素，以获得有效结论。</li>
+<li>你了解软件工程现代方法技术和工具平台的原理和使用方法。</li>
+</ol>
 </section>
 <section class="cc-section lab" id="seats" aria-labelledby="seats-title">
-<p class="eyebrow">互斥锁</p><h2 id="seats-title">实验一  测出抢座程序的问题</h2>
-<div class="lab-downloads"><a href="downloads/linux-concurrency/01-seats.zip" download>下载本实验运行包（ZIP）</a></div>
-<p class="lab-package-note">包含本实验源码、配置、运行脚本和使用说明；关键变量与接口调用已有中文注释。</p>
-<p>每位买家申请一个座位，成功后得到一张票。你可以设置座位数、买家数，以及查询余票后等待多久才出票。</p>
-<p>配置文件：01-seats/<code>config.sh</code></p>
-<h3>配置参数</h3>
-<p>以下列出各参数的初始设置。数值只填整数，时间单位为毫秒；英文选项按表中写法填写，区分大小写。</p>
-<table class="lab-parameters"><caption>互斥锁：配置参数</caption><colgroup><col class="param-name"><col class="param-range"><col></colgroup><thead><tr>
-<th scope="col">参数与初始设置</th>
-<th scope="col">取值范围或选项</th>
-<th scope="col">含义与作用</th>
-</tr></thead><tbody>
-<tr><th scope="row"><code>SEATS=1</code></th><td data-label="取值">1～16</td><td data-label="说明">初始座位数。每次启动程序时，余票数都重新设为这个值。</td></tr>
-<tr><th scope="row"><code>BUYERS=1</code></th><td data-label="取值">1～16</td><td data-label="说明">买家数量，也是买家线程数。每位买家只申请一个座位。</td></tr>
-<tr><th scope="row"><code>GAP_MS=0</code></th><td data-label="取值">0～1000 毫秒</td><td data-label="说明">查询余票后、尝试出票前的等待时间。0 表示不额外等待。</td></tr>
-<tr><th scope="row"><code>ARRIVAL_MS=0</code></th><td data-label="取值">0～1000 毫秒</td><td data-label="说明">相邻买家的预设到达间隔。所有线程准备好后，第一个不额外等待，第二个等待一个间隔，第三个等待两个间隔，以此类推。0 表示不主动错开到达时间。</td></tr>
-<tr><th scope="row"><code>LOCK=split</code></th><td data-label="取值">split / whole</td><td data-label="说明">split：查询和出票分别加锁，中间等待时不持锁。<br>whole：从查询到出票始终持锁，中间的等待也在锁内。</td></tr>
-</tbody></table>
-<p>先用 split 运行，再按任务要求与 whole 对照。预设到达时间不等于实际执行时间，操作系统调度仍会影响买家线程的先后顺序。</p>
-<p>保存配置后，在包含 run.sh 的解压目录中运行：</p>
+<p class="eyebrow">实验一 · 互斥锁</p>
+<h2 id="seats-title">测出抢座程序的问题</h2>
+<p class="lab-intro">每位买家申请一个座位。改变买家人数、到达间隔和查询余票后的等待时间，观察哪些情况下程序会多出票，或者记错余票数。</p>
+<div class="lab-run">
+<div>
+<p>修改 <code>01-seats/config.sh</code>，保存后运行。</p>
 <div class="lab-command"><pre><code>bash run.sh seats</code></pre><button type="button" data-copy-command aria-label="复制互斥锁实验运行命令">复制命令</button><span class="copy-status" role="status"></span></div>
+</div>
+<a class="lab-download" href="downloads/linux-concurrency/01-seats.zip" download>下载互斥锁实验包（ZIP）</a>
+</div>
+<h3>配置参数</h3>
+<p class="lab-note">数值填整数，英文选项按表中写法填写，区分大小写。</p>
+<table class="lab-parameters"><caption>互斥锁：配置参数</caption><colgroup><col class="param-name"><col class="param-range"><col></colgroup><thead><tr>
+<th scope="col">参数与默认值</th>
+<th scope="col">允许的取值</th>
+<th scope="col">作用</th>
+</tr></thead><tbody>
+<tr><th scope="row"><code>SEATS=1</code></th><td data-label="取值">1～16</td><td>初始座位数。每次启动程序时，余票数都重新设为这个值。</td></tr>
+<tr><th scope="row"><code>BUYERS=1</code></th><td data-label="取值">1～16</td><td>买家数量，也是买家线程数。每位买家只申请一个座位。</td></tr>
+<tr><th scope="row"><code>GAP_MS=0</code></th><td data-label="取值">0～1000 毫秒</td><td>查询余票后、尝试出票前的等待时间。0 表示不额外等待。</td></tr>
+<tr><th scope="row"><code>ARRIVAL_MS=0</code></th><td data-label="取值">0～1000 毫秒</td><td>相邻买家的预设到达间隔。所有线程准备好后，第一个不额外等待，第二个等待一个间隔，第三个等待两个间隔，以此类推。0 表示不主动错开到达时间。</td></tr>
+<tr><th scope="row"><code>LOCK=split</code></th><td data-label="取值"><code>split</code> / <code>whole</code></td><td><code>split</code>：查询和出票分别加锁，中间等待时不持锁。<br><code>whole</code>：从查询到出票始终持锁，中间的等待也在锁内。</td></tr>
+</tbody></table>
+<p class="lab-note">先用 <code>split</code> 运行，再与 <code>whole</code> 对照。配置里的到达间隔是预设值，实际执行顺序还会受线程调度影响。</p>
 <h3>操作与结果分析建议</h3>
+<div class="lab-analysis">
+<div class="lab-tasks">
 <h4>需要完成的任务</h4>
-<ol>
-<li>先想清楚：怎样的出票结果才算正确？然后增加买家数、调整到达间隔，或延长出票前的等待。每次只改一个参数，先预测再运行。出现错误时，记下完整配置。</li>
-<li>保持买家数和座位数不变，只调整时间参数，让错误暂时不再出现。再恢复之前的设置，尝试复现错误。比较两次输出中 <code>READ</code> 和 <code>ISSUE</code> 的顺序，解释为什么结果不同。仅凭一次没有出错，能说明 split 的实现一定正确吗？</li>
-<li>让座位数与买家数相等，其余参数仍采用之前容易出错的设置。先预测余票数，再运行核对。初始座位数、出票数和剩余座位数之间应该满足什么关系？用这个关系检查本次结果。</li>
-<li>恢复之前出错的配置，只把 <code>LOCK</code> 改为 whole，切换到程序已提供的另一种加锁方式，再运行一次。根据输出和参数说明，解释不同买家的哪些操作不能再交错执行。随后换一组人数或时间参数，看看结果是否仍然正确。</li>
+<ol class="lab-steps">
+<li><strong>找出会出错的条件</strong><p>先写下你认为正确的出票结果。增加买家数、调整到达间隔或延长出票前的等待，每次只改一项。出现错误时，保存完整配置。</p></li>
+<li><strong>改变时机，再复现错误</strong><p>固定座位数和买家数，只改时间参数，让这次运行不再出错。恢复原设置并尝试复现。对照 <code>READ</code> 和 <code>ISSUE</code> 的顺序，解释两次结果为什么不同。</p></li>
+<li><strong>用数量关系检查结果</strong><p>把座位数设为与买家数相同，保留之前容易出错的时间参数。先预测余票数，再用初始座位数、出票数和余票数之间的关系检查实际结果。</p></li>
+<li><strong>比较两种加锁范围</strong><p>恢复出错时的完整配置，只把 <code>LOCK</code> 改为 <code>whole</code>。根据输出解释哪些操作不能再交错。再换一组人数或时间参数，检查结果是否仍符合预期。</p></li>
 </ol>
-<h4>需要提交的材料</h4>
-<ol>
-<li>每次运行前的预测、完整配置和程序输出，涵盖正常运行、复现错误、调整时间使错误消失、恢复原条件，以及切换 whole 后的两组测试。</li>
-<li>选一次出错运行，按 <code>READ</code> 和 <code>ISSUE</code> 的顺序，说明相关买家分别读到了多少余票，以及程序怎样更新余票数。</li>
-<li>用初始座位数、出票数和余票数的关系检查结果，并解释仅调整时间与切换加锁方式有什么区别。</li>
-</ol>
+</div>
+<div class="lab-output">
 <h4>读懂程序输出</h4>
-<p><code>READ</code> 表示查询余票，其中 seen 是买家线程读到的余票数；<code>ISSUE</code> 表示出票，<code>REJECT</code> 表示拒绝申请。<code>SUMMARY</code> 中的 capacity、issued、left 分别是初始座位数、出票数和程序记录的余票数。</p>
-<p>所有买家线程准备好后，再按预设间隔开始抢座，实际顺序还会受调度影响。保存一次完整输出，按先后顺序梳理每位买家读到了多少余票、是否拿到票，以及程序怎样更新余票数。</p>
+<p><code>READ</code> 是查询余票，<code>seen</code> 是该买家读到的数值。<code>ISSUE</code> 表示出票，<code>REJECT</code> 表示拒绝申请。</p>
+<p>在 <code>SUMMARY</code> 中查看 <code>capacity</code>、<code>issued</code>、<code>left</code>，分别对应初始座位数、出票数和余票数。按输出顺序追踪每位买家读到多少余票、是否拿到票，以及程序怎样更新余票。</p>
+</div>
+</div>
+<div class="lab-submission">
+<h4>需要提交的材料</h4>
+<ol class="lab-evidence">
+<li>附上各次运行的预测、完整配置和程序输出。包括正常运行、复现错误、调整时间、恢复原设置，以及使用 <code>whole</code> 的两组测试。</li>
+<li>选一次出错运行，依据 <code>READ</code> 和 <code>ISSUE</code> 说明相关买家读到的余票数和程序写回的余票数。</li>
+<li>用座位数、出票数和余票数的关系检查结果。解释调整时间和改变加锁范围分别改变了什么。</li>
+</ol>
+</div>
 </section>
 <section class="cc-section lab" id="queue" aria-labelledby="queue-title">
-<p class="eyebrow">条件变量</p><h2 id="queue-title">实验二  通知发出后会发生什么</h2>
-<div class="lab-downloads"><a href="downloads/linux-concurrency/02-queue.zip" download>下载本实验运行包（ZIP）</a></div>
-<p class="lab-package-note">包含本实验源码、配置、运行脚本和使用说明；关键变量与接口调用已有中文注释。</p>
-<p>工作线程等待领取任务，每个线程在一次运行中最多领取一项。主线程负责往队列中放入任务，并通知工作线程。你也可以让它在队列还是空的时候先发通知。</p>
-<p>配置文件：02-queue/<code>config.sh</code></p>
-<h3>配置参数</h3>
-<p>以下列出各参数的初始设置。数值只填整数，时间单位为毫秒；英文选项按表中写法填写，区分大小写。</p>
-<table class="lab-parameters"><caption>条件变量：配置参数</caption><colgroup><col class="param-name"><col class="param-range"><col></colgroup><thead><tr>
-<th scope="col">参数与初始设置</th>
-<th scope="col">取值范围或选项</th>
-<th scope="col">含义与作用</th>
-</tr></thead><tbody>
-<tr><th scope="row"><code>WORKERS=1</code></th><td data-label="取值">1～8</td><td data-label="说明">工作线程数。每个线程在一次运行中最多领取一项任务。</td></tr>
-<tr><th scope="row"><code>JOBS=1</code></th><td data-label="取值">0～8</td><td data-label="说明">主线程一次放入队列的任务数。0 表示不放入任务。任务数超过线程数时，即使所有线程各取一项，也会有任务剩余。</td></tr>
-<tr><th scope="row"><code>EMPTY_NOTICE=0</code></th><td data-label="取值">0 / 1</td><td data-label="说明">0：放入任务前不发通知。<br>1：队列为空时先广播一次，等待 <code>OBSERVE_MS</code> 毫秒，再放入任务。这次提前通知始终使用广播，不受 <code>NOTICE</code> 影响。</td></tr>
-<tr><th scope="row"><code>NOTICE=broadcast</code></th><td data-label="取值">signal / broadcast</td><td data-label="说明">放入任务后的通知方式。<br>signal：通知一个等待线程。<br>broadcast：通知所有等待线程。</td></tr>
-<tr><th scope="row"><code>WAIT=if</code></th><td data-label="取值">if / while</td><td data-label="说明">if：等待返回后直接尝试领取任务，不因队列为空而重新等待。<br>while：每次被唤醒后都重新检查；队列为空且尚未关闭时，继续等待。</td></tr>
-<tr><th scope="row"><code>OBSERVE_MS=300</code></th><td data-label="取值">100～2000 毫秒</td><td data-label="说明">放入任务后，主线程等待这么久再统计结果。若 <code>EMPTY_NOTICE=1</code>，提前通知到放入任务之间也等待同样长的时间。</td></tr>
-</tbody></table>
-<p><code>NOTICE</code> 控制放入任务后的通知，<code>EMPTY_NOTICE</code> 控制是否提前通知，<code>WAIT</code> 控制工作线程醒来后的行为。三个选项分别起作用。</p>
-<p>保存配置后，在包含 run.sh 的解压目录中运行：</p>
+<p class="eyebrow">实验二 · 条件变量</p>
+<h2 id="queue-title">通知发出后会发生什么</h2>
+<p class="lab-intro">每个工作线程最多领取一项任务。主线程可以在任务入队后通知，也可以在队列为空时先发通知。观察收到通知的线程能否领到任务。</p>
+<div class="lab-run">
+<div>
+<p>修改 <code>02-queue/config.sh</code>，保存后运行。</p>
 <div class="lab-command"><pre><code>bash run.sh queue</code></pre><button type="button" data-copy-command aria-label="复制条件变量实验运行命令">复制命令</button><span class="copy-status" role="status"></span></div>
+</div>
+<a class="lab-download" href="downloads/linux-concurrency/02-queue.zip" download>下载条件变量实验包（ZIP）</a>
+</div>
+<h3>配置参数</h3>
+<p class="lab-note">数值填整数，英文选项按表中写法填写，区分大小写。</p>
+<table class="lab-parameters"><caption>条件变量：配置参数</caption><colgroup><col class="param-name"><col class="param-range"><col></colgroup><thead><tr>
+<th scope="col">参数与默认值</th>
+<th scope="col">允许的取值</th>
+<th scope="col">作用</th>
+</tr></thead><tbody>
+<tr><th scope="row"><code>WORKERS=1</code></th><td data-label="取值">1～8</td><td>工作线程数。每个线程在一次运行中最多领取一项任务。</td></tr>
+<tr><th scope="row"><code>JOBS=1</code></th><td data-label="取值">0～8</td><td>主线程一次放入队列的任务数。0 表示不放入任务。任务数超过线程数时，即使所有线程各取一项，也会有任务剩余。</td></tr>
+<tr><th scope="row"><code>EMPTY_NOTICE=0</code></th><td data-label="取值">0 / 1</td><td>0：放入任务前不发通知。<br>1：队列为空时先广播一次，等待 <code>OBSERVE_MS</code> 毫秒，再放入任务。这次提前通知始终使用广播，不受 <code>NOTICE</code> 影响。</td></tr>
+<tr><th scope="row"><code>NOTICE=broadcast</code></th><td data-label="取值"><code>signal</code> / <code>broadcast</code></td><td>放入任务后的通知方式。<br><code>signal</code>：通知一个等待线程。<br><code>broadcast</code>：通知所有等待线程。</td></tr>
+<tr><th scope="row"><code>WAIT=if</code></th><td data-label="取值"><code>if</code> / <code>while</code></td><td><code>if</code>：等待返回后直接尝试领取任务，不因队列为空而重新等待。<br><code>while</code>：每次被唤醒后都重新检查；队列为空且尚未关闭时，继续等待。</td></tr>
+<tr><th scope="row"><code>OBSERVE_MS=300</code></th><td data-label="取值">100～2000 毫秒</td><td>放入任务后，主线程等待这么久再统计结果。若 <code>EMPTY_NOTICE=1</code>，提前通知到放入任务之间也等待同样长的时间。</td></tr>
+</tbody></table>
+<p class="lab-note"><code>EMPTY_NOTICE</code> 决定是否提前广播，<code>NOTICE</code> 决定任务入队后的通知方式，<code>WAIT</code> 决定工作线程醒来后的行为。</p>
 <h3>操作与结果分析建议</h3>
+<div class="lab-analysis">
+<div class="lab-tasks">
 <h4>需要完成的任务</h4>
-<ol>
-<li>从一个线程、一项任务开始，先增加线程数，再增加任务数。找出会出现 <code>EMPTY_ATTEMPT</code> 和不会出现它的两组配置。增加任务后没有出错，能否说明等待逻辑已经正确？</li>
-<li>恢复默认配置，只把 <code>EMPTY_NOTICE</code> 改为 1。先猜一猜：工作线程收到提前发出的通知后会做什么？等主线程真正放入任务后，还有线程来领取吗？运行程序，检查你的预测。</li>
-<li>分别恢复前两步中出错的配置，只把 <code>WAIT</code> 改为 while，再运行一次。观察线程被唤醒后的行为：如果队列仍然为空，它接下来会做什么？</li>
-<li>设置两个线程、两项任务，保持 <code>WAIT=while</code>、<code>EMPTY_NOTICE=0</code>，比较 signal 和 broadcast。检查两个线程是否各领到一项。如果没有出现空取，但队列里仍有任务，请解释原因。</li>
+<ol class="lab-steps">
+<li><strong>让等待线程多于任务</strong><p>从一个线程、一项任务开始，先增加线程数，再增加任务数。找出出现和未出现 <code>EMPTY_ATTEMPT</code> 的配置。解释为什么任务够多时可能没有空取，再判断这能否说明等待逻辑正确。</p></li>
+<li><strong>在空队列时发通知</strong><p>恢复默认配置，只设 <code>EMPTY_NOTICE=1</code>。预测工作线程会怎样响应提前通知，以及稍后放入的任务是否还有线程领取，再运行核对。</p></li>
+<li><strong>比较 if 与 while</strong><p>分别恢复前两步中出现空取的配置，只把 <code>WAIT</code> 改为 <code>while</code>。观察线程醒来发现队列仍为空时，接下来会怎样。</p></li>
+<li><strong>比较单个通知和广播</strong><p>设置两个线程和两项任务，保持 <code>WAIT=while</code>、<code>EMPTY_NOTICE=0</code>。比较 <code>signal</code> 与 <code>broadcast</code> 下各线程的领取情况。若没有空取却仍有剩余任务，解释原因。</p></li>
 </ol>
+</div>
+<div class="lab-output">
+<h4>读懂程序输出</h4>
+<p><code>WAIT</code>、<code>WAKE</code> 和 <code>TAKE</code> 分别表示等待、唤醒和领取。<code>EMPTY_ATTEMPT</code> 表示线程尝试从空队列取任务，下面简称“空取”。</p>
+<p><code>SNAPSHOT</code> 给出统计时的已领取数 <code>taken</code>、剩余数 <code>queued</code> 和累计空取次数 <code>empty_attempts</code>。主线程随后输出 <code>CLOSE</code> 并唤醒等待的线程退出。关闭后，工作线程停止领取任务。</p>
+<p>看剩余任务时，先区分线程尚未醒来、醒来时没有任务，以及等待逻辑有误。需要时延长 <code>OBSERVE_MS</code> 再运行。</p>
+</div>
+</div>
+<div class="lab-submission">
 <h4>需要提交的材料</h4>
-<ol>
-<li>各组运行前的预测、完整配置和程序输出，包含任务少于线程数、提前通知，以及这两种条件下 if 与 while 的对照。</li>
-<li>两个线程、两项任务时，signal 与 broadcast 的对照结果。记录 taken、queued、<code>empty_attempts</code>，并说明统计结果是在 <code>CLOSE</code> 之前得到的。</li>
-<li>解释线程收到通知后为什么仍需检查队列，以及为什么没有出现空取，也可能有任务无人领取。</li>
+<ol class="lab-evidence">
+<li>附上预测、完整配置和程序输出。覆盖任务少于线程数、提前通知，以及在这两种条件下 <code>if</code> 与 <code>while</code> 的对照。</li>
+<li>对照两个线程、两项任务时的 <code>signal</code> 与 <code>broadcast</code>。记录 <code>CLOSE</code> 前的 <code>taken</code>、<code>queued</code> 和 <code>empty_attempts</code>。</li>
+<li>解释线程收到通知后为何仍要检查队列，以及没有空取时为什么也可能有任务无人领取。</li>
 </ol>
-<h4>看清统计结果和退出过程</h4>
-<p><code>WAIT</code>、<code>WAKE</code>、<code>TAKE</code> 分别表示等待、唤醒和领取任务。<code>EMPTY_ATTEMPT</code> 表示线程尝试从空队列取任务，文中简称“空取”。<code>SNAPSHOT</code> 中的 taken、queued、<code>empty_attempts</code> 分别是截至统计时已领取的任务数、剩余任务数和累计空取次数。</p>
-<p>输出 <code>SNAPSHOT</code> 后，主线程设置关闭状态，输出 <code>CLOSE</code>，再唤醒仍在等待的线程，让它们退出。关闭后，工作线程不再领取任务。分析结果时，要分清线程没有及时被唤醒、醒来后没有任务可领，以及等待逻辑本身有误这几种情况。必要时延长观察时间再运行。</p>
+</div>
 </section>
 <section class="cc-section lab" id="pool" aria-labelledby="pool-title">
-<p class="eyebrow">信号量</p><h2 id="pool-title">实验三  为什么可用资源越来越少</h2>
-<div class="lab-downloads"><a href="downloads/linux-concurrency/03-pool.zip" download>下载本实验运行包（ZIP）</a></div>
-<p class="lab-package-note">包含本实验源码、配置、运行脚本和使用说明；关键变量与接口调用已有中文注释。</p>
-<p>线程必须先取得一个信号量许可，才能使用资源。每轮申请的线程数都等于资源池的初始容量，其中一部分线程可以在取得许可后取消任务。多轮运行共用同一个信号量。</p>
-<p>配置文件：03-pool/<code>config.sh</code></p>
-<h3>配置参数</h3>
-<p>以下列出各参数的初始设置。数值只填整数，时间单位为毫秒；英文选项按表中写法填写，区分大小写。</p>
-<table class="lab-parameters"><caption>信号量：配置参数</caption><colgroup><col class="param-name"><col class="param-range"><col></colgroup><thead><tr>
-<th scope="col">参数与初始设置</th>
-<th scope="col">取值范围或选项</th>
-<th scope="col">含义与作用</th>
-</tr></thead><tbody>
-<tr><th scope="row"><code>CAPACITY=2</code></th><td data-label="取值">1～8</td><td data-label="说明">信号量的初始许可数。每轮发起申请的线程数也等于这个值；后续轮次不会自动补回缺少的许可。</td></tr>
-<tr><th scope="row"><code>ROUNDS=3</code></th><td data-label="取值">1～8</td><td data-label="说明">一次启动后连续运行的轮数。各轮共用一个信号量；重新启动程序才按 <code>CAPACITY</code> 重新初始化。</td></tr>
-<tr><th scope="row"><code>CANCEL=0</code></th><td data-label="取值">0～<code>CAPACITY</code></td><td data-label="说明">每轮要取消的任务数。按取得许可的先后顺序，前 <code>CANCEL</code> 个成功申请的线程取消任务。成功申请数不足时全部取消；0 表示不取消。</td></tr>
-<tr><th scope="row"><code>WORK_MS=100</code></th><td data-label="取值">0～500 毫秒</td><td data-label="说明">取得许可后的模拟处理时间。所有线程尝试申请后，成功取得许可的线程都会等待这么久，包括随后取消任务的线程。0 表示不额外等待。</td></tr>
-<tr><th scope="row"><code>CLEANUP=leak</code></th><td data-label="取值">leak / return</td><td data-label="说明">leak：正常完成时归还许可，取消任务时不归还。<br>return：无论正常完成还是取消任务，只要取得过许可，就会归还。</td></tr>
-</tbody></table>
-<p><code>CANCEL</code> 只作用于已经取得许可的线程。申请失败的线程不会取消任务，也不会归还自己没有取得的许可。</p>
-<p>保存配置后，在包含 run.sh 的解压目录中运行：</p>
+<p class="eyebrow">实验三 · 信号量</p>
+<h2 id="pool-title">为什么可用资源越来越少</h2>
+<p class="lab-intro">线程拿到信号量许可后才能使用资源。每轮发起申请的线程数等于资源池的初始容量。你可以让一部分线程在拿到许可后取消任务。同一次运行的各轮共用一个信号量。</p>
+<div class="lab-run">
+<div>
+<p>修改 <code>03-pool/config.sh</code>，保存后运行。</p>
 <div class="lab-command"><pre><code>bash run.sh pool</code></pre><button type="button" data-copy-command aria-label="复制信号量实验运行命令">复制命令</button><span class="copy-status" role="status"></span></div>
+</div>
+<a class="lab-download" href="downloads/linux-concurrency/03-pool.zip" download>下载信号量实验包（ZIP）</a>
+</div>
+<h3>配置参数</h3>
+<p class="lab-note">数值填整数，英文选项按表中写法填写，区分大小写。</p>
+<table class="lab-parameters"><caption>信号量：配置参数</caption><colgroup><col class="param-name"><col class="param-range"><col></colgroup><thead><tr>
+<th scope="col">参数与默认值</th>
+<th scope="col">允许的取值</th>
+<th scope="col">作用</th>
+</tr></thead><tbody>
+<tr><th scope="row"><code>CAPACITY=2</code></th><td data-label="取值">1～8</td><td>信号量的初始许可数。每轮发起申请的线程数也等于这个值；后续轮次不会自动补回缺少的许可。</td></tr>
+<tr><th scope="row"><code>ROUNDS=3</code></th><td data-label="取值">1～8</td><td>一次启动后连续运行的轮数。各轮共用一个信号量；重新启动程序才按 <code>CAPACITY</code> 重新初始化。</td></tr>
+<tr><th scope="row"><code>CANCEL=0</code></th><td data-label="取值">0～<code>CAPACITY</code></td><td>每轮要取消的任务数。按取得许可的先后顺序，前 <code>CANCEL</code> 个成功申请的线程取消任务。成功申请数不足时全部取消；0 表示不取消。</td></tr>
+<tr><th scope="row"><code>WORK_MS=100</code></th><td data-label="取值">0～500 毫秒</td><td>取得许可后的模拟处理时间。所有线程尝试申请后，成功取得许可的线程都会等待这么久，包括随后取消任务的线程。0 表示不额外等待。</td></tr>
+<tr><th scope="row"><code>CLEANUP=leak</code></th><td data-label="取值"><code>leak</code> / <code>return</code></td><td><code>leak</code>：正常完成时归还许可，取消任务时不归还。<br><code>return</code>：无论正常完成还是取消任务，只要取得过许可，就会归还。</td></tr>
+</tbody></table>
+<p class="lab-note"><code>CANCEL</code> 只影响已经取得许可的线程。申请失败的线程没有拿到许可，也没有许可可归还。</p>
 <h3>操作与结果分析建议</h3>
+<div class="lab-analysis">
+<div class="lab-tasks">
 <h4>需要完成的任务</h4>
-<ol>
-<li>先不取消任务，记录每轮结束时还有多少可用许可。然后增加 <code>CANCEL</code>，预测许可会在哪一轮用完，再增加运行轮数进行验证。保存从正常处理请求到所有申请都失败的完整输出。</li>
-<li>保持 <code>CANCEL</code> 不变，只增大 <code>CAPACITY</code>。先预测：增加容量能解决问题，还是只能让问题晚些出现？再用运行结果检验你的判断。</li>
-<li>保持 <code>CANCEL</code> 和 <code>CAPACITY</code> 不变，把 <code>WORK_MS</code> 减为零。缩短等待后，每轮结束时的可用许可数恢复了吗？结合输出，区分许可暂时被线程占用与线程结束后没有归还许可。</li>
-<li>恢复之前出错的配置，只把 <code>CLEANUP</code> 改为 return，再运行一次。随后把 <code>CANCEL</code> 设为 <code>CAPACITY</code>，让所有取得许可的线程都取消任务，检查每轮结束后是否还有许可未归还。</li>
+<ol class="lab-steps">
+<li><strong>跟踪许可逐轮变化</strong><p>先运行不取消任务的配置，记下每轮结束时的可用许可数。增加 <code>CANCEL</code>，预测许可会在哪一轮耗尽。调整 <code>ROUNDS</code> 验证，并保存从申请成功到全部申请失败的输出。</p></li>
+<li><strong>增大容量</strong><p>固定 <code>CANCEL</code>，只增大 <code>CAPACITY</code>。先预测增加容量会怎样影响许可耗尽的轮次，再看结果是否支持你的预测。</p></li>
+<li><strong>缩短处理时间</strong><p>保持 <code>CANCEL</code> 和 <code>CAPACITY</code> 不变，只把 <code>WORK_MS</code> 改为 0。检查每轮结束时的可用许可是否恢复，区分暂时占用与结束后没有归还。</p></li>
+<li><strong>比较取消后的归还方式</strong><p>恢复此前出错的配置，只把 <code>CLEANUP</code> 改为 <code>return</code>。然后设置 <code>CANCEL</code>=<code>CAPACITY</code>，使所有取得许可的线程都取消任务，核对每轮结束时的可用许可数。</p></li>
 </ol>
+</div>
+<div class="lab-output">
+<h4>读懂程序输出</h4>
+<p><code>ACQUIRE</code> 表示取得许可，<code>EAGAIN</code> 表示申请时已无可用许可。<code>CANCEL</code> 和 <code>FINISH</code> 分别表示取消任务和正常完成，两行都注明是否归还许可。</p>
+<p><code>ROUND</code> 中的 <code>start_available</code> 是本轮开始时的可用许可数。所有工作线程结束后，主线程临时取出许可进行计数，再全部归还。<code>END</code> 中的 <code>available</code> 是这次计数的结果。</p>
+<p>每轮所有线程都尝试申请一次后，拿到许可的线程才开始等待。程序用普通代码分支模拟任务取消。算出本轮应剩的许可，再和下一轮的 <code>start_available</code> 核对。</p>
+</div>
+</div>
+<div class="lab-submission">
 <h4>需要提交的材料</h4>
-<ol>
-<li>各组运行前的预测、完整配置和程序输出，包含不取消任务、加入取消操作、增加容量、缩短等待、切换 return，以及全部任务取消的情况。</li>
-<li>逐轮记录开始和结束时的可用许可数、成功申请数、取消数和申请失败数。把预测的许可数与实际结果放在一起比较。</li>
-<li>根据 <code>CANCEL</code> 或 <code>FINISH</code> 行中的归还信息，解释许可为什么减少，并说明增加容量、缩短等待和切换归还方式分别有什么影响。</li>
+<ol class="lab-evidence">
+<li>附上预测、完整配置和输出。覆盖不取消任务、加入取消、增加容量、缩短等待、切换 <code>return</code> 和全部任务取消。</li>
+<li>逐轮记录开始和结束时的可用许可数、申请成功数、取消数和申请失败数，比较预测和实际许可数。</li>
+<li>引用 <code>CANCEL</code> 或 <code>FINISH</code> 行中的归还信息，解释许可为什么减少。说明增大容量、缩短等待和切换归还方式的不同影响。</li>
 </ol>
-<h4>核对每轮的许可数</h4>
-<p><code>ACQUIRE</code> 表示取得许可，<code>EAGAIN</code> 表示本次申请时没有可用许可。<code>CANCEL</code> 和 <code>FINISH</code> 表示取消任务和正常完成，所在行还会注明是否归还许可。所有工作线程结束后，主线程统计可用许可数，并在 <code>END</code> 的 available 中给出结果。统计时会临时取走许可，数完后全部归还。</p>
-<p>每轮中，所有线程都尝试申请一次后，取得许可的线程才开始等待，并根据所选实现决定是否归还。取消操作通过普通代码分支模拟，不使用 <code>pthread_cancel</code>。请计算每轮结束时应有多少可用许可，再与下一轮开始时的 <code>start_available</code> 比较。</p>
+</div>
 </section>
 <section class="cc-section lab" id="events" aria-labelledby="events-title">
-<p class="eyebrow">事件驱动</p><h2 id="events-title">实验四  程序为什么延迟处理快消息</h2>
-<div class="lab-downloads"><a href="downloads/linux-concurrency/04-events.zip" download>下载本实验运行包（ZIP）</a></div>
-<p class="lab-package-note">包含本实验源码、配置、运行脚本和使用说明；关键变量与接口调用已有中文注释。</p>
-<p>程序通过两条连接接收消息，分别标为 slow 和 fast。你可以推迟 slow 的发送，也可以延长它的处理时间，看看 fast 是否也会延迟处理。</p>
-<p>配置文件：04-events/<code>config.sh</code></p>
-<h3>配置参数</h3>
-<p>以下列出各参数的初始设置。数值只填整数，时间单位为毫秒；英文选项按表中写法填写，区分大小写。</p>
-<table class="lab-parameters"><caption>事件驱动：配置参数</caption><colgroup><col class="param-name"><col class="param-range"><col></colgroup><thead><tr>
-<th scope="col">参数与初始设置</th>
-<th scope="col">取值范围或选项</th>
-<th scope="col">含义与作用</th>
-</tr></thead><tbody>
-<tr><th scope="row"><code>SLOW_SEND_MS=0</code></th><td data-label="取值">0～2000 毫秒</td><td data-label="说明">程序启动后，预定等待多久发送 slow。0 表示不额外推迟发送。</td></tr>
-<tr><th scope="row"><code>FAST_SEND_MS=100</code></th><td data-label="取值">0～2000 毫秒</td><td data-label="说明">程序启动后，预定等待多久发送 fast。它与 <code>SLOW_SEND_MS</code> 使用同一个计时起点，并不是相对 slow 的间隔。</td></tr>
-<tr><th scope="row"><code>SLOW_WORK_MS=0</code></th><td data-label="取值">0～2000 毫秒</td><td data-label="说明">开始处理 slow 后额外等待的时间，用来模拟慢处理。0 表示不额外等待。fast 的处理不受这个参数直接控制。</td></tr>
-<tr><th scope="row"><code>IO=blocking</code></th><td data-label="取值">blocking / epoll</td><td data-label="说明">blocking：先阻塞读取 slow，再读取 fast。<br>epoll：把套接字设为非阻塞，用 epoll 等待可读事件，读取已有数据的连接。</td></tr>
-<tr><th scope="row"><code>HANDLER=inline</code></th><td data-label="取值">inline / worker</td><td data-label="说明">inline：接收线程直接处理消息，处理结束后才能继续接收。<br>worker：把处理交给最多两个工作线程，接收线程继续执行读取操作。</td></tr>
-</tbody></table>
-<p><code>IO</code> 决定怎样读取消息，<code>HANDLER</code> 决定由哪个线程处理消息，两者可以组合。发送时刻可能受调度影响；同时发送时，不预先假定处理顺序。</p>
-<p>保存配置后，在包含 run.sh 的解压目录中运行：</p>
+<p class="eyebrow">实验四 · 事件驱动</p>
+<h2 id="events-title">程序为什么延迟处理快消息</h2>
+<p class="lab-intro">程序从两条连接接收 <code>slow</code> 和 <code>fast</code>。可以让 <code>slow</code> 晚些发送，也可以延长它的处理时间。观察 <code>fast</code> 的延迟发生在接收前，还是接收后。</p>
+<div class="lab-run">
+<div>
+<p>修改 <code>04-events/config.sh</code>，保存后运行。</p>
 <div class="lab-command"><pre><code>bash run.sh events</code></pre><button type="button" data-copy-command aria-label="复制事件驱动实验运行命令">复制命令</button><span class="copy-status" role="status"></span></div>
+</div>
+<a class="lab-download" href="downloads/linux-concurrency/04-events.zip" download>下载事件驱动实验包（ZIP）</a>
+</div>
+<h3>配置参数</h3>
+<p class="lab-note">数值填整数，英文选项按表中写法填写，区分大小写。</p>
+<table class="lab-parameters"><caption>事件驱动：配置参数</caption><colgroup><col class="param-name"><col class="param-range"><col></colgroup><thead><tr>
+<th scope="col">参数与默认值</th>
+<th scope="col">允许的取值</th>
+<th scope="col">作用</th>
+</tr></thead><tbody>
+<tr><th scope="row"><code>SLOW_SEND_MS=0</code></th><td data-label="取值">0～2000 毫秒</td><td>程序启动后，预定等待多久发送 <code>slow</code>。0 表示不额外推迟发送。</td></tr>
+<tr><th scope="row"><code>FAST_SEND_MS=100</code></th><td data-label="取值">0～2000 毫秒</td><td>程序启动后，预定等待多久发送 <code>fast</code>。它与 <code>SLOW_SEND_MS</code> 使用同一个计时起点，并不是相对 <code>slow</code> 的间隔。</td></tr>
+<tr><th scope="row"><code>SLOW_WORK_MS=0</code></th><td data-label="取值">0～2000 毫秒</td><td>开始处理 <code>slow</code> 后额外等待的时间，用来模拟慢处理。0 表示不额外等待。<code>fast</code> 的处理不受这个参数直接控制。</td></tr>
+<tr><th scope="row"><code>IO=blocking</code></th><td data-label="取值"><code>blocking</code> / <code>epoll</code></td><td><code>blocking</code>：先阻塞读取 <code>slow</code>，再读取 <code>fast</code>。<br><code>epoll</code>：把套接字设为非阻塞，用 <code>epoll</code> 等待可读事件，读取已有数据的连接。</td></tr>
+<tr><th scope="row"><code>HANDLER=inline</code></th><td data-label="取值"><code>inline</code> / <code>worker</code></td><td><code>inline</code>：接收线程直接处理消息，处理结束后才能继续接收。<br><code>worker</code>：把处理交给最多两个工作线程，接收线程继续执行读取操作。</td></tr>
+</tbody></table>
+<p class="lab-note"><code>IO</code> 决定怎样读取消息，<code>HANDLER</code> 决定哪个线程负责处理。两项可以组合。即使预设的发送时间相同，实际顺序也会受线程调度影响。</p>
 <h3>操作与结果分析建议</h3>
+<div class="lab-analysis">
+<div class="lab-tasks">
 <h4>需要完成的任务</h4>
-<ol>
-<li>先运行默认配置，再只推迟 slow 的发送，让 fast 先到达。逐渐拉大两条消息的发送间隔，预测并记录 fast 从发送到处理结束需要多久。然后只把 <code>IO</code> 改为 epoll，用相同的发送时间再次测量。</li>
-<li>保持 <code>IO=epoll</code>、<code>HANDLER=inline</code>，让 slow 先到、fast 稍后到，再逐步增大 <code>SLOW_WORK_MS</code>。比较 fast 的发送、接收和开始处理时间，并查看 slow 在这段时间内的处理过程。fast 延迟期间，接收线程在做什么？</li>
-<li>保留第二步中使 fast 明显延迟的设置，只把 <code>HANDLER</code> 改为 worker。检查程序能否在 slow 处理结束前完成 fast 的处理，并解释原因。</li>
-<li>保持 <code>HANDLER=worker</code>，把发送时间恢复为第一步中 fast 先到、slow 后到的设置。同时将 <code>SLOW_WORK_MS</code> 设为 0、<code>IO</code> 设为 blocking。先预测使用工作线程能否解决这时的延迟，再运行验证。</li>
+<ol class="lab-steps">
+<li><strong>让 slow 晚到</strong><p>先运行默认配置。只推迟 <code>slow</code> 的发送，让 <code>fast</code> 先到，并逐步拉大发送间隔。预测并记录 <code>fast</code> 从发送到处理结束的耗时。保持同一组发送时间，只把 <code>IO</code> 改为 <code>epoll</code>，再测一次。</p></li>
+<li><strong>让 slow 处理得更久</strong><p>保持 <code>IO=epoll</code>、<code>HANDLER=inline</code>。让 <code>slow</code> 先到、<code>fast</code> 稍后到，再逐步增大 <code>SLOW_WORK_MS</code>。对照 <code>fast</code> 的发送、接收和开始处理时间，找出等待期间接收线程在做什么。</p></li>
+<li><strong>把处理交给工作线程</strong><p>保留上一步让 <code>fast</code> 明显延迟的配置，只把 <code>HANDLER</code> 改为 <code>worker</code>。检查 <code>fast</code> 能否在 <code>slow</code> 处理结束前完成，并用输出解释原因。</p></li>
+<li><strong>把工作线程和阻塞读取组合</strong><p>保持 <code>HANDLER=worker</code>。恢复第一步的发送时间，让 <code>fast</code> 先到，再把 <code>SLOW_WORK_MS</code> 设为 0、<code>IO</code> 设为 <code>blocking</code>。先预测 <code>fast</code> 还会不会等待，再运行验证。</p></li>
 </ol>
+</div>
+<div class="lab-output">
+<h4>读懂程序输出</h4>
+<p><code>SEND</code>、<code>RECEIVE</code>、<code>HANDLER_START</code> 和 <code>HANDLER_END</code> 分别记录发送、接收、开始处理和处理结束的时刻，均从程序启动起算。<code>SUMMARY</code> 中的 <code>latency_ms</code> 是从记录发送时刻到处理结束的总耗时。</p>
+<p>消息由独立线程按预设时间发送，实际发送时刻可能因调度而推迟。用 <code>fast</code> 的时间戳分别算出发送到接收、接收到处理结束的耗时。<code>SLOW_WORK_MS</code> 用等待模拟慢处理，写报告时要说明这一点。</p>
+</div>
+</div>
+<div class="lab-submission">
 <h4>需要提交的材料</h4>
-<ol>
-<li>每次运行前的预测、完整配置和程序输出，包含慢到达时 blocking 与 epoll 的对照、慢处理时 inline 与 worker 的对照，以及 worker 搭配 blocking 的再次测试。</li>
-<li>从输出中记录 fast 的发送、接收、开始处理和处理结束时间，分别计算接收前与接收后的耗时，并比较不同配置下的变化。</li>
-<li>对照同一时段内 slow 的处理过程，解释 fast 为什么延迟，以及改变读取方式或处理线程分别能解决哪一种等待。</li>
+<ol class="lab-evidence">
+<li>附上各次预测、完整配置和程序输出。覆盖慢到达时 <code>blocking</code> 与 <code>epoll</code>、慢处理时 <code>inline</code> 与 <code>worker</code>，以及 <code>worker</code> 搭配 <code>blocking</code> 的对照。</li>
+<li>记录 <code>fast</code> 的发送、接收、开始处理和处理结束时刻，计算接收前后的两段耗时并作比较。</li>
+<li>对照 <code>fast</code> 等待期间 <code>slow</code> 的处理过程。解释改变读取方式和改变处理线程分别能减少哪段等待。</li>
 </ol>
-<h4>比较两段等待时间</h4>
-<p><code>SEND</code>、<code>RECEIVE</code>、<code>HANDLER_START</code>、<code>HANDLER_END</code> 分别表示发送、接收、开始处理和处理结束。它们前面的时间以程序启动为起点。<code>SUMMARY</code> 中的 <code>latency_ms</code> 是从记录发送时刻到处理结束的总耗时。自行设置几组延迟，分别比较 fast 在接收前和接收后的耗时。</p>
-<p>消息由独立线程按预设时间发送，实际发送时刻可能因调度而推迟。选择 inline 时，接收线程直接处理消息；选择 worker 时，它把消息交给工作线程处理。本实验用等待来模拟慢处理，解释结果时要说明这一点。</p>
+</div>
 </section>
 <div id="related"></div>
 </main>
 <footer><span>OSLab · 并发</span><a href="#top">返回顶部 ↑</a></footer>
 </div>
 <script src="knowledge-pages.js?v=20261107-linux-labs"></script>
-<script src="linux-concurrency-labs.js?v=20261107"></script>
+<script src="linux-concurrency-labs.js?v=20261111"></script>
 <script src="heading-typography.js?v=20261028-titles-1"></script>
 </body></html>
